@@ -7,7 +7,7 @@
 Сейчас проект находится в режиме:
 
 ```text
-Runtime Realization (R1 unblock pass, phase_06_disputes_money runtime-checked)
+Runtime Realization (R1 unblock pass complete; H1-H3 local hardening in progress)
 ```
 
 Это значит:
@@ -19,12 +19,65 @@ Runtime Realization (R1 unblock pass, phase_06_disputes_money runtime-checked)
 - `Phase 01 — Auth`, `Phase 02 — Vendor Gate`, `Phase 03 — Catalog`, `Phase 04 — Checkout`, `Phase 05 — Orders` and `Phase 06 — Disputes And Money` now have live runtime evidence for the numbered `R1` phase pack;
 - the auth slice is still not the final launch-grade implementation because email delivery remains temporary;
 - the KYC slice is still not the final launch-grade compliance/storage implementation because document storage remains local/dev metadata;
-- the catalog slice is still not the final launch-grade search/media implementation because public search is database-backed and listing media remains deferred;
+- the catalog slice now has local media metadata/UI proof, local Meilisearch indexing, admin-triggered full-replace reindex and a local catalog-search worker, but hosted object storage/CDN/image processing and hosted search operations remain open;
 - the checkout slice is still not the final launch-grade payment implementation because payment finalization uses a local/dev provider webhook;
-- the orders slice is still not the final launch-grade fulfillment implementation because current H2 proof is local/operator proof for delivery, shipment metadata, buyer delivery timeout completion, vendor confirmation timeout cancellation, pre-shipment cancellation stock return, no-auto-restock-after-shipment refund policy, a combined maintenance entrypoint, admin-triggerable maintenance dry-run/execute endpoint, API-level order timeline, first admin/backend ops surface and backend RMA inspection endpoints, not deployed scheduler/cron or polished admin UI;
-- an order-maintenance worker process entrypoint now exists locally for scheduler/cron-style execution, but deployed scheduler/cron evidence is still open;
-- local Compose `workers` profile now wires `notification-worker` and `order-maintenance-worker`, with one-shot container smoke proof; hosted/deployed scheduler evidence is still open;
-- the disputes/money slice is still not the final launch-grade money-ops implementation because refund, payout and reconciliation evidence is local/internal `dev_mock` evidence surfaced through backend ops APIs, not live provider-integrated execution or provider dashboard/API proof.
+- the orders slice is still not the final launch-grade fulfillment implementation because current H2/H3 proof is local/operator proof for delivery, shipment metadata, timeout jobs, API/UI timeline, admin/backend ops and backend RMA inspection endpoints, not hosted/deployed scheduler proof or deep RMA workflow automation;
+- local worker process entrypoints now exist for notification outbox, order maintenance, dispute SLA escalation and catalog search reindex, but hosted/deployed worker liveness evidence is still open;
+- local Compose `workers` profile now wires `notification-worker`, `order-maintenance-worker`, `dispute-sla-worker` and `catalog-search-worker`;
+- the disputes/money slice is still not the final launch-grade money-ops implementation because refund, payout and reconciliation evidence is local/internal `dev_mock` evidence surfaced through backend ops APIs, not live provider-integrated execution or provider dashboard/API proof;
+- dispute messages, evidence metadata, local protected raw dispute evidence storage/read, vendor-response SLA escalation command, SLA worker and admin-triggered SLA dry-run/execute now have local proof, but hosted private-bucket evidence, hosted worker proof and richer escalation/review workflow remain open.
+
+## Current Checkpoint — 2026-05-10
+
+The current dirty tree is an H3 local-hardening bundle over the completed R1/H1/H2 base.
+
+High-level groups:
+
+- admin/web surfaces:
+  - `/admin/ops`
+  - `/admin/kyc`
+  - `/admin/disputes`
+  - `/vendor/application`
+  - `/vendor/balance`
+  - buyer/vendor order timeline and dispute detail/response surfaces
+- catalog/search:
+  - `ProductMedia` migration and local inline media metadata/UI proof
+  - local Meilisearch adapter
+  - full-replace `catalog:reindex-search`
+  - admin-triggered catalog search reindex
+  - local `catalog:search-worker`
+- disputes/evidence/SLA:
+  - `DisputeMessage` and `DisputeEvidence` metadata migration
+  - local raw dispute evidence storage/read migration
+  - buyer/vendor evidence upload in dispute create/respond flows
+  - admin evidence read/preview
+  - vendor-response SLA command
+  - local dispute SLA worker
+  - admin-triggered dispute SLA dry-run/execute
+- worker/ops:
+  - Compose workers profile includes notification, order maintenance, dispute SLA and catalog search workers
+  - `/admin/ops/workers` and `/admin/ops/queues` include the new worker/backlog snapshots
+
+Important latest verification:
+
+- `npm run build --workspace apps/api`
+- `npm run lint --workspace apps/web`
+- `npm run build --workspace apps/web`
+- `npm run runtime:phase03 --workspace apps/api`
+- `npm run runtime:phase06 --workspace apps/api`
+- `npm run runtime:h3-catalog-search --workspace apps/api`
+- `npm run runtime:h3-catalog-search-ops --workspace apps/api`
+- `npm run runtime:h3-catalog-search-worker --workspace apps/api`
+- `npm run runtime:h3-dispute-sla --workspace apps/api`
+- `npm run runtime:h3-dispute-sla-worker --workspace apps/api`
+- `npm run runtime:h3-dispute-sla-ops --workspace apps/api`
+- `npm run runtime:h2-admin-worker-queue-ops --workspace apps/api`
+- `docker compose --profile workers config`
+- `npx prisma migrate status`
+
+Local DB status at checkpoint: `npx prisma migrate status` reports 21 migrations and schema up to date.
+
+Process hygiene: Vendora web dev servers on ports `3004`, `3005` and `3006` must be kept stopped. A non-Vendora `next dev` on port `4000` from `/home/nickf/Documents/ai_limits/app` may exist and should not be touched.
 
 ## Input References In Use
 

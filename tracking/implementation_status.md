@@ -225,8 +225,119 @@ Important:
   - admin-only `GET /admin/ops/workers` exposes heartbeat instances and marks old `RUNNING` heartbeat rows as `STALE`;
   - runtime command `npm run runtime:h2-worker-heartbeat --workspace apps/api` passed with `H2-WORKER-HEARTBEAT-01` through `H2-WORKER-HEARTBEAT-05` on `2026-05-09`;
   - post-change `npm run runtime:h1-email-worker-daemon --workspace apps/api`, `npm run runtime:h2-order-maintenance-worker --workspace apps/api`, `npm run runtime:h2-admin-worker-queue-ops --workspace apps/api` and `npm run runtime:h2-admin-ops --workspace apps/api` regressions passed on the current DB.
+- H3 minimal admin ops UI local build proof now exists:
+  - web route `/admin/ops` exposes the existing backend ops summary, queues, worker heartbeat snapshots, notification outbox retry, order-maintenance dry-run/execute, money failure visibility, reconciliation runs and return-inspection completion actions;
+  - login screen now has an explicit `Platform Admin` sign-in mode that uses `/admin/auth/login` and redirects platform admins to `/admin/ops`;
+  - `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-09`;
+  - this closes only the first minimal admin/backend ops UI surface; polished KYC review UI, dispute queue/detail/resolve UI, deeper RMA workflow UI and live provider evidence remain open.
+- H3 minimal admin KYC review UI local build proof now exists:
+  - web route `/admin/kyc` exposes the existing admin-only KYC queue/detail, business profile, document metadata, raw protected document read/preview, approve and reject actions;
+  - admin navigation now includes `Ops` and `KYC`;
+  - `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`;
+  - local API smoke for `admin@vendora.com / password123` against `/admin/kyc/applications` passed on `2026-05-10`;
+  - this closes only the first minimal KYC review UI surface; deeper compliance workflow, hosted private-bucket evidence and polished dispute admin UI remain open.
+- H3 minimal admin dispute UI local build proof now exists:
+  - web route `/admin/disputes` exposes the existing admin-only dispute queue/detail, buyer claim, vendor response, order/fund context and resolution actions for vendor-favor release, buyer-favor full refund and buyer-favor partial refund;
+  - admin navigation now includes `Ops`, `KYC` and `Disputes`;
+  - `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`;
+  - local API smoke for `admin@vendora.com / password123` against `/admin/disputes` passed on `2026-05-10` with 70 disputes and 8 `PLATFORM_REVIEW` disputes on the current DB;
+  - this closes only the first minimal dispute review/resolve UI surface; dispute evidence/messages UI, richer SLA/escalation workflows and live provider money evidence remain open.
+- H3 minimal vendor balance/history UI local build proof now exists:
+  - web route `/vendor/balance` exposes existing vendor-scoped balance totals for held, frozen, releasable, paid-out and returned-to-buyer funds plus recent vendor ledger entries;
+  - seller sidebar now includes `Баланс`;
+  - `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`;
+  - local API smoke for `vendor@vendora.com / password123` against `/vendor/balance` passed on `2026-05-10` with 25 ledger entries on the current DB;
+  - web smoke for `/vendor/balance` passed with Next dev in webpack mode on port `3004` because Turbopack dev cache repeatedly hit an internal corrupted-cache panic while production build remained clean.
+- H3 admin money remediation UI controls local build proof now exists:
+  - `/admin/ops` money failures panel now exposes failed refund/payout provider executions with review notes plus `Mark reviewed` and `Retry` actions wired to the existing admin-only remediation endpoints;
+  - `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`;
+  - local read-only API smoke for `admin@vendora.com / password123` against `/admin/ops/money/failures` passed on `2026-05-10` with 16 failed provider executions on the current DB;
+  - web smoke for `/admin/ops` passed with Next dev in webpack mode on port `3005`.
+- H3 order fulfillment/timeline UI local build proof now exists:
+  - vendor orders UI now captures optional carrier and tracking number when moving `CONFIRMED -> SHIPPED`;
+  - buyer orders UI now exposes the H2 `SHIPPED -> DELIVERED -> COMPLETED` flow instead of only the legacy shipped-to-completed shortcut;
+  - buyer and vendor order lists can expand existing detail endpoints to show the audit-backed lifecycle timeline;
+  - `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`;
+  - local read-only API smoke for buyer and vendor order detail/timeline endpoints passed on `2026-05-10` with buyer timeline length 3 and vendor timeline length 3 on sampled current DB orders.
+- H3 buyer/vendor dispute visibility and response UI local build proof now exists:
+  - buyer order detail expansion now shows dispute reason, status, vendor response and resolution metadata when a dispute exists;
+  - vendor order detail expansion now shows dispute reason/status and lets the vendor respond through existing `/vendor/disputes/:disputeId/respond` while the dispute is in `VENDOR_RESPONSE`;
+  - `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`;
+  - local read-only API smoke for buyer/vendor sampled order details confirmed existing dispute objects, vendor responses and timelines are returned on the current DB.
+- H3 vendor KYC application UI local build proof now exists:
+  - web route `/vendor/application` lets a vendor owner create a vendor workspace when the session has no vendor context, edit the business profile, upload a KYC document through the protected `presign -> upload` path and submit the application for review;
+  - seller sidebar now includes `KYC`;
+  - login and registration verification now route `VENDOR_OWNER` users without a vendor workspace to `/vendor/application` instead of buyer catalog;
+  - `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`;
+  - local read-only API smoke for `vendor@vendora.com / password123` against `/vendor/application` passed on `2026-05-10`.
+- H3 dispute messages/evidence metadata local proof now exists:
+  - migration `20260510110000_h3_dispute_messages_evidence` added durable `DisputeMessage` and `DisputeEvidence` metadata tables;
+  - buyer dispute creation now writes the buyer claim as a message and can attach evidence metadata;
+  - vendor dispute response now writes the vendor response as a message and can attach evidence metadata;
+  - admin dispute detail, buyer order detail and vendor order detail expose dispute messages and evidence metadata in the web UI;
+  - maintained `runtime:phase06` now includes `R1-DISP-04` and passed on `2026-05-10`, verifying buyer/vendor evidence metadata and messages are persisted and visible to admin detail;
+  - `npx prisma migrate deploy`, `npm run build --workspace apps/api`, `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`.
+- H3 basic listing media local proof now exists:
+  - migration `20260510113000_h3_product_media_metadata` added `ProductMedia` rows for DB-backed local inline image media;
+  - `/vendor/listings` and legacy `/products` create paths accept up to 5 image media items with content type/size/base64 validation;
+  - vendor listing/product responses and public catalog responses include ordered media metadata and local inline `assetUrl`;
+  - vendor product creation UI accepts an image file, sends it through the existing JSON API path and vendor/buyer catalog UI renders product thumbnails;
+  - maintained `runtime:phase03` now includes `R1-CAT-08` and passed on `2026-05-10`, verifying media storage and vendor/public catalog exposure;
+  - local smoke for legacy `/products` with media passed on `2026-05-10`, confirming the web vendor product creation path returns media on create and `/products/mine`;
+  - `npx prisma migrate deploy`, `npm run build --workspace apps/api`, `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`.
+- H3 local Meilisearch indexing proof now exists:
+  - catalog search adapter now can create/configure a local Meilisearch index, reindex buyer-visible catalog documents and optionally use Meilisearch ids before DB source-of-truth filtering;
+  - command `npm run catalog:reindex-search --workspace apps/api` now exists;
+  - public catalog search remains safe if Meilisearch is unavailable because DB-backed search remains the fallback path;
+  - runtime command `npm run runtime:h3-catalog-search --workspace apps/api` passed with `H3-CATALOG-SEARCH-01` and `H3-CATALOG-SEARCH-02` on `2026-05-10`;
+  - runtime proof verified reindex writes buyer-visible documents and excludes draft plus blocked-vendor products from the Meilisearch index;
+  - `npm run build --workspace apps/api` and `npm run build --workspace apps/web` passed after the adapter changes.
+- H3 admin-triggerable catalog search reindex local proof now exists:
+  - catalog reindex now replaces the full Meilisearch document set instead of only appending/upserting, preventing stale draft/blocked/deleted search hits from surviving reindex;
+  - admin-only `POST /admin/ops/catalog-search/reindex` exposes dry-run source document count and execute mode for Meilisearch reindex;
+  - execute mode writes `ADMIN_CATALOG_SEARCH_REINDEX` audit evidence with actor, source count and reindex result;
+  - admin ops UI now exposes catalog search dry-run/reindex controls and shows the latest run result;
+  - runtime command `npm run runtime:h3-catalog-search-ops --workspace apps/api` passed with `H3-CATALOG-SEARCH-OPS-01` through `H3-CATALOG-SEARCH-OPS-05` on `2026-05-10`;
+  - runtime proof verified dry-run does not mutate Meilisearch, execute mode removes a stale non-source document and leaves only buyer-visible source documents;
+  - `npm run build --workspace apps/api`, `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`.
+- H3 catalog search worker local proof now exists:
+  - command `npm run catalog:search-worker --workspace apps/api` runs full-replace catalog search reindex through a worker loop with `--once`, interval and stop-after-runs controls;
+  - worker writes durable `WorkerHeartbeat` state under `workerName=catalog_search` and `CATALOG_SEARCH_REINDEX_WORKER_RUN` audit evidence;
+  - Docker Compose `workers` profile now includes `catalog-search-worker` with local Meilisearch wiring, and `docker compose --profile workers config` passed on `2026-05-10`;
+  - admin ops worker snapshot now includes catalog search worker heartbeat and source document count visibility;
+  - runtime command `npm run runtime:h3-catalog-search-worker --workspace apps/api` passed with `H3-CATALOG-SEARCH-WORKER-01` through `H3-CATALOG-SEARCH-WORKER-04` on `2026-05-10`;
+  - existing `npm run runtime:h2-admin-worker-queue-ops --workspace apps/api` regression still passed after adding catalog search worker visibility;
+  - `npm run build --workspace apps/api`, `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`.
+- H3 raw dispute evidence storage local proof now exists:
+  - migration `20260510120000_h3_dispute_evidence_storage` added storage key/provider/size/checksum/confirmation metadata to `DisputeEvidence`;
+  - buyer dispute creation and vendor dispute response can now store raw evidence bytes through the same local private storage driver used for KYC protected documents;
+  - admin-only `GET /admin/disputes/evidence/:evidenceId/content` returns integrity-checked evidence content and writes `DISPUTE_EVIDENCE_OBJECT_READ` audit evidence;
+  - admin dispute UI can read stored evidence content and preview image evidence;
+  - buyer/vendor dispute UI now sends selected evidence file content through the existing dispute create/respond flows;
+  - maintained `runtime:phase06` now includes `R1-DISP-05` and passed on `2026-05-10`, verifying private raw evidence storage and admin read integrity;
+  - `npx prisma migrate deploy`, `npm run build --workspace apps/api`, `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`.
+- H3 vendor-response SLA escalation local proof now exists:
+  - command `npm run disputes:auto-escalate-vendor-response --workspace apps/api` moves overdue `VENDOR_RESPONSE` disputes to `PLATFORM_REVIEW` while leaving fresh vendor-response disputes unchanged;
+  - escalation writes a system `DisputeMessage`, `DISPUTE_VENDOR_RESPONSE_SLA_ESCALATED` audit evidence and buyer/vendor/admin notification outbox rows;
+  - runtime command `npm run runtime:h3-dispute-sla --workspace apps/api` passed with `H3-DISPUTE-SLA-01` through `H3-DISPUTE-SLA-04` on `2026-05-10`;
+  - runtime proof verified replay safety for already escalated disputes;
+  - `npm run build --workspace apps/api`, `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`.
+- H3 dispute SLA worker local proof now exists:
+  - command `npm run disputes:sla-worker --workspace apps/api` runs the same vendor-response SLA escalation through a worker loop with `--once`, interval and idle-stop controls;
+  - worker writes durable `WorkerHeartbeat` state under `workerName=dispute_sla`;
+  - Docker Compose `workers` profile now includes `dispute-sla-worker`, and `docker compose --profile workers config` passed on `2026-05-10`;
+  - admin ops worker/queue snapshots now include dispute SLA backlog and worker heartbeat visibility;
+  - runtime command `npm run runtime:h3-dispute-sla-worker --workspace apps/api` passed with `H3-DISPUTE-SLA-WORKER-01` through `H3-DISPUTE-SLA-WORKER-04` on `2026-05-10`;
+  - existing `npm run runtime:h2-admin-worker-queue-ops --workspace apps/api` regression still passed after the worker/queue snapshot extension;
+  - `npm run build --workspace apps/api`, `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`.
+- H3 admin-triggerable dispute SLA ops local proof now exists:
+  - admin-only `POST /admin/ops/dispute-sla/run` exposes dry-run backlog review and execute mode for vendor-response SLA escalation;
+  - execute mode writes `ADMIN_DISPUTE_SLA_RUN` audit evidence with actor, threshold, backlog-before and command result;
+  - admin ops UI now exposes dispute SLA dry-run/execute controls and shows the latest run result;
+  - runtime command `npm run runtime:h3-dispute-sla-ops --workspace apps/api` passed with `H3-DISPUTE-SLA-OPS-01` through `H3-DISPUTE-SLA-OPS-05` on `2026-05-10`;
+  - `npm run build --workspace apps/api`, `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`.
 - Maintained `runtime:phase05` now restores its seed-vendor product stock before checkout so repeated local replays remain compatible with H1 stock reservation/decrement behavior on a non-clean DB.
-- This closes local delivery-state, shipment metadata, individual timeout commands, combined order-maintenance operator-command evidence, admin-triggerable order-maintenance dry-run/execute evidence, local order-maintenance worker entrypoint, local Compose worker-profile wiring, local durable worker heartbeat, worker/queue DB snapshot visibility, pre-shipment cancellation stock return, no-auto-restock-after-shipment policy, API-level order timeline, first admin/backend ops surface, backend money ops visibility and backend RMA inspection queue/completion only; hosted/deployed scheduler/cron evidence, hosted/deployed worker liveness proof, productized delivery evidence, live provider money evidence, dedicated timeline table depth if needed, deeper RMA UI/workflow automation and polished admin UI remain open.
+- This closes local delivery-state, shipment metadata, individual timeout commands, combined order-maintenance operator-command evidence, admin-triggerable order-maintenance dry-run/execute evidence, admin-triggerable dispute SLA dry-run/execute evidence, admin-triggerable catalog search reindex evidence, local order-maintenance worker entrypoint, local dispute SLA worker entrypoint, local catalog search worker entrypoint, local Compose worker-profile wiring, local durable worker heartbeat, worker/queue DB snapshot visibility, pre-shipment cancellation stock return, no-auto-restock-after-shipment policy, API-level order timeline, first order fulfillment/timeline UI surface, first buyer/vendor dispute visibility/response UI surface, first vendor KYC application UI surface, first dispute messages/evidence metadata surface, first local raw dispute evidence storage/read surface, first basic listing media UI/API surface, local Meilisearch indexing/reindex proof, local vendor-response SLA escalation command, first admin/backend ops surface, first minimal admin ops UI surface, first minimal KYC review UI surface, first minimal dispute review/resolve UI surface, first minimal vendor balance/history UI surface, first admin money remediation UI controls, backend money ops visibility and backend RMA inspection queue/completion only; hosted/deployed scheduler/cron evidence, hosted/deployed worker liveness proof, productized delivery evidence, live provider money evidence, hosted private-bucket evidence for KYC/dispute evidence, hosted catalog media object storage/CDN/image processing, hosted search operations/reindex scheduling, richer dispute escalation/review workflows and polished admin UI remain open.
 - Second `H1` hardening target added protected KYC raw-document storage evidence:
   - migration `20260508113000_h1_kyc_private_storage`;
   - vendor upload path stores raw KYC document bytes through the local private storage driver;
@@ -695,8 +806,8 @@ Interpretation:
 These gaps still matter, but they no longer block downstream runtime work:
 
 - catalog is still backed by the imported `Product` table rather than a renamed first-class `Listing` model
-- no Meilisearch indexing integration was wired for this pass; public search is database-backed
-- listing media is still target/deferred metadata; no media upload/validation/CDN path exists
+- local Meilisearch indexing/reindex adapter, admin-triggerable full-replace reindex proof and local reindex worker entrypoint now exists with DB fallback; hosted search operations and deployed reindex scheduling remain open
+- listing media now has local DB-backed inline image metadata, validation and web UI proof; hosted object storage/CDN/image processing remains open
 - no plan/quota enforcement exists for listing creation
 - no moderation lifecycle exists
 - no richer buyer-facing search UX or facets were implemented
@@ -863,9 +974,9 @@ These gaps still matter, but they no longer block the current `R1` unblock pass:
 - local `dev_mock` partial refund evidence now exists, but no live provider partial-refund API/dashboard evidence yet
 - local `dev_mock` refund provider execution evidence now exists for buyer-favor disputes, but no live provider refund API/dashboard evidence yet
 - local `dev_mock` payout provider execution and controlled failure evidence now exists for releasable funds, and local/internal reconciliation run evidence now exists, but no live provider payout API/dashboard/reconciliation evidence yet
-- no vendor response SLA or auto-escalation job yet
-- no dispute messages/evidence file tables or UI yet
-- no admin dispute UI; proof is API-first
+- local vendor response SLA auto-escalation command, worker entrypoint and admin-triggerable dry-run/execute evidence now exists, but no hosted/deployed worker liveness proof or polished escalation review workflow yet
+- dispute messages, evidence metadata and local private raw evidence storage now have local DB/API/UI proof, but hosted private-bucket evidence and richer evidence review workflows remain open
+- first minimal admin dispute UI now exists, but polished review workflows and SLA/escalation remain open
 - no immutable ledger hardening beyond append-only application behavior
 - durable notification outbox records now exist for dispute open/respond/resolve; local `dev_log` worker shell is wired, but no real external provider delivery is wired yet
 - no richer balance reporting, statements or export path
