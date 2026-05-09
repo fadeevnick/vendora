@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vendora — Admin Dispute Resolution</title>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; background:#0f172a; font-family:'Inter',system-ui,sans-serif; color:#e2e8f0; min-height:100vh; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .fade-up { animation: fadeUp .25s cubic-bezier(.22,.84,.4,1) both; }
+  @keyframes pop { 0%{transform:scale(.85);opacity:0} 70%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
+  .pop { animation: pop .3s cubic-bezier(.22,.84,.4,1) both; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .spinner { animation: spin .7s linear infinite; }
+
+  .panel { background:#1e293b; border:1px solid #334155; border-radius:12px; }
+  .btn-primary { background:var(--brand,#3b82f6); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition: filter .15s, box-shadow .15s, transform .1s; }
+  .btn-primary:hover { filter:brightness(1.1); box-shadow:0 4px 14px color-mix(in srgb,var(--brand,#3b82f6) 35%,transparent); }
+  .btn-primary:active { transform:scale(.97); }
+  .btn-primary:disabled { opacity:.55; cursor:not-allowed; filter:none; box-shadow:none; }
+  .btn-ghost { background:transparent; color:#cbd5e1; border:1.5px solid #334155; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:500; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition: border-color .15s, color .15s, background .15s; }
+  .btn-ghost:hover { border-color:#64748b; color:#fff; background:#1e293b; }
+
+  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; font-size:13px; font-weight:500; color:#94a3b8; cursor:pointer; transition:background .15s, color .15s; }
+  .nav-item:hover { background:#1e293b; color:#fff; }
+  .nav-item.active { background:color-mix(in srgb,var(--brand,#3b82f6) 18%,#0f172a); color:#fff; font-weight:600; }
+
+  .row { transition: background .12s; cursor:pointer; }
+  .row:hover { background:#1e293b; }
+  .row.selected { background:color-mix(in srgb,var(--brand,#3b82f6) 12%,#1e293b); }
+
+  .status-pill { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.02em; }
+
+  .field { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px 12px; font-size:13px; color:#e2e8f0; width:100%; font-family:inherit; transition: border-color .15s, box-shadow .15s; }
+  .field:focus { outline:none; border-color:var(--brand,#3b82f6); box-shadow:0 0 0 3px color-mix(in srgb,var(--brand,#3b82f6) 25%,transparent); }
+
+  .ev-card { border:1px solid #334155; border-radius:10px; background:#0f172a; padding:12px; }
+  .ev-buyer { border-left:3px solid #f59e0b; }
+  .ev-vendor { border-left:3px solid #6366f1; }
+
+  ::-webkit-scrollbar { width:7px; height:7px; }
+  ::-webkit-scrollbar-track { background:#0f172a; }
+  ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+
+  @media(max-width:1100px){ .sidebar { display:none; } .queue { display:none; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "primaryColor": "#3b82f6",
+  "decisionMode": "binary",
+  "showSlaWarning": true,
+  "showAuditTrail": true,
+  "showEscalation": false
+}/*EDITMODE-END*/;
+
+const fmt = n => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
+
+const QUEUE = [
+  { id:'DSP-2026-0510-08', order:'VND-8821-A', amount: 540000, buyer:'ООО «Север-Снаб»', vendor:'ООО «ТехПро Солюшнс»', reason:'NOT_DELIVERED', sla:'4ч', overdue:false, severity:'high', evidence:8, selected:true, opened:'10.05 14:22' },
+  { id:'DSP-2026-0510-07', order:'VND-8772-C', amount: 128400, buyer:'ИП Соколов',         vendor:'ООО «Северный лес»', reason:'WRONG_ITEM',     sla:'12ч', overdue:false, severity:'medium', evidence:5, opened:'10.05 11:08' },
+  { id:'DSP-2026-0509-04', order:'VND-8654-B', amount: 882000, buyer:'ООО «Стройком»',      vendor:'ООО «Импорт-Сервис»', reason:'DAMAGED',        sla:'просрочен 6ч', overdue:true, severity:'high', evidence:12, opened:'09.05 09:44' },
+  { id:'DSP-2026-0509-03', order:'VND-8521-A', amount:  64200, buyer:'ИП Михайлов',         vendor:'ООО «Финкомпонент»',  reason:'NOT_AS_DESCRIBED', sla:'2д 3ч', overdue:false, severity:'low', evidence:3, opened:'09.05 16:11' },
+  { id:'DSP-2026-0508-12', order:'VND-8430-A', amount: 215000, buyer:'ООО «Мотор-Плюс»',    vendor:'ООО «ТехПро Солюшнс»', reason:'PARTIAL_DELIVERY', sla:'1д 8ч', overdue:false, severity:'medium', evidence:6, opened:'08.05 12:30' },
+];
+
+const REASON_META = {
+  NOT_DELIVERED:    { label:'Не доставлено',     bg:'#2a0a0a', color:'#ef4444' },
+  WRONG_ITEM:       { label:'Не тот товар',      bg:'#2a1f06', color:'#f59e0b' },
+  DAMAGED:          { label:'Повреждение',       bg:'#2a0a0a', color:'#ef4444' },
+  NOT_AS_DESCRIBED: { label:'Не как в описании', bg:'#0c2540', color:'#60a5fa' },
+  PARTIAL_DELIVERY: { label:'Частичная доставка',bg:'#2a1f06', color:'#f59e0b' },
+};
+
+const SEV_META = {
+  high:   { label:'High',   color:'#ef4444', bg:'#2a0a0a' },
+  medium: { label:'Medium', color:'#f59e0b', bg:'#2a1f06' },
+  low:    { label:'Low',    color:'#60a5fa', bg:'#0c2540' },
+};
+
+const TIMELINE = [
+  { time:'08.05 09:14', actor:'Buyer',  side:'buyer',  action:'Заказ оплачен',                 detail:'Сумма 540 000 ₽ зарезервирована (HELD)' },
+  { time:'08.05 11:42', actor:'Vendor', side:'vendor', action:'Заказ принят в работу',         detail:'Указан дедлайн отгрузки: 09.05' },
+  { time:'09.05 17:28', actor:'Vendor', side:'vendor', action:'Отгрузка отмечена',             detail:'Трек-номер EE 882 154 791 RU · СДЭК' },
+  { time:'10.05 14:22', actor:'Buyer',  side:'buyer',  action:'Открыт спор: NOT_DELIVERED',     detail:'Причина: товар не пришёл, трек неактивен на момент открытия спора' },
+  { time:'10.05 14:22', actor:'System', side:'system', action:'Сумма заморожена в FROZEN_DISPUTE', detail:'540 000 ₽ переведены из HELD в FROZEN' },
+  { time:'10.05 18:55', actor:'Vendor', side:'vendor', action:'Загружены доказательства',       detail:'Фото отгрузки, накладная, скрин трека (4 файла)' },
+  { time:'11.05 10:14', actor:'Buyer',  side:'buyer',  action:'Загружены доказательства',       detail:'Скрин почтового отделения «получено не было», переписка с курьером (4 файла)' },
+];
+
+const EVIDENCE_BUYER = [
+  { kind:'screenshot', label:'Скрин трека «не получено»', uploaded:'11.05 10:08' },
+  { kind:'message',    label:'Переписка с СДЭК',         uploaded:'11.05 10:09' },
+  { kind:'photo',      label:'Фото пустого ПВЗ',          uploaded:'11.05 10:11' },
+  { kind:'document',   label:'Заявление в СДЭК',          uploaded:'11.05 10:14' },
+];
+
+const EVIDENCE_VENDOR = [
+  { kind:'photo',    label:'Фото упакованного заказа',    uploaded:'10.05 18:42' },
+  { kind:'document', label:'Транспортная накладная',      uploaded:'10.05 18:44' },
+  { kind:'screenshot', label:'Скрин трека «вручено»',      uploaded:'10.05 18:50' },
+  { kind:'message',  label:'Подтверждение от курьера',     uploaded:'10.05 18:55' },
+];
+
+const Ic = {
+  check:({size=14}) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3L11.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  x:({size=14}) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
+  warn:() => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L1 12h12L7 1z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 5v3M7 10v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  info:() => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/><path d="M7 6.5V10M7 5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  search:() => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.4"/><path d="M9.5 9.5l3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  arrow:() => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M7 3l4 3.5L7 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  doc:() => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 1.5h5l3 3V12a.5.5 0 01-.5.5h-7a.5.5 0 01-.5-.5V2a.5.5 0 01.5-.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M8 1.5v3h3" stroke="currentColor" strokeWidth="1.3"/></svg>,
+  msg:() => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 2.5h11v8H4l-2.5 2.5v-10.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>,
+  photo:() => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2.5" width="11" height="9" rx="1" stroke="currentColor" strokeWidth="1.3"/><circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.3"/></svg>,
+};
+
+function evIcon(kind) {
+  if (kind === 'photo') return <Ic.photo/>;
+  if (kind === 'message') return <Ic.msg/>;
+  if (kind === 'screenshot') return <Ic.photo/>;
+  return <Ic.doc/>;
+}
+
+function ReasonPill({ reason }) { const r = REASON_META[reason]; return <span className="status-pill" style={{background:r.bg, color:r.color}}>{r.label}</span>; }
+function SevPill({ severity }) { const s = SEV_META[severity]; return <span className="status-pill" style={{background:s.bg, color:s.color}}>● {s.label}</span>; }
+
+function Header() {
+  return (
+    <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-30">
+      <div className="px-5 h-12 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{background:'var(--brand,#3b82f6)'}}>
+            <span className="text-white font-bold text-xs">V</span>
+          </div>
+          <div className="hidden sm:block">
+            <p className="text-xs font-bold text-white">Vendora · Admin Console</p>
+            <p className="text-[10px] text-slate-500 -mt-0.5">Operations · Dispute Resolution</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg w-72">
+            <Ic.search/>
+            <input className="bg-transparent border-0 text-xs text-white outline-none flex-1 placeholder:text-slate-500" placeholder="Найти спор, заказ, vendor…"/>
+            <kbd className="text-[10px] text-slate-500 border border-slate-700 rounded px-1.5 py-0.5">⌘K</kbd>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{background:'#0d9488'}}>М</div>
+            <div className="hidden sm:block">
+              <p className="text-xs font-semibold text-white">Михаил Б.</p>
+              <p className="text-[10px] text-slate-500">Operations · L2</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Sidebar() {
+  return (
+    <aside className="sidebar w-52 flex-shrink-0 bg-slate-900 border-r border-slate-800 min-h-[calc(100vh-3rem)] py-4 px-2.5">
+      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 mb-2">Operations</p>
+      <nav className="space-y-0.5">
+        <div className="nav-item active"><span>⚖️</span><span>Споры</span><span className="ml-auto text-[10px] text-amber-400">{QUEUE.length}</span></div>
+        <div className="nav-item"><span>⏸️</span><span>Эскалация L3</span><span className="ml-auto text-[10px] text-slate-400">2</span></div>
+        <div className="nav-item"><span>📜</span><span>История решений</span></div>
+        <div className="nav-item"><span>📊</span><span>Метрики SLA</span></div>
+      </nav>
+      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 mb-2 mt-5">Прочее</p>
+      <nav className="space-y-0.5">
+        <div className="nav-item"><span>📋</span><span>KYC</span><span className="ml-auto text-[10px] text-slate-400">6</span></div>
+        <div className="nav-item"><span>💸</span><span>Payouts review</span></div>
+      </nav>
+    </aside>
+  );
+}
+
+function Queue({ selectedId, onSelect }) {
+  return (
+    <div className="queue w-[340px] flex-shrink-0 panel flex flex-col">
+      <div className="px-4 py-3 border-b border-slate-700">
+        <p className="text-sm font-semibold text-white">Очередь споров</p>
+        <p className="text-[11px] text-slate-400 mt-0.5">{QUEUE.length} активных · {QUEUE.filter(q=>q.overdue).length} просрочка SLA</p>
+      </div>
+      <div className="px-4 py-2 border-b border-slate-700 flex items-center gap-2 text-[11px]">
+        <span className="text-slate-400">Сортировка:</span>
+        <button className="text-white font-medium border-b border-blue-400">SLA</button>
+        <button className="text-slate-400 hover:text-white">Сумма</button>
+        <button className="text-slate-400 hover:text-white">Severity</button>
+      </div>
+      <div className="overflow-y-auto flex-1">
+        {QUEUE.map(q => (
+          <div key={q.id} className={`row border-b border-slate-800 px-4 py-3 ${q.id === selectedId ? 'selected' : ''}`} onClick={() => onSelect(q.id)}>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <p className="text-[11px] font-mono text-slate-500">{q.id}</p>
+              <SevPill severity={q.severity}/>
+            </div>
+            <div className="flex items-center gap-2 mb-1">
+              <ReasonPill reason={q.reason}/>
+              <p className="text-sm font-bold text-white tabular-nums">{fmt(q.amount)}</p>
+            </div>
+            <p className="text-[11px] text-slate-300 truncate"><span className="text-slate-500">B:</span> {q.buyer}</p>
+            <p className="text-[11px] text-slate-300 truncate"><span className="text-slate-500">V:</span> {q.vendor}</p>
+            <div className="mt-2 flex items-center justify-between text-[11px]">
+              <span className={q.overdue ? 'text-red-400 font-semibold' : 'text-slate-400'}>SLA: {q.sla}</span>
+              <span className="text-slate-500">{q.evidence} файлов</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PartyCard({ side, name, contact, items }) {
+  const cfg = side === 'buyer'
+    ? { color:'#f59e0b', bg:'#2a1f06', label:'Buyer' }
+    : { color:'#6366f1', bg:'#1e1b4b', label:'Vendor' };
+  return (
+    <div className={`ev-card ${side === 'buyer' ? 'ev-buyer' : 'ev-vendor'}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{color: cfg.color}}>{cfg.label}</p>
+          <p className="text-sm font-bold text-white mt-0.5">{name}</p>
+          <p className="text-[11px] text-slate-400">{contact}</p>
+        </div>
+        <span className="status-pill" style={{background:cfg.bg, color:cfg.color}}>{items.length} файлов</span>
+      </div>
+      <div className="mt-3 space-y-1.5">
+        {items.map((e,i) => (
+          <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-slate-800/40 hover:bg-slate-800 cursor-pointer text-xs transition">
+            <span className="text-slate-400">{evIcon(e.kind)}</span>
+            <span className="text-slate-200 flex-1 truncate">{e.label}</span>
+            <span className="text-[10px] text-slate-500">{e.uploaded}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Detail({ t, setTweak }) {
+  const item = QUEUE[0];
+  const [decision, setDecision] = useState(null); // VENDOR_WINS | FULL_REFUND | PARTIAL_REFUND
+  const [reason, setReason] = useState('');
+  const [partialPct, setPartialPct] = useState(50);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(null);
+
+  function submit() {
+    setSubmitting(true);
+    setTimeout(() => {
+      setSubmitting(false);
+      setSubmitted({ decision, reason, partialPct, at: new Date().toLocaleString('ru-RU') });
+    }, 1100);
+  }
+
+  const decisionLabels = {
+    VENDOR_WINS:    { title:'Решить в пользу vendor', verb:'решён в пользу vendor', tone:'#16a34a', short:'Vendor wins · средства уходят в releasable, buyer без возврата.', btn:'Vendor wins' },
+    FULL_REFUND:    { title:'Полный возврат buyer',  verb:'возврат buyer',          tone:'#ef4444', short:'Full refund · вся сумма возвращается buyer, vendor без выплаты.', btn:'Full refund' },
+    PARTIAL_REFUND: { title:'Частичный возврат',     verb:'частичный возврат',      tone:'#f59e0b', short:'Partial refund · доля buyer/vendor по решению admin.',          btn:'Partial refund' },
+  };
+
+  const partialAmount = Math.round(item.amount * partialPct / 100);
+  const isBinary = t.decisionMode === 'binary';
+
+  return (
+    <div className="flex-1 flex flex-col min-w-0">
+      <div className="px-5 sm:px-6 py-4 border-b border-slate-800 bg-slate-900/60 flex items-start gap-4 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[11px] font-mono text-slate-500">{item.id}</p>
+            <ReasonPill reason={item.reason}/>
+            <SevPill severity={item.severity}/>
+            <span className="status-pill" style={{background:'#0c2540', color:'#60a5fa'}}>FROZEN_DISPUTE</span>
+          </div>
+          <h2 className="text-xl font-bold text-white mt-1">Заказ {item.order} · {fmt(item.amount)}</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Открыт {item.opened} · Buyer: {item.buyer} · Vendor: {item.vendor}</p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <p className="text-[11px] text-slate-400">SLA: <b className="text-white">{item.sla}</b></p>
+          <button className="btn-ghost text-xs" onClick={() => setTweak('showEscalation', !t.showEscalation)}>Эскалация L3 →</button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+        {t.showSlaWarning && (
+          <div className="panel p-3.5 fade-up flex items-start gap-3" style={{borderColor:'#854d0e', background:'linear-gradient(180deg,#2a1f06 0%,#1e293b 80%)'}}>
+            <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center flex-shrink-0"><Ic.warn/></div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-200">SLA: 4 часа до нарушения</p>
+              <p className="text-xs text-amber-300/70 mt-0.5 leading-relaxed">По R1 launch SLA — 48ч на принятие решения. Buyer и vendor получают auto-уведомления каждые 24ч до решения.</p>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2 space-y-5">
+            <section className="panel p-5 fade-up">
+              <p className="text-sm font-semibold text-white mb-3">Доказательства сторон</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <PartyCard side="buyer"  name={item.buyer}  contact="contact@sever-snab.ru"   items={EVIDENCE_BUYER}/>
+                <PartyCard side="vendor" name={item.vendor} contact="logistics@techpro.ru"     items={EVIDENCE_VENDOR}/>
+              </div>
+            </section>
+
+            <section className="panel p-5 fade-up">
+              <p className="text-sm font-semibold text-white mb-3">Хронология заказа</p>
+              <div className="relative pl-6">
+                <div className="absolute left-[9px] top-1 bottom-1 w-px bg-slate-700"></div>
+                <ul className="space-y-3.5">
+                  {TIMELINE.map((e,i) => {
+                    const dot = e.side==='buyer'?'#f59e0b':e.side==='vendor'?'#6366f1':'#64748b';
+                    return (
+                      <li key={i} className="relative">
+                        <span className="absolute -left-[19px] top-1 w-3 h-3 rounded-full border-2 border-slate-900" style={{background:dot}}></span>
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-white">{e.action}</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">{e.detail}</p>
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-mono whitespace-nowrap">{e.time} · {e.actor}</div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </section>
+
+            {t.showAuditTrail && (
+              <section className="panel p-5 fade-up">
+                <p className="text-sm font-semibold text-white mb-3">Audit trail (admin actions)</p>
+                <ul className="space-y-2 text-xs">
+                  <li className="flex items-start gap-3"><span className="text-slate-500 font-mono w-24 flex-shrink-0">10.05 14:30</span><span className="text-slate-400 w-32 flex-shrink-0 truncate">System</span><div className="flex-1"><p className="text-slate-200">Спор открыт</p><p className="text-slate-500 text-[11px] mt-0.5">Создан в очереди Operations L1 · SLA 48ч</p></div></li>
+                  <li className="flex items-start gap-3"><span className="text-slate-500 font-mono w-24 flex-shrink-0">11.05 09:12</span><span className="text-slate-400 w-32 flex-shrink-0 truncate">Михаил Б. (L2)</span><div className="flex-1"><p className="text-slate-200">Открыт для рассмотрения</p><p className="text-slate-500 text-[11px] mt-0.5">Эскалирован с L1 — стоимость заказа выше порога</p></div></li>
+                  <li className="flex items-start gap-3"><span className="text-slate-500 font-mono w-24 flex-shrink-0">11.05 10:42</span><span className="text-slate-400 w-32 flex-shrink-0 truncate">Михаил Б. (L2)</span><div className="flex-1"><p className="text-slate-200">Запрошены доп. фото от vendor</p><p className="text-slate-500 text-[11px] mt-0.5">Через RFI — vendor ответил через 3ч 12мин</p></div></li>
+                </ul>
+              </section>
+            )}
+          </div>
+
+          <aside className="space-y-5">
+            <section className="panel p-5 fade-up">
+              <p className="text-sm font-semibold text-white mb-3">Финансовая сводка</p>
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between items-baseline"><span className="text-[11px] text-slate-400">Сумма заказа</span><span className="text-base font-bold text-white tabular-nums">{fmt(item.amount)}</span></div>
+                <div className="flex justify-between items-baseline"><span className="text-[11px] text-slate-400">Платформенная комиссия (5%)</span><span className="text-sm text-slate-300 tabular-nums">{fmt(Math.round(item.amount*0.05))}</span></div>
+                <div className="flex justify-between items-baseline"><span className="text-[11px] text-slate-400">Текущий статус средств</span><span className="status-pill" style={{background:'#2a0a0a', color:'#ef4444'}}>FROZEN</span></div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-slate-700 text-[11px] text-slate-400 leading-relaxed">
+                Сумма заморожена в FROZEN_DISPUTE с момента открытия спора. Решение admin запускает ledger transition.
+              </div>
+            </section>
+
+            <section className="panel p-5 fade-up" style={{borderColor:'#854d0e', background:'linear-gradient(180deg,#2a1f06 0%,#1e293b 60%)'}}>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400">Launch (R1) cut</p>
+              <p className="text-sm font-bold text-white mt-1">Только Vendor wins / Full refund</p>
+              <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">На launch admin принимает <b>бинарное</b> решение. Partial refund будет в R2 — он требует доп. ledger entries и сложнее верифицируется.</p>
+              <button className="btn-ghost text-xs w-full justify-center mt-3" onClick={() => setTweak('decisionMode', t.decisionMode === 'binary' ? 'r2' : 'binary')}>
+                Переключить: {t.decisionMode === 'binary' ? 'на R2 (с partial)' : 'обратно на R1 (binary)'}
+              </button>
+            </section>
+
+            <section className="panel p-5 fade-up">
+              <p className="text-sm font-semibold text-white mb-3">Каналы связи</p>
+              <div className="space-y-1.5 text-xs">
+                <button className="btn-ghost w-full justify-start"><Ic.msg/> Написать buyer</button>
+                <button className="btn-ghost w-full justify-start"><Ic.msg/> Написать vendor</button>
+                <button className="btn-ghost w-full justify-start"><Ic.doc/> Запросить доп. документы</button>
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        {/* Decision panel */}
+        <section className="panel p-5 fade-up sticky bottom-5" style={{background:'#0f172a', borderColor:'#475569', boxShadow:'0 -8px 24px rgba(0,0,0,.45)'}}>
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+            <div>
+              <p className="text-sm font-semibold text-white">Решение Operations L2</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Ledger пересчёт произойдёт мгновенно после подтверждения · payout vendor в следующем цикле</p>
+            </div>
+            <span className="status-pill" style={{background:'#0c2540', color:'#60a5fa'}}>{isBinary ? 'R1 launch · binary' : 'R2 mode · с partial'}</span>
+          </div>
+
+          {!submitted ? (
+            <>
+              <div className={`grid gap-2.5 mb-4 ${isBinary ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                <DecisionTile active={decision==='VENDOR_WINS'}    onClick={() => setDecision('VENDOR_WINS')}    color="#16a34a" icon={<Ic.check size={14}/>} title="Vendor wins" desc="Доказательства vendor убедительны. Сумма уходит в releasable." sub={`+ ${fmt(item.amount - Math.round(item.amount*0.05))}`}/>
+                <DecisionTile active={decision==='FULL_REFUND'}    onClick={() => setDecision('FULL_REFUND')}    color="#ef4444" icon={<Ic.x size={14}/>}     title="Full refund" desc="Доказательства buyer убедительны. Полный возврат." sub={`− ${fmt(item.amount)} buyer`}/>
+                {!isBinary && (
+                  <DecisionTile active={decision==='PARTIAL_REFUND'} onClick={() => setDecision('PARTIAL_REFUND')} color="#f59e0b" icon={<Ic.warn/>}            title="Partial refund" desc="Сторонам — по доле, выбираемой ниже." sub="R2 · split %" badge="R2"/>
+                )}
+              </div>
+
+              {decision && (
+                <div className="space-y-3 fade-up">
+                  {decision === 'PARTIAL_REFUND' && !isBinary && (
+                    <div className="panel p-3.5" style={{background:'#172033'}}>
+                      <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-2">Доля возврата buyer</p>
+                      <div className="flex items-center gap-3">
+                        <input type="range" min="10" max="90" step="5" value={partialPct} onChange={e => setPartialPct(parseInt(e.target.value))} className="flex-1" style={{accentColor:'var(--brand)'}}/>
+                        <span className="text-base font-bold text-white tabular-nums w-12 text-right">{partialPct}%</span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                        <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                          <p className="text-amber-300 text-[10px] uppercase tracking-wider font-semibold">Buyer получит</p>
+                          <p className="text-base font-bold text-white tabular-nums">{fmt(partialAmount)}</p>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30">
+                          <p className="text-indigo-300 text-[10px] uppercase tracking-wider font-semibold">Vendor releasable</p>
+                          <p className="text-base font-bold text-white tabular-nums">{fmt(item.amount - partialAmount - Math.round(item.amount*0.05))}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Обоснование решения</label>
+                    <textarea className="field mt-1.5" rows="3" placeholder="Например: «Скрин трека vendor показывает вручение 10.05 в 16:42, подтверждение получателя — buyer SDP 4 не предоставил доказательств отказа от получения. Решение в пользу vendor.»" value={reason} onChange={e => setReason(e.target.value)}/>
+                    <p className="text-[11px] text-slate-500 mt-1">Текст увидит проигравшая сторона. Укажите конкретные доказательства.</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button className="btn-primary" onClick={submit} disabled={submitting || reason.trim().length < 12} style={decision==='VENDOR_WINS'?{background:'#16a34a'}:decision==='FULL_REFUND'?{background:'#dc2626'}:{background:'#f59e0b'}}>
+                      {submitting ? <><svg className="spinner w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 16 16"/>Применяем…</> : <>Подтвердить · {decisionLabels[decision].btn} <Ic.arrow/></>}
+                    </button>
+                    <button className="btn-ghost" onClick={() => { setDecision(null); setReason(''); }}>Отменить</button>
+                    {t.showEscalation && <button className="btn-ghost ml-auto">Эскалировать на L3 →</button>}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="p-4 rounded-xl flex items-start gap-3 pop" style={{background:`color-mix(in srgb,${decisionLabels[submitted.decision].tone} 15%,#0f172a)`, border:`1px solid ${decisionLabels[submitted.decision].tone}`}}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0" style={{background:decisionLabels[submitted.decision].tone}}>
+                {submitted.decision === 'VENDOR_WINS' ? <Ic.check/> : submitted.decision === 'FULL_REFUND' ? <Ic.x/> : <Ic.warn/>}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-white">Спор {decisionLabels[submitted.decision].verb}</p>
+                <p className="text-xs text-slate-300 mt-0.5">{submitted.at} · Михаил Б. (Operations L2) · case {item.id}</p>
+                <p className="text-xs text-slate-300 mt-2 p-2 rounded bg-black/20 leading-relaxed">«{submitted.reason}»</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="p-2 rounded bg-black/20"><span className="text-slate-400">Buyer:</span> <b className="text-white">{submitted.decision === 'VENDOR_WINS' ? '0 ₽' : submitted.decision === 'FULL_REFUND' ? fmt(item.amount) : fmt(Math.round(item.amount*submitted.partialPct/100))}</b></div>
+                  <div className="p-2 rounded bg-black/20"><span className="text-slate-400">Vendor releasable:</span> <b className="text-white">{submitted.decision === 'VENDOR_WINS' ? fmt(item.amount - Math.round(item.amount*0.05)) : submitted.decision === 'FULL_REFUND' ? '0 ₽' : fmt(item.amount - Math.round(item.amount*submitted.partialPct/100) - Math.round(item.amount*0.05))}</b></div>
+                </div>
+                <div className="mt-3 flex gap-2 flex-wrap">
+                  <button className="btn-primary text-xs" style={{padding:'7px 12px'}}>К следующему спору <Ic.arrow/></button>
+                  <button className="btn-ghost text-xs" style={{padding:'7px 12px'}} onClick={() => { setSubmitted(null); setDecision(null); setReason(''); }}>Открыть полный audit</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function DecisionTile({ active, onClick, color, icon, title, desc, sub, badge }) {
+  return (
+    <button className="text-left p-3.5 rounded-xl border transition relative" style={{
+      borderColor: active ? color : '#334155',
+      background: active ? `color-mix(in srgb,${color} 12%,#0f172a)` : '#0f172a',
+      cursor:'pointer', fontFamily:'inherit',
+    }} onClick={onClick}>
+      {badge && <span className="absolute top-2 right-2 status-pill" style={{background:'#0c2540',color:'#60a5fa',padding:'2px 6px',fontSize:9}}>{badge}</span>}
+      <div className="flex items-center gap-2 mb-1">
+        <span className="w-6 h-6 rounded-full flex items-center justify-center text-white" style={{background: color}}>{icon}</span>
+        <p className="text-sm font-semibold text-white">{title}</p>
+      </div>
+      <p className="text-[11px] text-slate-400 leading-snug">{desc}</p>
+      {sub && <p className="text-[11px] mt-1.5 font-semibold tabular-nums" style={{color}}>{sub}</p>}
+    </button>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [selectedId, setSelectedId] = useState('DSP-2026-0510-08');
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', t.primaryColor);
+  }, [t.primaryColor]);
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header/>
+      <div className="flex-1 flex">
+        <Sidebar/>
+        <div className="flex-1 flex p-4 gap-4 min-w-0">
+          <Queue selectedId={selectedId} onSelect={setSelectedId}/>
+          <Detail t={t} setTweak={setTweak}/>
+        </div>
+      </div>
+
+      <TweaksPanel>
+        <TweakSection label="Тема"/>
+        <TweakColor label="Акцент" value={t.primaryColor} onChange={v => setTweak('primaryColor', v)}/>
+
+        <TweakSection label="Режим решения"/>
+        <TweakSelect label="Доступные решения" value={t.decisionMode} options={[
+          {value:'binary', label:'R1 launch · только binary (Vendor wins / Full refund)'},
+          {value:'r2',     label:'R2 · с partial refund'},
+        ]} onChange={v => setTweak('decisionMode', v)}/>
+
+        <TweakSection label="Слои UI"/>
+        <TweakToggle label="SLA-предупреждение" value={t.showSlaWarning} onChange={v => setTweak('showSlaWarning', v)}/>
+        <TweakToggle label="Audit trail (admin)" value={t.showAuditTrail} onChange={v => setTweak('showAuditTrail', v)}/>
+        <TweakToggle label="Кнопка эскалации L3" value={t.showEscalation} onChange={v => setTweak('showEscalation', v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

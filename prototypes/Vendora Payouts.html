@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vendora — Payouts</title>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; background:#f1f4f9; font-family:'Inter',system-ui,sans-serif; color:#1e293b; min-height:100vh; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .fade-up { animation: fadeUp .28s cubic-bezier(.22,.84,.4,1) both; }
+  @keyframes pop { 0%{transform:scale(.85);opacity:0} 70%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
+  .pop { animation: pop .35s cubic-bezier(.22,.84,.4,1) both; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .spinner { animation: spin .7s linear infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+  .pulse-dot { animation: pulse 1.8s ease infinite; }
+
+  .card { background:#fff; border-radius:14px; border:1px solid #e4e9f2; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+
+  .btn-primary {
+    background:var(--brand,#2455e8); color:#fff; border:none; border-radius:9px;
+    padding:9px 18px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px;
+    transition: filter .15s, box-shadow .15s, transform .1s;
+  }
+  .btn-primary:hover { filter:brightness(.88); box-shadow:0 4px 14px color-mix(in srgb,var(--brand,#2455e8) 30%,transparent); }
+  .btn-primary:active { transform:scale(.97); }
+  .btn-primary:disabled { opacity:.55; cursor:not-allowed; filter:none; box-shadow:none; }
+
+  .btn-ghost {
+    background:transparent; color:#475569; border:1.5px solid #e2e8f0;
+    border-radius:9px; padding:8px 16px; font-size:13px; font-weight:500; font-family:inherit;
+    cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .btn-ghost:hover { border-color:#94a3b8; color:#1e293b; background:#f8fafc; }
+
+  .nav-item {
+    display:flex; align-items:center; gap:10px; padding:9px 12px;
+    border-radius:9px; font-size:13px; font-weight:500; color:#64748b;
+    cursor:pointer; transition:background .15s, color .15s;
+  }
+  .nav-item:hover { background:#f1f4f9; color:#1e293b; }
+  .nav-item.active { background:color-mix(in srgb,var(--brand,#2455e8) 10%,white); color:var(--brand,#2455e8); font-weight:600; }
+
+  .tab-btn {
+    padding:10px 4px; font-size:13px; font-weight:500; color:#64748b;
+    cursor:pointer; border-bottom:2px solid transparent; transition:color .15s, border-color .15s;
+    background:transparent; border-top:none; border-left:none; border-right:none;
+  }
+  .tab-btn:hover { color:#1e293b; }
+  .tab-btn.active { color:var(--brand,#2455e8); border-bottom-color:var(--brand,#2455e8); font-weight:600; }
+
+  .status-pill {
+    display:inline-flex; align-items:center; gap:5px; padding:3px 10px;
+    border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.02em;
+  }
+
+  .balance-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; background:#eef2f7; }
+  .balance-bar > span { display:block; }
+
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+
+  @media(max-width:900px){ .sidebar { display:none; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "primaryColor": "#2455e8",
+  "providerStatus": "verified",
+  "showFailure": false,
+  "balanceReleasable": 740000,
+  "balanceHeld": 1280000,
+  "balanceFrozen": 95400,
+  "showRefundScenario": false
+}/*EDITMODE-END*/;
+
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+const PROVIDER_META = {
+  not_started:    { label:'Не подключён', color:'#64748b', bg:'#f1f5f9', desc:'Чтобы получать выплаты, подключите банковский счёт через Stripe Connect.' },
+  pending:        { label:'Проверка',     color:'#0891b2', bg:'#ecfeff', desc:'Stripe проверяет данные. Обычно это занимает 1–2 рабочих дня.' },
+  action_required:{ label:'Требуется действие', color:'#f59e0b', bg:'#fffbeb', desc:'Provider запросил уточнение: подтверждение бенефициара. Без этого выплаты не запускаются.' },
+  verified:       { label:'Подтверждён',  color:'#16a34a', bg:'#f0fdf4', desc:'Все требования provider пройдены, выплаты идут автоматически.' },
+};
+
+const PAYOUTS = [
+  { id:'PO-2026-0501-A', date:'01.05.2026', amount: 612400, status:'paid',     ref:'po_1ABcD2eF...', method:'Расч. счёт •• 8821', orders: 14 },
+  { id:'PO-2026-0424-A', date:'24.04.2026', amount: 488200, status:'paid',     ref:'po_1ABcD9zX...', method:'Расч. счёт •• 8821', orders: 9 },
+  { id:'PO-2026-0417-A', date:'17.04.2026', amount: 540000, status:'pending',  ref:'po_1ABcF3wQ...', method:'Расч. счёт •• 8821', orders: 11 },
+  { id:'PO-2026-0410-A', date:'10.04.2026', amount: 320000, status:'failed',   ref:'po_1ABc77pp...', method:'Расч. счёт •• 8821', orders: 7,
+    failure:{ reason:'Provider отклонил перевод: реквизиты получателя не совпадают.', adminNote:'Запросили обновлённые реквизиты у вендора 11.04. Ожидаем ответ.' } },
+  { id:'PO-2026-0403-A', date:'03.04.2026', amount: 215600, status:'review',   ref:'po_1ABcL5kR...', method:'Расч. счёт •• 8821', orders: 5,
+    failure:{ reason:'Сумма выше типичной — отправлено на ручную проверку.', adminNote:'Финансовый отдел подтвердит до 06.04.' } },
+];
+
+const PAYOUT_STATUS = {
+  paid:    { label:'Выплачено',  color:'#16a34a', bg:'#f0fdf4' },
+  pending: { label:'В обработке', color:'#0891b2', bg:'#ecfeff' },
+  failed:  { label:'Ошибка',     color:'#ef4444', bg:'#fef2f2' },
+  review:  { label:'На проверке', color:'#f59e0b', bg:'#fffbeb' },
+};
+
+const RECONCILE = [
+  { date:'02.05.2026', kind:'order_created',   label:'Заказ #VND-8821-A создан',           amount: +1075000, bucket:'held',       note:'Покупатель оплатил, средства зарезервированы' },
+  { date:'05.05.2026', kind:'order_delivered', label:'Заказ #VND-8821-A доставлен',         amount: 0,        bucket:'held',       note:'Запущен T+2 holdback period' },
+  { date:'07.05.2026', kind:'release',         label:'Holdback завершён',                  amount: 0,        bucket:'releasable', note:'Средства переведены в releasable' },
+  { date:'07.05.2026', kind:'commission',      label:'Платформенная комиссия 5%',           amount: -53750,   bucket:'releasable', note:'Удержано платформой' },
+  { date:'08.05.2026', kind:'payout',          label:'Payout PO-2026-0508-A',              amount: -1021250, bucket:'releasable', note:'Запущен на счёт •• 8821' },
+];
+
+const RECONCILE_REFUND = [
+  { date:'06.05.2026', kind:'dispute_open', label:'Открыт спор по #VND-8821-A',     amount: -540000,  bucket:'frozen',  note:'Сумма заморожена в FROZEN_DISPUTE' },
+  { date:'09.05.2026', kind:'partial_refund', label:'Частичный возврат покупателю', amount: -240000,  bucket:'returned', note:'Решение admin: частичный возврат' },
+  { date:'09.05.2026', kind:'release',     label:'Остаток возвращён в releasable', amount: +300000,  bucket:'releasable', note:'Доля вендора после спора' },
+];
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const fmt = n => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
+const fmtSign = n => (n > 0 ? '+ ' : n < 0 ? '− ' : '') + fmt(Math.abs(n));
+
+// ─── ICONS ────────────────────────────────────────────────────────────────────
+const Ic = {
+  check: ({size=14}) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3L11.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  arrow: () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M7 3l4 3.5L7 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  external: () => <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 2H2v8h8V7M7 2h3v3M5 7l5-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  download: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8m0 0L4 6m3 3l3-3M2 11v1h10v-1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  warning: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L1 12h12L7 1z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 5v3M7 10v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  info: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/><path d="M7 6.5V10M7 5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  bank: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l6 3v1H1V4l6-3z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M2 6v5m3-5v5m4-5v5m3-5v5M1 12h12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  shield: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.3L1.7 3.5v3.7c0 3 2 5.4 5.3 6.2 3.3-.8 5.3-3.2 5.3-6.2V3.5L7 1.3z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  refresh: () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 1.5v3H8M2 11.5v-3h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M11 5.5A4.5 4.5 0 002 6.5M2 8.5a4.5 4.5 0 009 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+};
+
+// ─── HEADER + SIDEBAR ─────────────────────────────────────────────────────────
+function Header() {
+  return (
+    <header className="bg-white border-b border-slate-100 sticky top-0 z-30">
+      <div className="px-5 sm:px-7 h-14 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{background:'var(--brand,#2455e8)'}}>
+            <span className="text-white font-bold text-sm">V</span>
+          </div>
+          <div className="hidden sm:block">
+            <p className="text-sm font-bold text-slate-800">Vendora</p>
+            <p className="text-[11px] text-slate-400 -mt-0.5">Seller Portal · Выплаты</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500">
+            <span className="text-green-500"><Ic.shield/></span>
+            <span>Защищённое соединение</span>
+          </span>
+          <div className="flex items-center gap-2 pl-3 border-l border-slate-100">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{background:'#6366f1'}}>T</div>
+            <div className="hidden sm:block">
+              <p className="text-xs font-semibold text-slate-800">TechPro Solutions</p>
+              <p className="text-[10px] text-slate-400">vendor #1284</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Sidebar({ tab, setTab }) {
+  const items = [
+    { id:'overview',  label:'Обзор баланса', icon:'💼' },
+    { id:'method',    label:'Способ выплат', icon:'🏦' },
+    { id:'history',   label:'История выплат',icon:'📜' },
+    { id:'review',    label:'На проверке',   icon:'⚠️' },
+    { id:'reconcile', label:'Сверка',        icon:'📈' },
+  ];
+  return (
+    <aside className="sidebar w-56 flex-shrink-0 bg-white border-r border-slate-100 min-h-[calc(100vh-3.5rem)] py-5 px-3">
+      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2">Выплаты</p>
+      <nav className="space-y-0.5">
+        {items.map(i => (
+          <div key={i.id} className={`nav-item ${tab===i.id?'active':''}`} onClick={() => setTab(i.id)}>
+            <span className="text-base leading-none">{i.icon}</span>
+            <span>{i.label}</span>
+          </div>
+        ))}
+      </nav>
+      <div className="mt-6 mx-2 p-3 rounded-xl border border-amber-200 bg-amber-50/60">
+        <p className="text-[11px] font-semibold text-amber-800 flex items-center gap-1.5"><Ic.info/> Launch-safe</p>
+        <p className="text-[11px] text-amber-700 leading-snug mt-1">Запуск выплат идёт через hosted Stripe Connect / admin-assisted путь. Расчёт <i>releasable</i> — в продукте Vendora.</p>
+      </div>
+    </aside>
+  );
+}
+
+// ─── PILLS ────────────────────────────────────────────────────────────────────
+function ProviderPill({ status }) {
+  const s = PROVIDER_META[status];
+  return <span className="status-pill" style={{background:s.bg, color:s.color}}><span className="w-1.5 h-1.5 rounded-full" style={{background:s.color}}></span>{s.label}</span>;
+}
+function PayoutPill({ status }) {
+  const s = PAYOUT_STATUS[status];
+  return <span className="status-pill" style={{background:s.bg, color:s.color}}>{s.label}</span>;
+}
+function BucketPill({ bucket }) {
+  const meta = {
+    held:       { label:'Held',        bg:'#eef2ff', color:'#6366f1' },
+    frozen:     { label:'Frozen',      bg:'#fef2f2', color:'#ef4444' },
+    releasable: { label:'Releasable',  bg:'#f0fdf4', color:'#16a34a' },
+    returned:   { label:'Returned',    bg:'#f1f5f9', color:'#475569' },
+    paid:       { label:'Paid out',    bg:'#ecfeff', color:'#0891b2' },
+  }[bucket];
+  return <span className="status-pill" style={{background:meta.bg, color:meta.color}}>{meta.label}</span>;
+}
+
+// ─── OVERVIEW ─────────────────────────────────────────────────────────────────
+function Overview({ t, setTab }) {
+  const held = t.balanceHeld;
+  const frozen = t.balanceFrozen;
+  const releasable = t.balanceReleasable;
+  const paid = 4_180_400;
+  const failedReview = t.showFailure ? PAYOUTS.find(p=>p.status==='failed').amount + PAYOUTS.find(p=>p.status==='review').amount : PAYOUTS.find(p=>p.status==='review').amount;
+  const total = held + frozen + releasable;
+  const pct = (n) => total > 0 ? (n/total*100) : 0;
+  const provStatus = t.providerStatus;
+  const provReady = provStatus === 'verified';
+
+  return (
+    <div className="space-y-5">
+      {/* Top hero */}
+      <div className="card p-5 sm:p-6 fade-up">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Доступно к выплате</p>
+            <p className="text-3xl sm:text-4xl font-bold text-slate-900 mt-1">{fmt(releasable)}</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Следующий payout <b className="text-slate-800">~{fmt(releasable)}</b> · ожидаемая дата <b className="text-slate-800">{provReady ? '08.05.2026' : '—'}</b>
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">Provider:</span>
+              <ProviderPill status={provStatus}/>
+            </div>
+            <button className="btn-primary" disabled={!provReady} onClick={() => setTab('method')}>
+              {provReady ? <>Запросить досрочную выплату <Ic.arrow/></> : 'Завершите подключение payout method →'}
+            </button>
+          </div>
+        </div>
+
+        {/* Balance breakdown bar */}
+        <div className="mt-6">
+          <div className="balance-bar">
+            <span style={{width:`${pct(held)}%`,    background:'#6366f1'}}></span>
+            <span style={{width:`${pct(frozen)}%`,  background:'#ef4444'}}></span>
+            <span style={{width:`${pct(releasable)}%`, background:'#16a34a'}}></span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+            <BalanceTile color="#6366f1" label="Held" sub="Завершаются заказы / holdback period" amount={held}/>
+            <BalanceTile color="#ef4444" label="Frozen in disputes" sub="Заморожено по спорам" amount={frozen}/>
+            <BalanceTile color="#16a34a" label="Releasable" sub="Доступно к следующему payout" amount={releasable}/>
+            <BalanceTile color="#0891b2" label="Paid out, всего" sub="За весь период работы" amount={paid}/>
+          </div>
+        </div>
+
+        {!provReady && (
+          <div className="mt-5 p-3.5 rounded-xl border flex items-start gap-3" style={{background:'#fffbeb', borderColor:'#fde68a'}}>
+            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0"><Ic.warning/></div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-900">Provider {PROVIDER_META[provStatus].label.toLowerCase()}</p>
+              <p className="text-xs text-amber-800 mt-0.5">{PROVIDER_META[provStatus].desc}</p>
+              <button className="btn-primary mt-3" style={{padding:'7px 14px', fontSize:12}} onClick={() => setTab('method')}>Перейти к настройке выплат <Ic.arrow/></button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Failure / review row */}
+      {(t.showFailure || PAYOUTS.some(p => p.status === 'review')) && (
+        <div className="card p-5 fade-up border-red-200" style={{borderColor:'#fecaca'}}>
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0"><Ic.warning/></div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-slate-800">Требует внимания</p>
+              <p className="text-xs text-slate-500 mt-0.5">{t.showFailure ? '1 неудачная выплата · 1 на ручной проверке.' : '1 выплата на ручной проверке у admin.'}</p>
+              <button className="btn-ghost mt-3 text-xs" style={{padding:'6px 12px'}} onClick={() => setTab('review')}>Открыть проверку →</button>
+            </div>
+            <p className="text-base font-bold text-red-600">{fmt(failedReview)}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Recent payouts */}
+      <div className="card fade-up">
+        <div className="px-5 py-3.5 flex items-center justify-between border-b border-slate-100">
+          <p className="text-sm font-semibold text-slate-800">Последние выплаты</p>
+          <button className="text-xs text-slate-500 hover:text-slate-800 font-medium flex items-center gap-1" onClick={() => setTab('history')}>Вся история <Ic.arrow/></button>
+        </div>
+        <div className="divide-y divide-slate-50">
+          {PAYOUTS.slice(0,4).map(p => (
+            <div key={p.id} className="px-5 py-3 flex items-center gap-4">
+              <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 flex-shrink-0"><Ic.bank/></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">{p.id}</p>
+                <p className="text-[11px] text-slate-400">{p.date} · {p.orders} заказов · {p.method}</p>
+              </div>
+              <p className="text-sm font-semibold text-slate-800">{fmt(p.amount)}</p>
+              <PayoutPill status={p.status}/>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BalanceTile({ color, label, sub, amount }) {
+  return (
+    <div>
+      <p className="text-xs flex items-center gap-1.5 text-slate-500"><span className="w-2 h-2 rounded-full" style={{background:color}}></span>{label}</p>
+      <p className="text-lg font-bold text-slate-900 mt-1">{fmt(amount)}</p>
+      <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{sub}</p>
+    </div>
+  );
+}
+
+// ─── PAYOUT METHOD ────────────────────────────────────────────────────────────
+function Method({ t, setTweak }) {
+  const status = t.providerStatus;
+  const meta = PROVIDER_META[status];
+  const steps = [
+    { id:'company',  label:'Информация о компании', done:status !== 'not_started' },
+    { id:'account',  label:'Банковский счёт',        done:['pending','action_required','verified'].includes(status) },
+    { id:'identity', label:'Подтверждение бенефициара', done:status === 'verified' },
+    { id:'tax',      label:'Налоговые формы',         done:status === 'verified' },
+  ];
+  const [redirecting, setRedirecting] = useState(false);
+
+  function go() {
+    setRedirecting(true);
+    setTimeout(() => setRedirecting(false), 1400);
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Способ выплат</h2>
+        <p className="text-sm text-slate-500 mt-1">Подключение через Stripe Connect (hosted onboarding). Mandatory KYC у provider — выплаты не запускаются до verified.</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="card p-5 fade-up">
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Provider</p>
+              <ProviderPill status={status}/>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold" style={{background:'linear-gradient(135deg,#635bff,#7e72ff)'}}>S</div>
+              <div className="flex-1">
+                <p className="text-base font-bold text-slate-900">Stripe Connect (Custom)</p>
+                <p className="text-xs text-slate-500 mt-0.5">{meta.desc}</p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-2.5">
+              {steps.map((s, i) => (
+                <div key={s.id} className="flex items-center gap-3 p-3 rounded-xl border" style={{borderColor: s.done ? '#bbf7d0' : '#e2e8f0', background: s.done ? '#f0fdf4' : '#fff'}}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{background: s.done ? '#16a34a' : '#e2e8f0', color: s.done ? '#fff' : '#64748b'}}>
+                    {s.done ? <Ic.check size={12}/> : i+1}
+                  </div>
+                  <p className="text-sm font-medium text-slate-800 flex-1">{s.label}</p>
+                  {!s.done && i === steps.findIndex(x => !x.done) && (
+                    <span className="status-pill" style={{background:'#fffbeb', color:'#d97706'}}>Следующий шаг</span>
+                  )}
+                  {s.done && <Ic.check size={14} />}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 flex items-center gap-2 flex-wrap">
+              {status !== 'verified' && (
+                <button className="btn-primary" onClick={go} disabled={redirecting}>
+                  {redirecting ? <><svg className="spinner w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 16 16"/>Открываем Stripe…</> : <>Продолжить onboarding в Stripe <Ic.external/></>}
+                </button>
+              )}
+              {status === 'verified' && (
+                <button className="btn-ghost" onClick={go}>Изменить реквизиты в Stripe <Ic.external/></button>
+              )}
+              <button className="btn-ghost" onClick={() => setTweak('providerStatus', status === 'verified' ? 'action_required' : 'verified')}>
+                <Ic.refresh/> Перепроверить статус
+              </button>
+            </div>
+          </div>
+
+          {/* Bank account masked */}
+          <div className="card p-5 fade-up">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Банковский счёт</p>
+              {status === 'verified' && <span className="status-pill" style={{background:'#f0fdf4', color:'#16a34a'}}>● основной</span>}
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center"><Ic.bank/></div>
+              <div className="flex-1">
+                <p className="font-semibold text-slate-800">АО «Банк Открытие» · •••• 8821</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">RUB · ООО «ТехПро Солюшнс» · ИНН 7712345678</p>
+              </div>
+              {status !== 'verified' && (
+                <span className="status-pill" style={{background:'#fffbeb', color:'#d97706'}}>не подтверждён</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <aside className="space-y-4">
+          <div className="card p-5 fade-up">
+            <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Launch (R1)</p>
+            <p className="text-sm font-semibold text-slate-800">Hosted / admin-assisted payout</p>
+            <p className="text-xs text-slate-500 leading-relaxed mt-1.5">Если onboarding в Stripe не проходит — финансовый отдел Vendora запустит выплату вручную. <i>Releasable</i> в продукте останется корректным.</p>
+            <button className="btn-ghost w-full justify-center mt-3 text-xs">Связаться с финансовым отделом</button>
+          </div>
+          <div className="card p-5 fade-up">
+            <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Target (R2)</p>
+            <p className="text-sm font-semibold text-slate-800">Self-serve в продукте</p>
+            <p className="text-xs text-slate-500 leading-relaxed mt-1.5">В R2 — onboarding и смена реквизитов без редиректа в Stripe, с отображением статуса в реальном времени.</p>
+          </div>
+          <div className="card p-5 fade-up text-xs leading-relaxed text-slate-600">
+            <p className="flex items-center gap-1.5 font-semibold text-slate-700"><Ic.shield/> KYC у provider</p>
+            <p className="mt-2">Реквизиты и документы передаются напрямую в Stripe и не хранятся на стороне Vendora.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────────────────────
+function History({ t }) {
+  const [filter, setFilter] = useState('all');
+  const list = useMemo(() => {
+    let items = PAYOUTS;
+    if (!t.showFailure) items = items.filter(p => p.status !== 'failed');
+    if (filter === 'all') return items;
+    return items.filter(p => p.status === filter);
+  }, [filter, t.showFailure]);
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">История выплат</h2>
+        <p className="text-sm text-slate-500 mt-1">Все payouts с ID provider, методом и количеством заказов в выплате.</p>
+      </div>
+
+      <div className="card fade-up">
+        <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2 flex-wrap">
+          {[['all','Все'], ['paid','Выплачено'], ['pending','В обработке'], ['review','На проверке'], ['failed','Ошибка']].map(([k,l]) => (
+            <button key={k} className={`tab-btn ${filter===k?'active':''}`} onClick={() => setFilter(k)}>{l}</button>
+          ))}
+          <div className="ml-auto flex items-center gap-2">
+            <button className="btn-ghost" style={{padding:'6px 12px', fontSize:12}}><Ic.download/> Экспорт CSV</button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-slate-400 bg-slate-50/40">
+              <tr>
+                <th className="text-left px-5 py-2.5 font-semibold">Payout</th>
+                <th className="text-left px-5 py-2.5 font-semibold">Дата</th>
+                <th className="text-left px-5 py-2.5 font-semibold">Заказов</th>
+                <th className="text-left px-5 py-2.5 font-semibold">Метод</th>
+                <th className="text-left px-5 py-2.5 font-semibold">Provider ref</th>
+                <th className="text-right px-5 py-2.5 font-semibold">Сумма</th>
+                <th className="text-left px-5 py-2.5 font-semibold">Статус</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {list.map(p => (
+                <React.Fragment key={p.id}>
+                  <tr className="hover:bg-slate-50/50">
+                    <td className="px-5 py-3.5 font-semibold text-slate-800">{p.id}</td>
+                    <td className="px-5 py-3.5 text-slate-600">{p.date}</td>
+                    <td className="px-5 py-3.5 text-slate-600">{p.orders}</td>
+                    <td className="px-5 py-3.5 text-slate-600">{p.method}</td>
+                    <td className="px-5 py-3.5 text-slate-500 font-mono text-xs">{p.ref}</td>
+                    <td className="px-5 py-3.5 text-right font-semibold text-slate-800">{fmt(p.amount)}</td>
+                    <td className="px-5 py-3.5"><PayoutPill status={p.status}/></td>
+                  </tr>
+                  {(p.status === 'failed' || p.status === 'review') && p.failure && (
+                    <tr style={{background: p.status === 'failed' ? 'rgba(254,242,242,.5)' : 'rgba(255,251,235,.5)'}}>
+                      <td colSpan={7} className="px-5 py-2.5 text-xs">
+                        <div className="flex items-start gap-2">
+                          <span style={{color: p.status === 'failed' ? '#b91c1c' : '#b45309'}}><Ic.warning/></span>
+                          <div className="flex-1">
+                            <p style={{color: p.status === 'failed' ? '#b91c1c' : '#b45309'}}><b>Причина:</b> {p.failure.reason}</p>
+                            <p className="text-slate-600 mt-0.5"><b>Заметка admin:</b> {p.failure.adminNote}</p>
+                          </div>
+                          {p.status === 'failed' && (
+                            <button className="btn-ghost" style={{padding:'5px 10px', fontSize:11}}><Ic.refresh/> Запросить retry</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+              {list.length === 0 && (
+                <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-400 text-sm">Нет записей в этом фильтре</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── REVIEW ───────────────────────────────────────────────────────────────────
+function Review({ t }) {
+  const failed = t.showFailure ? PAYOUTS.find(p => p.status === 'failed') : null;
+  const review = PAYOUTS.find(p => p.status === 'review');
+  const items = [failed, review].filter(Boolean);
+
+  if (items.length === 0) {
+    return (
+      <div className="card p-12 text-center fade-up">
+        <div className="text-3xl mb-3">✓</div>
+        <p className="text-base font-semibold text-slate-800">Нет выплат на проверке</p>
+        <p className="text-sm text-slate-500 mt-1">Все payouts прошли provider и admin без замечаний.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">На проверке</h2>
+        <p className="text-sm text-slate-500 mt-1">Выплаты с замечаниями provider или на ручной проверке финансового отдела.</p>
+      </div>
+
+      {items.map((p, idx) => (
+        <div key={p.id} className="card p-5 fade-up" style={{animationDelay: `${idx*0.05}s`}}>
+          <div className="flex items-start justify-between flex-wrap gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-slate-900">{p.id}</p>
+                <PayoutPill status={p.status}/>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">{p.date} · {p.orders} заказов · {p.method}</p>
+            </div>
+            <p className="text-xl font-bold text-slate-900">{fmt(p.amount)}</p>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl border" style={{background: p.status === 'failed' ? '#fef2f2' : '#fffbeb', borderColor: p.status === 'failed' ? '#fecaca' : '#fde68a'}}>
+              <p className="text-[11px] font-semibold uppercase tracking-wider" style={{color: p.status === 'failed' ? '#b91c1c' : '#b45309'}}>Причина</p>
+              <p className="text-sm text-slate-700 mt-1.5 leading-relaxed">{p.failure.reason}</p>
+            </div>
+            <div className="p-3 rounded-xl border bg-slate-50/60 border-slate-100">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Заметка admin</p>
+              <p className="text-sm text-slate-700 mt-1.5 leading-relaxed">{p.failure.adminNote}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {p.status === 'failed' && <button className="btn-primary"><Ic.refresh/> Запросить retry</button>}
+            <button className="btn-ghost">Связаться с поддержкой</button>
+            <button className="btn-ghost"><Ic.download/> Документ от provider</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── RECONCILE ────────────────────────────────────────────────────────────────
+function Reconcile({ t }) {
+  const events = t.showRefundScenario ? [...RECONCILE.slice(0,3), ...RECONCILE_REFUND, ...RECONCILE.slice(3)] : RECONCILE;
+  const totals = useMemo(() => {
+    let held=0, frozen=0, releasable=0, returned=0, paid=0;
+    events.forEach(e => {
+      if (e.bucket === 'held') held += e.amount;
+      if (e.bucket === 'frozen') frozen += Math.abs(e.amount);
+      if (e.bucket === 'releasable') releasable += e.amount;
+      if (e.bucket === 'returned') returned += Math.abs(e.amount);
+    });
+    paid = -events.filter(e => e.kind === 'payout').reduce((s,e) => s + e.amount, 0);
+    return { held, frozen, releasable, returned, paid };
+  }, [events]);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Сверка по заказу</h2>
+          <p className="text-sm text-slate-500 mt-1">Как деньги по заказу <b className="text-slate-800">#VND-8821-A</b> прошли путь от order funds → releasable → payout.</p>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <SmallTile label="Initial held" value={fmt(totals.held)} color="#6366f1"/>
+        <SmallTile label="Frozen" value={fmt(totals.frozen)} color="#ef4444"/>
+        <SmallTile label="Returned to buyer" value={fmt(totals.returned)} color="#475569"/>
+        <SmallTile label="Releasable" value={fmt(totals.releasable)} color="#16a34a"/>
+        <SmallTile label="Paid out" value={fmt(totals.paid)} color="#0891b2"/>
+      </div>
+
+      {/* Timeline */}
+      <div className="card p-5 fade-up">
+        <p className="text-sm font-semibold text-slate-800 mb-4">Ledger timeline</p>
+        <div className="relative pl-6">
+          <div className="absolute left-[9px] top-1 bottom-1 w-px bg-slate-200"></div>
+          <ul className="space-y-4">
+            {events.map((e,i) => (
+              <li key={i} className="relative">
+                <span className="absolute -left-[19px] top-1 w-3 h-3 rounded-full border-2 border-white" style={{background: e.amount > 0 ? '#16a34a' : e.amount < 0 ? '#ef4444' : '#94a3b8'}}></span>
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800">{e.label}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{e.date} · {e.note}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <BucketPill bucket={e.bucket}/>
+                    <p className={`text-sm font-bold tabular-nums ${e.amount > 0 ? 'text-green-600' : e.amount < 0 ? 'text-red-600' : 'text-slate-500'}`}>{e.amount === 0 ? '—' : fmtSign(e.amount)}</p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {t.showRefundScenario && (
+        <div className="card p-5 fade-up" style={{background:'#fff7ed', borderColor:'#fed7aa'}}>
+          <p className="text-sm font-semibold text-orange-900 flex items-center gap-2"><Ic.warning/> Сценарий частичного возврата (R2)</p>
+          <p className="text-xs text-orange-800 mt-1.5 leading-relaxed">На launch (R1) поддерживаются только <b>FULL_REFUND</b> и <b>VENDOR_WINS</b>. Партиальный возврат поднимется в R2 и пройдёт через тот же ledger — frozen → returned → releasable. Вендор увидит точный сплит.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SmallTile({ label, value, color }) {
+  return (
+    <div className="card p-4">
+      <p className="text-[11px] flex items-center gap-1.5 text-slate-500"><span className="w-1.5 h-1.5 rounded-full" style={{background:color}}></span>{label}</p>
+      <p className="text-base font-bold text-slate-900 mt-1.5">{value}</p>
+    </div>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+function LaunchBanner() {
+  return (
+    <div className="card fade-up px-4 py-2.5 flex items-center gap-3" style={{background:'#fffaf0', borderColor:'#fde68a'}}>
+      <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0"><Ic.warning/></div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-amber-900">Launch (R1): hosted Stripe Connect / admin-assisted payouts · Target (R2): self-serve визуализация и retry</p>
+        <p className="text-[11px] text-amber-700">Расчёт <i>releasable</i>, исключение dispute-frozen funds и audit trail — уже в продукте Vendora.</p>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [tab, setTab] = useState('overview');
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', t.primaryColor);
+  }, [t.primaryColor]);
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header/>
+      <div className="flex-1 flex">
+        <Sidebar tab={tab} setTab={setTab}/>
+        <main className="flex-1 p-5 sm:p-7 max-w-6xl">
+          <div className="space-y-5">
+            <LaunchBanner/>
+            {tab === 'overview'  && <Overview  t={t} setTab={setTab}/>}
+            {tab === 'method'    && <Method    t={t} setTweak={setTweak}/>}
+            {tab === 'history'   && <History   t={t}/>}
+            {tab === 'review'    && <Review    t={t}/>}
+            {tab === 'reconcile' && <Reconcile t={t}/>}
+          </div>
+        </main>
+      </div>
+
+      <TweaksPanel>
+        <TweakSection label="Тема"/>
+        <TweakColor label="Акцент" value={t.primaryColor} onChange={v => setTweak('primaryColor', v)}/>
+
+        <TweakSection label="Provider"/>
+        <TweakSelect label="Статус подключения" value={t.providerStatus} options={[
+          {value:'not_started',label:'Не подключён'},
+          {value:'pending',label:'Проверка'},
+          {value:'action_required',label:'Требуется действие'},
+          {value:'verified',label:'Подтверждён'},
+        ]} onChange={v => setTweak('providerStatus', v)}/>
+        <TweakToggle label="Показать failed payout" value={t.showFailure} onChange={v => setTweak('showFailure', v)}/>
+
+        <TweakSection label="Балансы"/>
+        <TweakSlider label="Releasable" min={0} max={3000000} step={10000} unit=" ₽" value={t.balanceReleasable} onChange={v => setTweak('balanceReleasable', v)}/>
+        <TweakSlider label="Held" min={0} max={3000000} step={10000} unit=" ₽" value={t.balanceHeld} onChange={v => setTweak('balanceHeld', v)}/>
+        <TweakSlider label="Frozen in disputes" min={0} max={500000} step={5000} unit=" ₽" value={t.balanceFrozen} onChange={v => setTweak('balanceFrozen', v)}/>
+
+        <TweakSection label="Сценарии"/>
+        <TweakToggle label="Сверка с partial refund" value={t.showRefundScenario} onChange={v => setTweak('showRefundScenario', v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

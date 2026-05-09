@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendora — Reviews B-6</title>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: #f1f4f9; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; color: #0f172a; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.28s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes slideIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+    .slide-in { animation: slideIn 0.3s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes pop { 0% { transform: scale(.88); opacity: 0; } 70% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+    .pop { animation: pop 0.34s cubic-bezier(.22,.84,.4,1) both; }
+
+    .card { background: #fff; border-radius: 14px; border: 1px solid #e4e9f2; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+    .soft-card { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 14px; border: 1px solid #e7edf7; }
+
+    .btn-primary {
+      background: var(--brand,#2455e8); color: #fff; border: none; border-radius: 9px;
+      padding: 9px 18px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 7px; transition: filter .15s, box-shadow .15s, transform .1s;
+    }
+    .btn-primary:hover { filter: brightness(.88); box-shadow: 0 4px 14px color-mix(in srgb, var(--brand,#2455e8) 30%, transparent); }
+    .btn-primary:active { transform: scale(.97); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; filter: none; box-shadow: none; }
+
+    .btn-ghost {
+      background: transparent; color: #64748b; border: 1.5px solid #e2e8f0;
+      border-radius: 9px; padding: 8px 16px; font-size: 13px; font-weight: 500; font-family: inherit;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+      transition: border-color .15s, color .15s, background .15s;
+    }
+    .btn-ghost:hover { border-color: #94a3b8; color: #1e293b; background: #f8fafc; }
+
+    .btn-danger {
+      background: #fff; color: #ef4444; border: 1.5px solid #fecaca;
+      border-radius: 9px; padding: 8px 16px; font-size: 13px; font-weight: 500; font-family: inherit;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-danger:hover { background: #fef2f2; border-color: #ef4444; }
+
+    .input-field, textarea.input-field {
+      width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 9px;
+      font-size: 13px; font-family: inherit; background: #fff; color: #1e293b;
+      transition: border-color .15s, box-shadow .15s; outline: none;
+    }
+    .input-field:focus, textarea.input-field:focus { border-color: var(--brand,#2455e8); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand,#2455e8) 12%, transparent); }
+    .input-field.error { border-color: #ef4444; }
+    textarea.input-field { min-height: 110px; resize: vertical; }
+
+    .input-label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+    .input-hint { margin-top: 5px; font-size: 11px; color: #94a3b8; }
+    .input-error { margin-top: 5px; font-size: 11px; color: #ef4444; }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: .02em;
+    }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+      border-radius: 999px; border: 1.5px solid #e2e8f0; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all .15s; background: #fff; color: #475569;
+    }
+    .chip.active { border-color: var(--brand,#2455e8); background: color-mix(in srgb, var(--brand,#2455e8) 8%, white); color: var(--brand,#2455e8); }
+
+    .order-row {
+      display: grid; grid-template-columns: minmax(0, 1.2fr) 120px 150px auto;
+      align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #f1f4f9;
+      cursor: pointer; transition: background .12s;
+    }
+    .order-row:hover { background: #f8fafc; }
+    .order-row:last-child { border-bottom: none; }
+    .order-row.active { background: color-mix(in srgb, var(--brand,#2455e8) 5%, white); }
+
+    .star-btn {
+      width: 38px; height: 38px; border-radius: 12px; border: 1.5px solid #e2e8f0;
+      background: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      transition: border-color .15s, background .15s, transform .1s;
+    }
+    .star-btn:hover { border-color: #f59e0b; transform: translateY(-1px); }
+    .star-btn.active { border-color: #f59e0b; background: #fffbeb; }
+
+    .media-pill {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px;
+      border-radius: 999px; border: 1.5px solid #e2e8f0; background: #fff;
+      font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; color: #64748b;
+    }
+    .media-pill.active { border-color: var(--brand,#2455e8); color: var(--brand,#2455e8); background: color-mix(in srgb, var(--brand,#2455e8) 8%, white); }
+
+    .review-card { border: 1px solid #e7edf7; border-radius: 16px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); }
+    .metric-card { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border: 1px solid #e7edf7; border-radius: 14px; padding: 16px 18px; }
+    .banner { border-radius: 14px; padding: 14px 16px; border: 1px solid; }
+
+    .notice-row {
+      display: flex; gap: 10px; padding: 11px 0; border-bottom: 1px solid #eef2f7;
+    }
+    .notice-row:last-child { border-bottom: none; }
+
+    @media(max-width: 1024px) {
+      .reviews-layout { grid-template-columns: 1fr; }
+    }
+
+    @media(max-width: 768px) {
+      .order-row { grid-template-columns: 1fr auto; }
+      .order-row .hide-mobile { display: none; }
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const REVIEWABLE_ORDERS = [
+  {
+    id: 'VND-8809-A',
+    vendor: 'TechPro Solutions',
+    product: 'Монитор LG UltraWide 34"',
+    completedAt: '27.04.2026 12:14',
+    ratingContext: '4.8 · 1 240 отзывов',
+    eligible: true,
+    icon: '🖥️',
+    total: 94200,
+  },
+  {
+    id: 'VND-8802-A',
+    vendor: 'OfficeMax Россия',
+    product: 'Кресло Herman Miller Aeron',
+    completedAt: '18.04.2026 16:40',
+    ratingContext: '4.6 · 889 отзывов',
+    eligible: false,
+    reviewedAt: '20.04.2026 09:12',
+    icon: '🪑',
+    total: 145000,
+  },
+  {
+    id: 'VND-8798-A',
+    vendor: 'CleanMaster Pro',
+    product: 'Pro-Clean Multi 5L',
+    completedAt: '12.04.2026 18:05',
+    ratingContext: '4.9 · 2 107 отзывов',
+    eligible: true,
+    icon: '🧴',
+    total: 12000,
+  },
+];
+
+const EXISTING_REVIEWS = [
+  {
+    id: 'r1',
+    status: 'published',
+    vendor: 'OfficeMax Россия',
+    product: 'Кресло Herman Miller Aeron',
+    rating: 5,
+    date: '20.04.2026',
+    text: 'Кресло пришло в идеальном состоянии. Сборка заняла 15 минут, поддержка спины отличная.',
+    media: ['📷 Фото упаковки'],
+    response: 'Спасибо за подробный отзыв. Если понадобится докупить такие же кресла для переговорной, напишите нам.',
+  },
+  {
+    id: 'r2',
+    status: 'under_review',
+    vendor: 'DigitalHub Store',
+    product: 'Маршрутизатор enterprise series',
+    rating: 2,
+    date: '25.04.2026',
+    text: 'Есть вопросы к комплектности. Отзыв сейчас скрыт до окончания moderation проверки.',
+    media: ['📎 Акт приёмки'],
+    response: '',
+  },
+];
+
+const MEDIA_OPTIONS = [
+  { id: 'photo', label: 'Фото товара', icon: '📷' },
+  { id: 'invoice', label: 'Документ / акт', icon: '📎' },
+  { id: 'video', label: 'Короткое видео', icon: '🎥' },
+];
+
+const Ic = {
+  plus: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  check: ({ size=14 }) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3L11.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  x: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
+  star: ({ filled=true, size=16 }) => (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill={filled ? 'currentColor' : 'none'}>
+      <path d="M7 1l1.7 3.6 3.9.6-2.8 2.7.7 3.9L7 10.1l-3.5 1.8.7-3.9L1.4 5.2l3.9-.6L7 1z" stroke="currentColor" strokeWidth="1.2"/>
+    </svg>
+  ),
+  chevronRight: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  chevronLeft: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L6 8l4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  mail: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.8" stroke="currentColor" strokeWidth="1.4"/><path d="M3 4.5l5 3.5 5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  alert: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L1.5 13h13L8 2z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6.4V9.5M8 11.6v.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  shield: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L2 4v4c0 3.5 2.5 6 6 7 3.5-1 6-3.5 6-7V4L8 1.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M5.5 8l2 2L11 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  flag: () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 13V2.5M3 3h7l-1.4 2L10 7H3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+};
+
+function Stars({ rating, size=14 }) {
+  return (
+    <div className="flex items-center gap-1">
+      {[1,2,3,4,5].map((n) => (
+        <span key={n} style={{ color: n <= rating ? '#f59e0b' : '#e2e8f0' }}>
+          <Ic.star filled={n <= rating} size={size} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function Header({ screen, brandName, buyerName, onBack, mode }) {
+  return (
+    <header className="bg-white border-b border-slate-100 sticky top-0 z-30">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          {onBack && <button className="btn-ghost px-2 py-1.5 text-xs" onClick={onBack}><Ic.chevronLeft /> Назад</button>}
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold shadow-sm" style={{ background: 'var(--brand,#2455e8)' }}>V</div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-slate-900 text-sm">{brandName}</span>
+              <span className="status-badge" style={{ background: '#eef2ff', color: 'var(--brand,#2455e8)' }}>B-6</span>
+              <span className="status-badge" style={{ background: mode === 'launch' ? '#eff6ff' : '#f0fdf4', color: mode === 'launch' ? '#1d4ed8' : '#166534' }}>
+                {mode === 'launch' ? 'Launch fallback' : 'Target self-serve'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">{screen === 'success' ? 'Review submitted' : 'Buyer reviews and ratings'}</p>
+          </div>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="status-badge" style={{ background: '#f8fafc', color: '#64748b' }}><Ic.shield /> buyer: {buyerName}</span>
+          <a href="Vendora Search.html" className="btn-ghost">B-2 Search</a>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function LaunchBanner({ mode, onGoTarget }) {
+  if (mode === 'launch') {
+    return (
+      <div className="banner bg-blue-50 text-blue-800 border-blue-200">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold">Launch может идти без публичной review system</p>
+            <p className="text-xs mt-1 max-w-2xl">Если feedback нужен раньше, его можно собирать через email или support flow. Core marketplace не зависит от отдельного product review loop.</p>
+          </div>
+          <button className="btn-ghost" onClick={onGoTarget}><Ic.plus /> Показать target version</button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="banner bg-green-50 text-green-800 border-green-200">
+      <p className="text-sm font-semibold">Target review layer preview</p>
+      <p className="text-xs mt-1">Здесь включены rating 1–5, текст, media, vendor response и moderation statuses как следующий trust/reputation слой поверх core marketplace.</p>
+    </div>
+  );
+}
+
+function Metrics({ reviews, eligibleCount }) {
+  const published = reviews.filter((r) => r.status === 'published').length;
+  const underReview = reviews.filter((r) => r.status === 'under_review').length;
+  const avg = reviews.length ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : '0.0';
+  return (
+    <div className="grid md:grid-cols-3 gap-4">
+      <div className="metric-card">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Eligible orders</p>
+        <p className="text-3xl font-bold text-slate-900 mt-2">{eligibleCount}</p>
+        <p className="text-xs text-slate-500 mt-2">Completed orders, доступные для одного review each</p>
+      </div>
+      <div className="metric-card">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Published reviews</p>
+        <p className="text-3xl font-bold text-slate-900 mt-2">{published}</p>
+        <p className="text-xs text-slate-500 mt-2">Уже влияют на vendor trust layer</p>
+      </div>
+      <div className="metric-card">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Average rating</p>
+        <p className="text-3xl font-bold text-slate-900 mt-2">{avg}</p>
+        <p className="text-xs text-slate-500 mt-2">{underReview} review waiting moderation</p>
+      </div>
+    </div>
+  );
+}
+
+function OrdersPanel({ orders, selectedId, onSelect }) {
+  return (
+    <div className="card p-0 overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-100">
+        <p className="text-sm font-semibold text-slate-800">Completed orders eligible for review</p>
+        <p className="text-xs text-slate-500 mt-1">`FR-REV-002`: один review на один completed order, только от buyer с подтверждённой покупкой.</p>
+      </div>
+      {orders.map((order) => (
+        <div key={order.id} className={`order-row ${selectedId === order.id ? 'active' : ''}`} onClick={() => onSelect(order.id)}>
+          <div className="min-w-0">
+            <div className="flex items-start gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center text-xl shrink-0">{order.icon}</div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900">{order.product}</p>
+                <p className="text-xs text-slate-500 mt-1">{order.vendor} · {order.id}</p>
+                <p className="text-xs text-slate-400 mt-1">Completed {order.completedAt}</p>
+              </div>
+            </div>
+          </div>
+          <div className="hide-mobile text-sm font-semibold text-slate-900">{new Intl.NumberFormat('ru-RU').format(order.total)} ₽</div>
+          <div className="hide-mobile">
+            {order.eligible ? (
+              <span className="status-badge" style={{ background: '#f0fdf4', color: '#166534' }}><Ic.check /> eligible</span>
+            ) : (
+              <span className="status-badge" style={{ background: '#f8fafc', color: '#64748b' }}>already reviewed</span>
+            )}
+          </div>
+          <div className="text-slate-400"><Ic.chevronRight /></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReviewComposer({ order, form, setForm, mode, onSubmit }) {
+  const [errors, setErrors] = useState({});
+
+  function toggleMedia(id) {
+    setForm((prev) => ({
+      ...prev,
+      media: prev.media.includes(id) ? prev.media.filter((item) => item !== id) : [...prev.media, id],
+    }));
+  }
+
+  function submit() {
+    const nextErrors = {};
+    if (mode === 'launch') nextErrors.mode = 'В launch fallback feedback собирается через email/support, а не через product loop.';
+    if (!order?.eligible) nextErrors.order = 'Этот completed order уже использован для review.';
+    if (!form.rating) nextErrors.rating = 'Поставьте оценку 1–5.';
+    if (!form.text.trim()) nextErrors.text = 'Добавьте текст отзыва.';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length === 0) onSubmit();
+  }
+
+  if (!order) return null;
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Оставить отзыв</p>
+          <p className="text-xs text-slate-500 mt-1">{order.product} · {order.vendor} · current vendor context {order.ratingContext}</p>
+        </div>
+        {!order.eligible && <span className="status-badge" style={{ background: '#f8fafc', color: '#64748b' }}>one review already used</span>}
+      </div>
+
+      {(errors.mode || errors.order) && (
+        <div className="banner bg-amber-50 text-amber-800 border-amber-200 mt-4">
+          <p className="text-sm font-semibold">{errors.mode || errors.order}</p>
+        </div>
+      )}
+
+      <div className="mt-5 space-y-5">
+        <div>
+          <label className="input-label">Оценка</label>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {[1,2,3,4,5].map((n) => (
+              <button key={n} className={`star-btn ${form.rating === n ? 'active' : ''}`} onClick={() => setForm((prev) => ({ ...prev, rating: n }))}>
+                <span style={{ color: form.rating >= n ? '#f59e0b' : '#cbd5e1' }}><Ic.star filled={form.rating >= n} size={18} /></span>
+              </button>
+            ))}
+          </div>
+          {errors.rating && <div className="input-error">{errors.rating}</div>}
+        </div>
+
+        <div>
+          <label className="input-label">Текст отзыва</label>
+          <textarea className={`input-field ${errors.text ? 'error' : ''}`} value={form.text} onChange={(e) => setForm((prev) => ({ ...prev, text: e.target.value }))} />
+          <div className="input-hint">Target version допускает public review text. Moderation может временно скрыть suspicious content.</div>
+          {errors.text && <div className="input-error">{errors.text}</div>}
+        </div>
+
+        <div>
+          <label className="input-label">Media attachments</label>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {MEDIA_OPTIONS.map((item) => (
+              <button key={item.id} className={`media-pill ${form.media.includes(item.id) ? 'active' : ''}`} onClick={() => toggleMedia(item.id)}>
+                <span>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <button className="btn-primary" onClick={submit}><Ic.plus /> Отправить отзыв</button>
+          <button className="btn-ghost" onClick={() => setForm({ rating: 0, text: '', media: [] })}>Очистить</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExistingReviews({ reviews }) {
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Submitted reviews</p>
+          <p className="text-xs text-slate-500 mt-1">Published, under-review and vendor-response states живут рядом, чтобы показать full target loop.</p>
+        </div>
+        <span className="status-badge" style={{ background: '#eef2ff', color: 'var(--brand,#2455e8)' }}>{reviews.length} total</span>
+      </div>
+      <div className="space-y-4 mt-4">
+        {reviews.map((review) => (
+          <div key={review.id} className="review-card p-4">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-slate-800">{review.product}</p>
+                  <span className="status-badge" style={{ background: review.status === 'published' ? '#f0fdf4' : '#fff7ed', color: review.status === 'published' ? '#166534' : '#c2410c' }}>
+                    {review.status === 'published' ? 'published' : 'under moderation'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">{review.vendor} · {review.date}</p>
+              </div>
+              <Stars rating={review.rating} />
+            </div>
+            <p className="text-sm text-slate-700 mt-4 leading-6">{review.text}</p>
+            {review.media.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {review.media.map((item) => (
+                  <span key={item} className="status-badge" style={{ background: '#f8fafc', color: '#64748b' }}>{item}</span>
+                ))}
+              </div>
+            )}
+            {review.response && (
+              <div className="soft-card p-4 mt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vendor public response</p>
+                <p className="text-sm text-slate-700 mt-2">{review.response}</p>
+              </div>
+            )}
+            {review.status !== 'published' && (
+              <div className="banner bg-amber-50 text-amber-800 border-amber-200 mt-4">
+                <p className="text-sm font-semibold">Review скрыт до окончания moderation</p>
+                <p className="text-xs mt-1">Alternative path: suspicious review временно не влияет на public rating surface.</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SidePanel({ mode, order, reviews, onSwitchToLaunch, onSwitchToTarget }) {
+  const latestPublished = reviews.find((r) => r.status === 'published');
+  return (
+    <div className="space-y-6 slide-in">
+      <div className="card p-5">
+        <p className="text-sm font-semibold text-slate-800">Mode switch</p>
+        <div className="flex flex-wrap gap-2 mt-4">
+          <button className={`chip ${mode === 'launch' ? 'active' : ''}`} onClick={onSwitchToLaunch}>Launch fallback</button>
+          <button className={`chip ${mode === 'target' ? 'active' : ''}`} onClick={onSwitchToTarget}>Target self-serve</button>
+        </div>
+        <div className="mt-4 text-xs text-slate-500">Journey `B-6` target-first, поэтому launch и target показаны в одном прототипе как две честные интерпретации.</div>
+      </div>
+
+      <div className="card p-5">
+        <p className="text-sm font-semibold text-slate-800">How this feeds B-2 trust layer</p>
+        <div className="soft-card p-4 mt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vendor context preview</p>
+          <div className="flex items-center gap-2 mt-3">
+            <Stars rating={latestPublished ? latestPublished.rating : 5} size={13} />
+            <span className="text-sm font-semibold text-slate-800">{order.ratingContext}</span>
+          </div>
+          <p className="text-xs text-slate-500 mt-2">После полноценной агрегации этот слой должен отражаться в B-2 search/product/vendor views.</p>
+        </div>
+      </div>
+
+      <div className="card p-5">
+        <p className="text-sm font-semibold text-slate-800">Moderation and abuse controls</p>
+        <div className="mt-4">
+          {[
+            'Подозрительный review может быть скрыт до окончания moderation.',
+            'Vendor public response разрешён один раз и позже относится к более зрелому reputation loop.',
+            'Flag/report path нужен для жалоб на чужие отзывы.',
+          ].map((text) => (
+            <div key={text} className="notice-row">
+              <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><Ic.flag /></div>
+              <p className="text-sm text-slate-700">{text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LaunchFallbackScreen({ onSwitchToTarget }) {
+  return (
+    <div className="max-w-5xl mx-auto fade-up">
+      <div className="grid lg:grid-cols-[1fr_0.95fr] gap-6">
+        <div className="card p-6 sm:p-7">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Launch-safe path</p>
+          <h1 className="text-3xl font-bold text-slate-900 mt-2">Feedback без публичной review system</h1>
+          <p className="text-sm text-slate-500 mt-3 max-w-2xl">На запуске Vendora может честно работать без отдельного reviews product loop. Buyer feedback при необходимости собирается через email, support form или success-survey после completed order.</p>
+
+          <div className="grid sm:grid-cols-3 gap-4 mt-8">
+            {[
+              { title: 'Email follow-up', desc: 'Письмо через 24 часа после COMPLETED с просьбой оставить feedback вручную.', icon: '📧' },
+              { title: 'Support ticket', desc: 'Buyer делится мнением через support channel, не влияя на публичный trust layer.', icon: '🛟' },
+              { title: 'Later migration', desc: 'Когда появится self-serve reviews, исторический feedback можно использовать как seed input.', icon: '🧭' },
+            ].map((item) => (
+              <div key={item.title} className="soft-card p-4">
+                <div className="text-2xl">{item.icon}</div>
+                <p className="text-sm font-semibold text-slate-800 mt-4">{item.title}</p>
+                <p className="text-xs text-slate-500 mt-2 leading-5">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="banner bg-blue-50 text-blue-800 border-blue-200 mt-8">
+            <p className="text-sm font-semibold">Это не blocker для core marketplace</p>
+            <p className="text-xs mt-1">B-6 intentionally target-first: revenue loop, order state machine и disputes не зависят от появления review layer.</p>
+          </div>
+
+          <div className="flex flex-wrap gap-3 mt-8">
+            <button className="btn-primary" onClick={onSwitchToTarget}><Ic.plus /> Показать target review UI</button>
+            <a href="Vendora Order Tracking.html" className="btn-ghost">Вернуться к B-4</a>
+          </div>
+        </div>
+
+        <div className="card p-6 sm:p-7">
+          <p className="text-sm font-semibold text-slate-800">What remains true even without product reviews</p>
+          <div className="mt-4">
+            {[
+              'Only completed orders can later become review-eligible.',
+              'Buyer identity and purchase proof already exist after B-3/B-4.',
+              'Vendor rating context in B-2 is still optional until aggregation appears.',
+              'Abuse controls and moderation can stay outside launch runtime.',
+            ].map((text) => (
+              <div key={text} className="notice-row">
+                <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><Ic.shield /></div>
+                <p className="text-sm text-slate-700">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SuccessScreen({ order, form, onBackToCompose, onBackToCenter }) {
+  return (
+    <div className="max-w-4xl mx-auto fade-up">
+      <div className="card p-6 sm:p-8 text-center pop">
+        <div className="w-16 h-16 rounded-full bg-green-50 text-green-600 flex items-center justify-center mx-auto mb-5">
+          <Ic.check size={28} />
+        </div>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-green-600">Review submitted</p>
+        <h1 className="text-3xl font-bold text-slate-900 mt-2">Отзыв отправлен</h1>
+        <p className="text-sm text-slate-500 mt-3 max-w-2xl mx-auto">Order <span className="font-semibold text-slate-700">{order.id}</span> использован для review. Дальше отзыв либо публикуется сразу, либо временно попадает в moderation path.</p>
+
+        <div className="grid sm:grid-cols-3 gap-4 mt-8 text-left">
+          <div className="soft-card p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Rating</p>
+            <div className="mt-2"><Stars rating={form.rating} /></div>
+          </div>
+          <div className="soft-card p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Media</p>
+            <p className="text-sm font-semibold text-slate-800 mt-2">{form.media.length || 0} attachment(s)</p>
+          </div>
+          <div className="soft-card p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Visibility</p>
+            <p className="text-sm font-semibold text-slate-800 mt-2">Published or under review</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-3 mt-8">
+          <button className="btn-primary" onClick={onBackToCenter}>В review center</button>
+          <button className="btn-ghost" onClick={onBackToCompose}>Назад к отзыву</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#2455e8",
+  "brandName": "Vendora",
+  "buyerName": "ООО «ТехноСтарт»",
+  "mode": "target",
+  "moderateNewReview": false
+}/*EDITMODE-END*/;
+
+function App() {
+  const tweakApi = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : null;
+  const [tweaks, setTweak] = Array.isArray(tweakApi) ? tweakApi : [TWEAK_DEFAULTS, () => {}];
+  const TweaksPanel = window.TweaksPanel;
+  const TweakSection = window.TweakSection;
+  const TweakColor = window.TweakColor;
+  const TweakText = window.TweakText;
+  const TweakToggle = window.TweakToggle;
+  const TweakSelect = window.TweakSelect;
+
+  const [screen, setScreen] = useState('center');
+  const [mode, setMode] = useState(TWEAK_DEFAULTS.mode);
+  const [orders, setOrders] = useState(REVIEWABLE_ORDERS);
+  const [reviews, setReviews] = useState(EXISTING_REVIEWS);
+  const [selectedId, setSelectedId] = useState(REVIEWABLE_ORDERS[0].id);
+  const [form, setForm] = useState({
+    rating: 5,
+    text: 'Отличный монитор для офиса: хорошая цветопередача, удобное крепление, пришёл вовремя.',
+    media: ['photo'],
+  });
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', tweaks.accentColor || '#2455e8');
+  }, [tweaks.accentColor]);
+
+  useEffect(() => {
+    setMode(tweaks.mode || 'target');
+  }, [tweaks.mode]);
+
+  const selectedOrder = orders.find((order) => order.id === selectedId) || orders[0];
+  const eligibleCount = orders.filter((order) => order.eligible).length;
+
+  function submitReview() {
+    const status = tweaks.moderateNewReview ? 'under_review' : 'published';
+    const mediaLabels = form.media
+      .map((id) => MEDIA_OPTIONS.find((item) => item.id === id))
+      .filter(Boolean)
+      .map((item) => `${item.icon} ${item.label}`);
+    const newReview = {
+      id: `r${Date.now()}`,
+      status,
+      vendor: selectedOrder.vendor,
+      product: selectedOrder.product,
+      rating: form.rating,
+      date: '07.05.2026',
+      text: form.text,
+      media: mediaLabels,
+      response: '',
+    };
+    setReviews((prev) => [newReview, ...prev]);
+    setOrders((prev) => prev.map((order) => order.id === selectedOrder.id ? { ...order, eligible: false, reviewedAt: '07.05.2026 19:40' } : order));
+    setScreen('success');
+  }
+
+  return (
+    <div style={{ '--brand': tweaks.accentColor || '#2455e8' }}>
+      <Header
+        screen={screen}
+        brandName={tweaks.brandName || 'Vendora'}
+        buyerName={tweaks.buyerName || 'ООО «ТехноСтарт»'}
+        onBack={screen === 'success' ? (() => setScreen('center')) : null}
+        mode={mode}
+      />
+
+      <main className="max-w-7xl mx-auto px-4 py-6 pb-16">
+        {screen === 'success' ? (
+          <SuccessScreen
+            order={selectedOrder}
+            form={form}
+            onBackToCompose={() => setScreen('center')}
+            onBackToCenter={() => setScreen('center')}
+          />
+        ) : (
+          <>
+            <LaunchBanner mode={mode} onGoTarget={() => { setMode('target'); setTweak('mode', 'target'); }} />
+
+            <div className="mt-6">
+              {mode === 'launch' ? (
+                <LaunchFallbackScreen onSwitchToTarget={() => { setMode('target'); setTweak('mode', 'target'); }} />
+              ) : (
+                <div className="space-y-6 fade-up">
+                  <Metrics reviews={reviews} eligibleCount={eligibleCount} />
+
+                  <div className="reviews-layout grid xl:grid-cols-[1.04fr_0.96fr] gap-6 items-start">
+                    <div className="space-y-6">
+                      <OrdersPanel orders={orders} selectedId={selectedId} onSelect={setSelectedId} />
+                      <ReviewComposer
+                        order={selectedOrder}
+                        form={form}
+                        setForm={setForm}
+                        mode={mode}
+                        onSubmit={submitReview}
+                      />
+                      <ExistingReviews reviews={reviews} />
+                    </div>
+
+                    <SidePanel
+                      mode={mode}
+                      order={selectedOrder}
+                      reviews={reviews}
+                      onSwitchToLaunch={() => { setMode('launch'); setTweak('mode', 'launch'); }}
+                      onSwitchToTarget={() => { setMode('target'); setTweak('mode', 'target'); }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </main>
+
+      {TweaksPanel && TweakSection && TweakColor && TweakText && TweakToggle && TweakSelect && (
+        <TweaksPanel title="B-6 Tweaks">
+          <TweakSection label="Брендинг">
+            <TweakColor label="Цвет акцента" value={tweaks.accentColor} onChange={(value) => setTweak('accentColor', value)} />
+            <TweakText label="Бренд" value={tweaks.brandName} onChange={(value) => setTweak('brandName', value)} />
+            <TweakText label="Buyer name" value={tweaks.buyerName} onChange={(value) => setTweak('buyerName', value)} />
+          </TweakSection>
+          <TweakSection label="Сценарий">
+            <TweakSelect
+              label="Mode"
+              value={tweaks.mode}
+              options={[
+                { value: 'launch', label: 'Launch fallback' },
+                { value: 'target', label: 'Target self-serve' },
+              ]}
+              onChange={(value) => setTweak('mode', value)}
+            />
+            <TweakToggle label="Moderate new review" value={!!tweaks.moderateNewReview} onChange={(value) => setTweak('moderateNewReview', value)} />
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

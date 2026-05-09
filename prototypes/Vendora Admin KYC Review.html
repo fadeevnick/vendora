@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vendora — Admin KYC Review</title>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; background:#0f172a; font-family:'Inter',system-ui,sans-serif; color:#e2e8f0; min-height:100vh; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .fade-up { animation: fadeUp .25s cubic-bezier(.22,.84,.4,1) both; }
+  @keyframes pop { 0%{transform:scale(.85);opacity:0} 70%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
+  .pop { animation: pop .3s cubic-bezier(.22,.84,.4,1) both; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .spinner { animation: spin .7s linear infinite; }
+
+  .panel { background:#1e293b; border:1px solid #334155; border-radius:12px; }
+
+  .btn-primary { background:var(--brand,#3b82f6); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition: filter .15s, box-shadow .15s, transform .1s; }
+  .btn-primary:hover { filter:brightness(1.1); box-shadow:0 4px 14px color-mix(in srgb,var(--brand,#3b82f6) 35%,transparent); }
+  .btn-primary:active { transform:scale(.97); }
+  .btn-primary:disabled { opacity:.55; cursor:not-allowed; filter:none; box-shadow:none; }
+  .btn-ghost { background:transparent; color:#cbd5e1; border:1.5px solid #334155; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:500; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition: border-color .15s, color .15s, background .15s; }
+  .btn-ghost:hover { border-color:#64748b; color:#fff; background:#1e293b; }
+  .btn-success { background:#16a34a; color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:filter .15s; }
+  .btn-success:hover { filter:brightness(1.1); }
+  .btn-danger  { background:#dc2626; color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:filter .15s; }
+  .btn-danger:hover { filter:brightness(1.1); }
+
+  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; font-size:13px; font-weight:500; color:#94a3b8; cursor:pointer; transition:background .15s, color .15s; }
+  .nav-item:hover { background:#1e293b; color:#fff; }
+  .nav-item.active { background:color-mix(in srgb,var(--brand,#3b82f6) 18%,#0f172a); color:#fff; font-weight:600; }
+
+  .row { transition: background .12s; }
+  .row:hover { background:#1e293b; cursor:pointer; }
+  .row.selected { background:color-mix(in srgb,var(--brand,#3b82f6) 12%,#1e293b); }
+
+  .status-pill { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.02em; }
+
+  .field { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px 12px; font-size:13px; color:#e2e8f0; width:100%; font-family:inherit; transition: border-color .15s, box-shadow .15s; }
+  .field:focus { outline:none; border-color:var(--brand,#3b82f6); box-shadow:0 0 0 3px color-mix(in srgb,var(--brand,#3b82f6) 25%,transparent); }
+
+  .checkitem { display:flex; align-items:flex-start; gap:10px; padding:11px 12px; border:1px solid #334155; border-radius:10px; background:#172033; transition:border-color .15s, background .15s; cursor:pointer; }
+  .checkitem:hover { border-color:#475569; background:#1e293b; }
+  .checkitem.pass { border-color:#166534; background:#052e16; }
+  .checkitem.fail { border-color:#7f1d1d; background:#2a0a0a; }
+  .checkitem.warn { border-color:#854d0e; background:#2a1f06; }
+
+  .doc-tile { border:1px solid #334155; border-radius:10px; overflow:hidden; cursor:pointer; transition: border-color .15s, transform .12s; background:#0f172a; }
+  .doc-tile:hover { border-color:var(--brand,#3b82f6); transform:translateY(-1px); }
+
+  ::-webkit-scrollbar { width:7px; height:7px; }
+  ::-webkit-scrollbar-track { background:#0f172a; }
+  ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+  ::-webkit-scrollbar-thumb:hover { background:#475569; }
+
+  @media(max-width:1100px){ .sidebar { display:none; } .queue { display:none; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "primaryColor": "#3b82f6",
+  "providerVerdict": "approved",
+  "providerLatency": "ok",
+  "showProviderError": false,
+  "showAuditTrail": true
+}/*EDITMODE-END*/;
+
+const QUEUE = [
+  { id:'KYC-2026-0512-A', vendor:'ООО «ТехПро Солюшнс»', inn:'7712345678', country:'RU', risk:'low',    submitted:'12.05.2026 09:14', sla:'18ч',  flags:0, providerScore:96, status:'awaiting' },
+  { id:'KYC-2026-0512-B', vendor:'ИП Иванов А. С.',       inn:'770512345678', country:'RU', risk:'medium', submitted:'12.05.2026 11:02', sla:'15ч',  flags:1, providerScore:74, status:'awaiting' },
+  { id:'KYC-2026-0512-C', vendor:'ООО «Северный лес»',    inn:'2901123456', country:'RU', risk:'low',    submitted:'12.05.2026 12:48', sla:'13ч',  flags:0, providerScore:91, status:'awaiting' },
+  { id:'KYC-2026-0511-D', vendor:'ООО «Импорт-Сервис»',   inn:'7728856701', country:'RU', risk:'high',   submitted:'11.05.2026 16:30', sla:'просрочен 2ч', flags:3, providerScore:42, status:'awaiting', overdue:true },
+  { id:'KYC-2026-0511-E', vendor:'KazTrade LLP',          inn:'-',          country:'KZ', risk:'medium', submitted:'11.05.2026 18:14', sla:'8ч',   flags:1, providerScore:68, status:'awaiting' },
+  { id:'KYC-2026-0511-F', vendor:'ООО «Финкомпонент»',    inn:'7813209900', country:'RU', risk:'medium', submitted:'11.05.2026 20:55', sla:'5ч',   flags:1, providerScore:80, status:'on_hold' },
+];
+
+const RISK_META = {
+  low:    { label:'Низкий',  color:'#16a34a', bg:'#052e16' },
+  medium: { label:'Средний', color:'#f59e0b', bg:'#2a1f06' },
+  high:   { label:'Высокий', color:'#ef4444', bg:'#2a0a0a' },
+};
+const STATUS_META = {
+  awaiting: { label:'В очереди',     color:'#60a5fa', bg:'#0c2540' },
+  on_hold:  { label:'Пауза (RFI)',   color:'#f59e0b', bg:'#2a1f06' },
+};
+
+const DOCUMENTS = [
+  { id:'doc1', label:'Свидетельство о регистрации (ОГРН)', type:'PDF', size:'248 KB', uploaded:'12.05 09:12', verdict:'pass' },
+  { id:'doc2', label:'Свидетельство ИНН', type:'PDF', size:'186 KB', uploaded:'12.05 09:12', verdict:'pass' },
+  { id:'doc3', label:'Устав организации', type:'PDF', size:'1.2 MB', uploaded:'12.05 09:13', verdict:'pass' },
+  { id:'doc4', label:'Паспорт бенефициара (стр. 2-3)', type:'JPG', size:'412 KB', uploaded:'12.05 09:14', verdict:'pass' },
+  { id:'doc5', label:'Решение о назначении директора', type:'PDF', size:'94 KB', uploaded:'12.05 09:14', verdict:'pass' },
+  { id:'doc6', label:'Выписка из банка с реквизитами', type:'PDF', size:'72 KB', uploaded:'12.05 09:14', verdict:'pass' },
+];
+
+const CHECKS = [
+  { id:'c1', label:'ИНН/ОГРН валиден в ФНС',                      verdict:'pass', source:'provider', detail:'Найдено в ЕГРЮЛ. Статус: действующее.' },
+  { id:'c2', label:'Совпадение наименования организации',          verdict:'pass', source:'provider', detail:'Заявленное название совпадает с ЕГРЮЛ.' },
+  { id:'c3', label:'Бенефициар не в санкционных списках',          verdict:'pass', source:'provider', detail:'OFAC, EU, ЦБ РФ — совпадений нет.' },
+  { id:'c4', label:'Бенефициар не в PEP-списках',                  verdict:'pass', source:'provider', detail:'Проверено: отсутствует.' },
+  { id:'c5', label:'Адрес фактического местонахождения',           verdict:'warn', source:'manual',   detail:'Адрес отличается от юридического. Не блокирует, но требует пометки.' },
+  { id:'c6', label:'Совпадение реквизитов в выписке банка',         verdict:'pass', source:'provider', detail:'Расч. счёт •• 8821 принадлежит этой организации.' },
+  { id:'c7', label:'Подтверждение бенефициара (паспорт + лицо)',    verdict:'pass', source:'provider', detail:'Liveness check пройден, лицо совпало с паспортом.' },
+  { id:'c8', label:'Срок документов (выписка не старше 30 дней)',   verdict:'pass', source:'manual',   detail:'Выписка от 28.04.2026 — в пределах 30 дней.' },
+];
+
+const AUDIT = [
+  { time:'12.05 09:14', actor:'Vendor',          action:'Заявка отправлена',                   detail:'6 документов прикреплено' },
+  { time:'12.05 09:14', actor:'System',          action:'Запрос в provider (Stripe Identity)', detail:'request_id req_kyc_88f3' },
+  { time:'12.05 09:16', actor:'Provider',        action:'Verdict: APPROVED · score 96/100',     detail:'Все автоматические проверки прошли' },
+  { time:'12.05 09:16', actor:'System',          action:'Назначение в очередь Compliance L1',   detail:'SLA до 13.05 09:14 (24ч)' },
+  { time:'12.05 09:42', actor:'Анна К. (admin)', action:'Открыто для ручной проверки',          detail:'Чтение документов' },
+];
+
+const Ic = {
+  check: ({size=14}) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3L11.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  x: ({size=14}) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
+  warn: ({size=14}) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M7 1L1 12h12L7 1z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 5v3M7 10v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  info: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/><path d="M7 6.5V10M7 5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  search: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.4"/><path d="M9.5 9.5l3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  arrow: () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M7 3l4 3.5L7 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  refresh: () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 1.5v3H8M2 11.5v-3h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M11 5.5A4.5 4.5 0 002 6.5M2 8.5a4.5 4.5 0 009 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  external: () => <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 2H2v8h8V7M7 2h3v3M5 7l5-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  flag: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 1v12M3 2h7l-1.5 2.5L10 7H3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+};
+
+function Header() {
+  return (
+    <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-30">
+      <div className="px-5 h-12 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{background:'var(--brand,#3b82f6)'}}>
+            <span className="text-white font-bold text-xs">V</span>
+          </div>
+          <div className="hidden sm:block">
+            <p className="text-xs font-bold text-white">Vendora · Admin Console</p>
+            <p className="text-[10px] text-slate-500 -mt-0.5">Compliance · KYC Review</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg w-72">
+            <Ic.search/>
+            <input className="bg-transparent border-0 text-xs text-white outline-none flex-1 placeholder:text-slate-500" placeholder="Найти заявку, ИНН, vendor…"/>
+            <kbd className="text-[10px] text-slate-500 border border-slate-700 rounded px-1.5 py-0.5">⌘K</kbd>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{background:'#a855f7'}}>А</div>
+            <div className="hidden sm:block">
+              <p className="text-xs font-semibold text-white">Анна К.</p>
+              <p className="text-[10px] text-slate-500">Compliance · L1</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Sidebar() {
+  return (
+    <aside className="sidebar w-52 flex-shrink-0 bg-slate-900 border-r border-slate-800 min-h-[calc(100vh-3rem)] py-4 px-2.5">
+      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 mb-2">Compliance</p>
+      <nav className="space-y-0.5">
+        <div className="nav-item active"><span>📋</span><span>KYC очередь</span><span className="ml-auto text-[10px] text-slate-400">{QUEUE.length}</span></div>
+        <div className="nav-item"><span>⏸️</span><span>RFI / Hold</span><span className="ml-auto text-[10px] text-slate-400">3</span></div>
+        <div className="nav-item"><span>🔁</span><span>Re-review</span></div>
+        <div className="nav-item"><span>📜</span><span>История</span></div>
+      </nav>
+      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 mb-2 mt-5">Очередь</p>
+      <nav className="space-y-0.5">
+        <div className="nav-item"><span>⚖️</span><span>Споры</span><span className="ml-auto text-[10px] text-amber-400">8</span></div>
+        <div className="nav-item"><span>💸</span><span>Payouts review</span><span className="ml-auto text-[10px] text-slate-400">2</span></div>
+      </nav>
+    </aside>
+  );
+}
+
+function RiskPill({ risk }) { const r = RISK_META[risk]; return <span className="status-pill" style={{background:r.bg, color:r.color}}>● {r.label}</span>; }
+function StatusPill({ status }) { const s = STATUS_META[status]; return <span className="status-pill" style={{background:s.bg, color:s.color}}>{s.label}</span>; }
+function VerdictDot({ verdict }) {
+  const meta = { pass:{ bg:'#16a34a', icon:<Ic.check size={10}/> }, fail:{ bg:'#ef4444', icon:<Ic.x size={10}/> }, warn:{ bg:'#f59e0b', icon:<Ic.warn size={10}/> } }[verdict];
+  return <span className="w-4 h-4 rounded-full inline-flex items-center justify-center text-white flex-shrink-0" style={{background:meta.bg}}>{meta.icon}</span>;
+}
+
+function Queue({ selectedId, onSelect }) {
+  return (
+    <div className="queue w-[340px] flex-shrink-0 panel flex flex-col">
+      <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-white">Очередь KYC</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">{QUEUE.filter(q=>q.status==='awaiting').length} в работе · {QUEUE.filter(q=>q.overdue).length} просрочка</p>
+        </div>
+        <button className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1"><Ic.refresh/></button>
+      </div>
+      <div className="px-4 py-2 border-b border-slate-700 flex items-center gap-2 text-[11px]">
+        <span className="text-slate-400">Сортировка:</span>
+        <button className="text-white font-medium border-b border-blue-400">SLA</button>
+        <button className="text-slate-400 hover:text-white">Risk</button>
+        <button className="text-slate-400 hover:text-white">Дата</button>
+      </div>
+      <div className="overflow-y-auto flex-1">
+        {QUEUE.map(q => (
+          <div key={q.id} className={`row border-b border-slate-800 px-4 py-3 ${q.id === selectedId ? 'selected' : ''}`} onClick={() => onSelect(q.id)}>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <p className="text-[11px] font-mono text-slate-500">{q.id}</p>
+              <RiskPill risk={q.risk}/>
+            </div>
+            <p className="text-sm font-semibold text-white truncate">{q.vendor}</p>
+            <p className="text-[11px] text-slate-400 truncate">ИНН {q.inn} · {q.country}</p>
+            <div className="mt-2 flex items-center justify-between text-[11px]">
+              <span className={q.overdue ? 'text-red-400 font-semibold' : 'text-slate-400'}>SLA: {q.sla}</span>
+              <div className="flex items-center gap-2">
+                {q.flags > 0 && <span className="text-amber-400 inline-flex items-center gap-0.5"><Ic.flag/>{q.flags}</span>}
+                <span className="text-slate-500">score {q.providerScore}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CheckItem({ check }) {
+  return (
+    <div className={`checkitem ${check.verdict}`}>
+      <VerdictDot verdict={check.verdict}/>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-white">{check.label}</p>
+        <p className="text-[11px] text-slate-400 mt-0.5">{check.detail}</p>
+      </div>
+      <span className="text-[10px] uppercase tracking-wider text-slate-500 mt-0.5">{check.source}</span>
+    </div>
+  );
+}
+
+function DocTile({ doc, onOpen }) {
+  return (
+    <div className="doc-tile" onClick={() => onOpen(doc)}>
+      <div className="aspect-[4/3] bg-slate-950 border-b border-slate-700 relative flex items-center justify-center">
+        <div className="absolute inset-3 border border-slate-700 rounded-md opacity-50">
+          <div className="px-3 py-2 space-y-1">
+            <div className="h-1.5 w-2/3 bg-slate-700 rounded"></div>
+            <div className="h-1.5 w-1/2 bg-slate-700 rounded"></div>
+            <div className="h-1.5 w-3/4 bg-slate-800 rounded"></div>
+            <div className="h-1.5 w-3/5 bg-slate-800 rounded"></div>
+          </div>
+        </div>
+        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[9px] text-slate-400 font-semibold tracking-wider">{doc.type}</div>
+        <div className="absolute bottom-2 right-2"><VerdictDot verdict={doc.verdict}/></div>
+      </div>
+      <div className="px-3 py-2.5">
+        <p className="text-xs font-medium text-white truncate">{doc.label}</p>
+        <p className="text-[10px] text-slate-500 mt-0.5">{doc.size} · {doc.uploaded}</p>
+      </div>
+    </div>
+  );
+}
+
+function Detail({ t, setTweak }) {
+  const item = QUEUE[0];
+  const [decision, setDecision] = useState(null);
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(null);
+  const [docOpen, setDocOpen] = useState(null);
+
+  const passes = CHECKS.filter(c => c.verdict === 'pass').length;
+  const warns = CHECKS.filter(c => c.verdict === 'warn').length;
+  const fails = CHECKS.filter(c => c.verdict === 'fail').length;
+
+  const providerStatus = t.providerVerdict;
+  const providerScore = providerStatus === 'approved' ? 96 : providerStatus === 'review' ? 74 : 38;
+
+  function submit() {
+    if (!decision) return;
+    setSubmitting(true);
+    setTimeout(() => {
+      setSubmitting(false);
+      setSubmitted({ decision, reason, at: new Date().toLocaleString('ru-RU') });
+    }, 1100);
+  }
+
+  const decisionLabels = {
+    approve: { title:'Одобрить заявку',     btn:'btn-success', verb:'одобрена',         tone:'#16a34a' },
+    reject:  { title:'Отклонить заявку',    btn:'btn-danger',  verb:'отклонена',        tone:'#ef4444' },
+    rfi:     { title:'Запросить уточнение', btn:'btn-primary', verb:'отправлена в RFI', tone:'#f59e0b' },
+  };
+
+  return (
+    <div className="flex-1 flex flex-col min-w-0">
+      <div className="px-5 sm:px-6 py-4 border-b border-slate-800 bg-slate-900/60 flex items-start gap-4 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[11px] font-mono text-slate-500">{item.id}</p>
+            <StatusPill status="awaiting"/>
+            <RiskPill risk={item.risk}/>
+          </div>
+          <h2 className="text-xl font-bold text-white mt-1">{item.vendor}</h2>
+          <p className="text-xs text-slate-400 mt-0.5">ИНН {item.inn} · {item.country} · подано {item.submitted}</p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <p className="text-[11px] text-slate-400">SLA: <b className="text-white">{item.sla}</b></p>
+          <div className="flex items-center gap-2">
+            <button className="btn-ghost text-xs" onClick={() => setTweak('providerVerdict', t.providerVerdict==='approved'?'review':'approved')}><Ic.refresh/> Перезапросить provider</button>
+            <button className="btn-ghost text-xs"><Ic.external/> Открыть в provider</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+        <div className="panel p-4 fade-up flex items-start gap-4" style={{borderColor: providerStatus==='approved' ? '#166534' : providerStatus==='review' ? '#854d0e' : '#7f1d1d', background: providerStatus==='approved' ? 'linear-gradient(180deg,#052e16 0%,#1e293b 80%)' : providerStatus==='review' ? 'linear-gradient(180deg,#2a1f06 0%,#1e293b 80%)' : 'linear-gradient(180deg,#2a0a0a 0%,#1e293b 80%)'}}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'linear-gradient(135deg,#635bff,#7e72ff)'}}>
+            <span className="text-white font-bold">S</span>
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Verdict provider · Stripe Identity</p>
+              {t.providerLatency === 'slow' && <span className="status-pill" style={{background:'#2a1f06', color:'#f59e0b'}}>задержка provider</span>}
+              {t.showProviderError && <span className="status-pill" style={{background:'#2a0a0a', color:'#ef4444'}}>ошибка интеграции</span>}
+            </div>
+            <p className="text-base font-bold text-white mt-1">
+              {providerStatus === 'approved' ? 'APPROVED' : providerStatus === 'review' ? 'NEEDS_MANUAL_REVIEW' : 'REJECTED'} · score {providerScore}/100
+            </p>
+            <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+              {providerStatus === 'approved' && 'Все автоматические проверки пройдены. Compliance L1 подтверждает решение и одобряет запуск.'}
+              {providerStatus === 'review'   && 'Provider не смог принять автоматическое решение. Compliance принимает финальное решение, опираясь на documents и manual checks.'}
+              {providerStatus === 'rejected' && 'Provider обнаружил высокий риск или несоответствие. Решение отказа должно быть подтверждено человеком и сохранено в audit trail.'}
+            </p>
+            {t.showProviderError && (
+              <div className="mt-3 p-2.5 rounded-lg flex items-start gap-2 text-[11px]" style={{background:'#2a0a0a', color:'#fca5a5'}}>
+                <Ic.warn/><span><b>Ошибка provider:</b> request_id req_kyc_88f3 — timeout. На launch (R1) допустим manual override; решение всё равно пройдёт audit trail.</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          <div className="xl:col-span-2 space-y-5">
+            <section className="panel p-5 fade-up">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-white">Документы</p>
+                <p className="text-[11px] text-slate-400">{DOCUMENTS.length} файлов · все приняты</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {DOCUMENTS.map(d => <DocTile key={d.id} doc={d} onOpen={setDocOpen}/>)}
+              </div>
+            </section>
+
+            <section className="panel p-5 fade-up">
+              <p className="text-sm font-semibold text-white mb-3">Автоматические и ручные проверки</p>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="status-pill" style={{background:'#052e16', color:'#16a34a'}}><Ic.check size={11}/>{passes} pass</span>
+                {warns > 0 && <span className="status-pill" style={{background:'#2a1f06', color:'#f59e0b'}}><Ic.warn size={11}/>{warns} warn</span>}
+                {fails > 0 && <span className="status-pill" style={{background:'#2a0a0a', color:'#ef4444'}}><Ic.x size={11}/>{fails} fail</span>}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {CHECKS.map(c => <CheckItem key={c.id} check={c}/>)}
+              </div>
+            </section>
+          </div>
+
+          <aside className="space-y-5">
+            <section className="panel p-5 fade-up">
+              <p className="text-sm font-semibold text-white mb-3">О vendor</p>
+              <dl className="space-y-2.5 text-sm">
+                <Row label="Юр. лицо" value="ООО «ТехПро Солюшнс»"/>
+                <Row label="ИНН" value="7712345678" mono/>
+                <Row label="ОГРН" value="1097746123456" mono/>
+                <Row label="КПП" value="771201001" mono/>
+                <Row label="Юр. адрес" value="г. Москва, ул. Тверская, 12"/>
+                <Row label="Бенефициар" value="Петров Иван Иванович"/>
+                <Row label="Дата регистрации" value="14.02.2009"/>
+                <Row label="Категории" value="Промышленное оборудование"/>
+                <Row label="Ожидаемый GMV" value="до 5 000 000 ₽ / мес"/>
+              </dl>
+            </section>
+
+            <section className="panel p-5 fade-up">
+              <p className="text-sm font-semibold text-white mb-3">Связи и риски</p>
+              <ul className="space-y-2 text-xs text-slate-300">
+                <li className="flex items-start gap-2"><span className="text-green-400 mt-0.5"><Ic.check size={12}/></span>Не связан с уже забаненными vendor</li>
+                <li className="flex items-start gap-2"><span className="text-green-400 mt-0.5"><Ic.check size={12}/></span>ИНН не встречался в спорах</li>
+                <li className="flex items-start gap-2"><span className="text-amber-400 mt-0.5"><Ic.warn size={12}/></span>2 связанные компании на том же бенефициаре (info)</li>
+              </ul>
+              <button className="btn-ghost w-full justify-center mt-3 text-xs">Открыть граф связей <Ic.arrow/></button>
+            </section>
+          </aside>
+        </div>
+
+        {t.showAuditTrail && (
+          <section className="panel p-5 fade-up">
+            <p className="text-sm font-semibold text-white mb-3">Audit trail</p>
+            <ul className="space-y-2.5 text-xs">
+              {AUDIT.map((a,i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="text-slate-500 font-mono w-24 flex-shrink-0">{a.time}</span>
+                  <span className="text-slate-400 w-32 flex-shrink-0 truncate">{a.actor}</span>
+                  <div className="flex-1">
+                    <p className="text-slate-200">{a.action}</p>
+                    <p className="text-slate-500 text-[11px] mt-0.5">{a.detail}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section className="panel p-5 fade-up sticky bottom-5" style={{background:'#0f172a', borderColor:'#475569', boxShadow:'0 -8px 24px rgba(0,0,0,.45)'}}>
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+            <p className="text-sm font-semibold text-white">Решение Compliance L1</p>
+            <p className="text-[11px] text-slate-400">Все решения подписываются цифровой подписью (Анна К.) и не могут быть отозваны</p>
+          </div>
+
+          {!submitted ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
+                <DecisionTile active={decision==='approve'} onClick={() => setDecision('approve')} color="#16a34a" icon={<Ic.check size={14}/>} title="Одобрить" desc="Vendor получит доступ к продаже и payouts."/>
+                <DecisionTile active={decision==='rfi'} onClick={() => setDecision('rfi')} color="#f59e0b" icon={<Ic.warn size={14}/>} title="Запросить уточнение" desc="Vendor получит запрос: что догрузить."/>
+                <DecisionTile active={decision==='reject'} onClick={() => setDecision('reject')} color="#ef4444" icon={<Ic.x size={14}/>} title="Отклонить" desc="Аккаунт остаётся в статусе «отказано»."/>
+              </div>
+
+              {decision && (
+                <div className="space-y-3 fade-up">
+                  <div>
+                    <label className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">{decision === 'approve' ? 'Заметка (опционально)' : decision === 'rfi' ? 'Что нужно от vendor' : 'Причина отказа'}</label>
+                    <textarea className="field mt-1.5" rows="3" placeholder={decision === 'approve' ? 'Заметка попадёт во внутренний журнал…' : decision === 'rfi' ? 'Например: «Догрузите выписку из банка не старше 30 дней»' : 'Например: «Документы не прошли провайдера, бенефициар в санкционных списках»'} value={reason} onChange={e => setReason(e.target.value)}/>
+                  </div>
+                  {decision !== 'approve' && (
+                    <div className="text-[11px] text-slate-400 flex items-start gap-2"><Ic.info/><span>Текст увидит vendor в письме и в портале. Будьте конкретны и вежливы.</span></div>
+                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button className={decisionLabels[decision].btn} onClick={submit} disabled={submitting || (decision !== 'approve' && reason.trim().length < 8)}>
+                      {submitting ? <><svg className="spinner w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 16 16"/>Отправляем…</> : <>{decisionLabels[decision].title} <Ic.arrow/></>}
+                    </button>
+                    <button className="btn-ghost" onClick={() => { setDecision(null); setReason(''); }}>Отменить</button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="p-4 rounded-xl flex items-start gap-3 pop" style={{background:`color-mix(in srgb,${decisionLabels[submitted.decision].tone} 15%,#0f172a)`, border:`1px solid ${decisionLabels[submitted.decision].tone}`}}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0" style={{background:decisionLabels[submitted.decision].tone}}>
+                {submitted.decision === 'approve' ? <Ic.check/> : submitted.decision === 'rfi' ? <Ic.warn/> : <Ic.x/>}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-white">Заявка {decisionLabels[submitted.decision].verb}</p>
+                <p className="text-xs text-slate-300 mt-0.5">{submitted.at} · Анна К. (Compliance L1) · request_id req_kyc_88f3</p>
+                {submitted.reason && <p className="text-xs text-slate-300 mt-2 p-2 rounded bg-black/20 leading-relaxed">«{submitted.reason}»</p>}
+                <div className="mt-3 flex gap-2">
+                  <button className="btn-primary text-xs" style={{padding:'7px 12px'}}>Перейти к следующей заявке <Ic.arrow/></button>
+                  <button className="btn-ghost text-xs" style={{padding:'7px 12px'}} onClick={() => { setSubmitted(null); setDecision(null); setReason(''); }}>Открыть audit trail</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+
+      {docOpen && <DocOverlay doc={docOpen} onClose={() => setDocOpen(null)}/>}
+    </div>
+  );
+}
+
+function DecisionTile({ active, onClick, color, icon, title, desc }) {
+  return (
+    <button className="text-left p-3.5 rounded-xl border transition" style={{
+      borderColor: active ? color : '#334155',
+      background: active ? `color-mix(in srgb,${color} 12%,#0f172a)` : '#0f172a',
+      cursor:'pointer', fontFamily:'inherit',
+    }} onClick={onClick}>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="w-6 h-6 rounded-full flex items-center justify-center text-white" style={{background: color}}>{icon}</span>
+        <p className="text-sm font-semibold text-white">{title}</p>
+      </div>
+      <p className="text-[11px] text-slate-400 leading-snug">{desc}</p>
+    </button>
+  );
+}
+
+function Row({ label, value, mono }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="text-[11px] text-slate-500 flex-shrink-0">{label}</dt>
+      <dd className={`text-sm text-white text-right ${mono ? 'font-mono' : ''}`}>{value}</dd>
+    </div>
+  );
+}
+
+function DocOverlay({ doc, onClose }) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center p-6" style={{background:'rgba(2,6,23,.78)'}} onClick={onClose}>
+      <div className="panel max-w-3xl w-full max-h-[90vh] flex flex-col pop" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-3 border-b border-slate-700 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-white">{doc.label}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">{doc.type} · {doc.size} · загружен {doc.uploaded}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <VerdictDot verdict={doc.verdict}/>
+            <button className="btn-ghost text-xs" onClick={onClose}>Закрыть</button>
+          </div>
+        </div>
+        <div className="flex-1 p-6 bg-slate-950 flex items-center justify-center">
+          <div className="bg-white text-slate-900 w-full max-w-md aspect-[3/4] rounded-md p-8 shadow-2xl">
+            <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Документ — preview</p>
+            <h3 className="text-base font-bold mt-1">{doc.label}</h3>
+            <div className="mt-5 space-y-2 text-xs text-slate-600">
+              <div className="h-2 bg-slate-200 rounded w-3/4"></div>
+              <div className="h-2 bg-slate-200 rounded w-2/3"></div>
+              <div className="h-2 bg-slate-100 rounded w-5/6"></div>
+              <div className="h-2 bg-slate-100 rounded w-1/2"></div>
+              <div className="h-2 bg-slate-100 rounded w-3/5"></div>
+            </div>
+            <div className="mt-6 p-3 border border-slate-200 rounded">
+              <p className="text-[11px] text-slate-500 uppercase tracking-wider">Подпись</p>
+              <p className="text-sm font-mono mt-1">verified · 12.05.2026</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [selectedId, setSelectedId] = useState('KYC-2026-0512-A');
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', t.primaryColor);
+  }, [t.primaryColor]);
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header/>
+      <div className="flex-1 flex">
+        <Sidebar/>
+        <div className="flex-1 flex p-4 gap-4 min-w-0">
+          <Queue selectedId={selectedId} onSelect={setSelectedId}/>
+          <Detail t={t} setTweak={setTweak}/>
+        </div>
+      </div>
+
+      <TweaksPanel>
+        <TweakSection label="Тема"/>
+        <TweakColor label="Акцент" value={t.primaryColor} onChange={v => setTweak('primaryColor', v)}/>
+
+        <TweakSection label="Provider"/>
+        <TweakSelect label="Verdict provider" value={t.providerVerdict} options={[
+          {value:'approved', label:'APPROVED · score 96'},
+          {value:'review',   label:'NEEDS_MANUAL_REVIEW · 74'},
+          {value:'rejected', label:'REJECTED · 38'},
+        ]} onChange={v => setTweak('providerVerdict', v)}/>
+        <TweakSelect label="Состояние интеграции" value={t.providerLatency} options={[
+          {value:'ok', label:'OK'},
+          {value:'slow', label:'Задержка'},
+        ]} onChange={v => setTweak('providerLatency', v)}/>
+        <TweakToggle label="Ошибка интеграции (manual override)" value={t.showProviderError} onChange={v => setTweak('showProviderError', v)}/>
+
+        <TweakSection label="Слои UI"/>
+        <TweakToggle label="Audit trail" value={t.showAuditTrail} onChange={v => setTweak('showAuditTrail', v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

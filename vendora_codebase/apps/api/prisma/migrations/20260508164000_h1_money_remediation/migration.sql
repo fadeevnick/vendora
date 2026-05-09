@@ -1,0 +1,9 @@
+ALTER TABLE "RefundProviderExecution"
+  ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "reviewedByUserId" TEXT,
+  ADD COLUMN IF NOT EXISTS "reviewNote" TEXT;
+
+ALTER TABLE "PayoutProviderExecution"
+  ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "reviewedByUserId" TEXT,
+  ADD COLUMN IF NOT EXISTS "reviewNote" TEXT;

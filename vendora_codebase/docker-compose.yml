@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: vendora
+      POSTGRES_USER: vendora
+      POSTGRES_PASSWORD: vendora
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.8
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_MASTER_KEY: masterkey
+      MEILI_ENV: development
+
+  notification-worker:
+    image: node:22-bookworm-slim
+    profiles:
+      - workers
+    working_dir: /workspace
+    depends_on:
+      - postgres
+    volumes:
+      - .:/workspace
+    environment:
+      DATABASE_URL: ${WORKER_DATABASE_URL:-postgresql://vendora:vendora@postgres:5432/vendora}
+      JWT_SECRET: ${JWT_SECRET:-change-me-local-dev}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-dev_log}
+      EMAIL_FROM: ${EMAIL_FROM:-Vendora <no-reply@vendora.local>}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_API_BASE_URL: ${RESEND_API_BASE_URL:-https://api.resend.com}
+      NPM_CONFIG_UPDATE_NOTIFIER: "false"
+    command:
+      - npm
+      - run
+      - notifications:worker
+      - --workspace
+      - apps/api
+      - --
+      - --limit=${NOTIFICATION_WORKER_LIMIT:-25}
+      - --max-attempts=${NOTIFICATION_WORKER_MAX_ATTEMPTS:-3}
+      - --interval-ms=${NOTIFICATION_WORKER_INTERVAL_MS:-30000}
+    restart: unless-stopped
+
+  order-maintenance-worker:
+    image: node:22-bookworm-slim
+    profiles:
+      - workers
+    working_dir: /workspace
+    depends_on:
+      - postgres
+    volumes:
+      - .:/workspace
+    environment:
+      DATABASE_URL: ${WORKER_DATABASE_URL:-postgresql://vendora:vendora@postgres:5432/vendora}
+      JWT_SECRET: ${JWT_SECRET:-change-me-local-dev}
+      NPM_CONFIG_UPDATE_NOTIFIER: "false"
+    command:
+      - npm
+      - run
+      - orders:maintenance-worker
+      - --workspace
+      - apps/api
+      - --
+      - --limit=${ORDER_MAINTENANCE_WORKER_LIMIT:-50}
+      - --confirmation-older-than-hours=${ORDER_CONFIRMATION_TIMEOUT_HOURS:-48}
+      - --delivery-older-than-hours=${ORDER_DELIVERY_TIMEOUT_HOURS:-72}
+      - --interval-ms=${ORDER_MAINTENANCE_WORKER_INTERVAL_MS:-60000}
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vendora — Billing & Subscription</title>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; background:#f1f4f9; font-family:'Inter',system-ui,sans-serif; min-height:100vh; color:#1e293b; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .fade-up { animation: fadeUp .28s cubic-bezier(.22,.84,.4,1) both; }
+  @keyframes slideIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+  .slide-in { animation: slideIn .3s cubic-bezier(.22,.84,.4,1) both; }
+  @keyframes pop { 0%{transform:scale(.85);opacity:0} 70%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
+  .pop { animation: pop .35s cubic-bezier(.22,.84,.4,1) both; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .spinner { animation: spin .7s linear infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+  .pulse-dot { animation: pulse 1.8s ease infinite; }
+
+  .card { background:#fff; border-radius:14px; border:1px solid #e4e9f2; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+
+  .btn-primary {
+    background:var(--brand,#2455e8); color:#fff; border:none; border-radius:9px;
+    padding:9px 18px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px;
+    transition: filter .15s, box-shadow .15s, transform .1s;
+  }
+  .btn-primary:hover { filter:brightness(.88); box-shadow:0 4px 14px color-mix(in srgb,var(--brand,#2455e8) 30%,transparent); }
+  .btn-primary:active { transform:scale(.97); }
+  .btn-primary:disabled { opacity:.55; cursor:not-allowed; filter:none; box-shadow:none; }
+
+  .btn-ghost {
+    background:transparent; color:#475569; border:1.5px solid #e2e8f0;
+    border-radius:9px; padding:8px 16px; font-size:13px; font-weight:500; font-family:inherit;
+    cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .btn-ghost:hover { border-color:#94a3b8; color:#1e293b; background:#f8fafc; }
+
+  .btn-danger {
+    background:#fff; color:#ef4444; border:1.5px solid #fecaca;
+    border-radius:9px; padding:8px 16px; font-size:13px; font-weight:500; font-family:inherit;
+    cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+    transition: background .15s, border-color .15s;
+  }
+  .btn-danger:hover { background:#fef2f2; border-color:#ef4444; }
+
+  .nav-item {
+    display:flex; align-items:center; gap:10px; padding:9px 12px;
+    border-radius:9px; font-size:13px; font-weight:500; color:#64748b;
+    cursor:pointer; transition:background .15s, color .15s;
+  }
+  .nav-item:hover { background:#f1f4f9; color:#1e293b; }
+  .nav-item.active { background:color-mix(in srgb,var(--brand,#2455e8) 10%,white); color:var(--brand,#2455e8); font-weight:600; }
+
+  .tab-btn {
+    padding:10px 4px; font-size:13px; font-weight:500; color:#64748b;
+    cursor:pointer; border-bottom:2px solid transparent; transition:color .15s, border-color .15s;
+    background:transparent; border-top:none; border-left:none; border-right:none;
+  }
+  .tab-btn:hover { color:#1e293b; }
+  .tab-btn.active { color:var(--brand,#2455e8); border-bottom-color:var(--brand,#2455e8); font-weight:600; }
+
+  .status-pill {
+    display:inline-flex; align-items:center; gap:5px; padding:3px 10px;
+    border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.02em;
+  }
+
+  .stat-card { background:#fff; border-radius:14px; border:1px solid #e4e9f2; padding:18px 20px; }
+
+  .progress-track { height:6px; background:#eef2f7; border-radius:999px; overflow:hidden; }
+  .progress-bar { height:100%; background:var(--brand,#2455e8); border-radius:999px; transition:width .4s ease; }
+  .progress-bar.warn { background:#f59e0b; }
+  .progress-bar.crit { background:#ef4444; }
+
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+
+  @media(max-width:900px){ .sidebar { display:none; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+
+// ─── DEFAULTS / TWEAKS ────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "primaryColor": "#2455e8",
+  "currentPlan": "pro",
+  "subscriptionStatus": "active",
+  "limitReached": false,
+  "monthlyGmv": 1840000,
+  "showLaunchBanner": true
+}/*EDITMODE-END*/;
+
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+const PLANS = {
+  standard: {
+    id:'standard', name:'Standard', tagline:'Старт продаж на Vendora',
+    price: 4900, priceLabel:'4 900 ₽ / мес',
+    commission: 7.5,
+    listings: 50, seats: 2, gmv: 500000,
+    features: [
+      'До 50 листингов',
+      '2 пользователя в команде',
+      'GMV до 500 000 ₽ / мес',
+      'Базовая поддержка по email',
+      'Стандартный payout (T+5)',
+    ],
+  },
+  pro: {
+    id:'pro', name:'Pro', tagline:'Для растущих B2B-продавцов', popular:true,
+    price: 14900, priceLabel:'14 900 ₽ / мес',
+    commission: 5.0,
+    listings: 500, seats: 10, gmv: 5000000,
+    features: [
+      'До 500 листингов',
+      '10 пользователей в команде',
+      'GMV до 5 000 000 ₽ / мес',
+      'Приоритетная поддержка',
+      'Ускоренный payout (T+2)',
+      'Брендирование витрины',
+    ],
+  },
+  enterprise: {
+    id:'enterprise', name:'Enterprise', tagline:'Корпоративные условия',
+    price: null, priceLabel:'По договору',
+    commission: 3.0,
+    listings: -1, seats: -1, gmv: -1,
+    features: [
+      'Без лимита листингов',
+      'Без лимита пользователей',
+      'Без лимита GMV',
+      'Персональный менеджер',
+      'SLA с гарантией доступности',
+      'Ускоренный payout (T+1)',
+      'Кастомные интеграции',
+    ],
+  },
+};
+
+const STATUS_META = {
+  active:    { label:'Активна',         color:'#16a34a', bg:'#f0fdf4', icon:'●' },
+  trial:     { label:'Триал',           color:'#0891b2', bg:'#ecfeff', icon:'○' },
+  past_due:  { label:'Просрочка',       color:'#f59e0b', bg:'#fffbeb', icon:'!' },
+  cancelled: { label:'Отменена',        color:'#ef4444', bg:'#fef2f2', icon:'✕' },
+};
+
+const INVOICES = [
+  { id:'INV-2026-0501', date:'01.05.2026', period:'Май 2026',     amount: 14900, status:'pending', method:'Карта •• 4242' },
+  { id:'INV-2026-0401', date:'01.04.2026', period:'Апрель 2026',   amount: 14900, status:'paid',    method:'Карта •• 4242' },
+  { id:'INV-2026-0301', date:'01.03.2026', period:'Март 2026',     amount: 14900, status:'failed',  method:'Карта •• 4242', failReason:'Недостаточно средств на карте' },
+  { id:'INV-2026-0301-R', date:'03.03.2026', period:'Март 2026 (повтор)', amount: 14900, status:'paid', method:'Карта •• 7821' },
+  { id:'INV-2026-0201', date:'01.02.2026', period:'Февраль 2026',   amount: 14900, status:'paid',    method:'Карта •• 4242' },
+  { id:'INV-2026-0101', date:'01.01.2026', period:'Январь 2026',    amount:  4900, status:'paid',    method:'Карта •• 4242' },
+];
+
+const INVOICE_STATUS = {
+  paid:    { label:'Оплачен', color:'#16a34a', bg:'#f0fdf4' },
+  pending: { label:'Ожидает', color:'#f59e0b', bg:'#fffbeb' },
+  failed:  { label:'Ошибка',  color:'#ef4444', bg:'#fef2f2' },
+};
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const fmt = n => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
+const fmtNum = n => new Intl.NumberFormat('ru-RU').format(n);
+
+// ─── ICONS ────────────────────────────────────────────────────────────────────
+const Ic = {
+  check:   ({size=14}) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3L11.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  x:       ({size=14}) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
+  arrow:   () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M7 3l4 3.5L7 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  external:() => <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 2H2v8h8V7M7 2h3v3M5 7l5-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  download:() => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8m0 0L4 6m3 3l3-3M2 11v1h10v-1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  card:    () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="1.4" stroke="currentColor" strokeWidth="1.3"/><path d="M1 6h12M3 9h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  warning: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L1 12h12L7 1z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 5v3M7 10v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  refresh: () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 1.5v3H8M2 11.5v-3h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M11 5.5A4.5 4.5 0 002 6.5M2 8.5a4.5 4.5 0 009 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  info:    () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/><path d="M7 6.5V10M7 5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  shield:  () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.3L1.7 3.5v3.7c0 3 2 5.4 5.3 6.2 3.3-.8 5.3-3.2 5.3-6.2V3.5L7 1.3z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  spark:   () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.5 4L13 7 8.5 8.5 7 13l-1.5-4.5L1 7l4.5-2L7 1z" fill="currentColor"/></svg>,
+};
+
+// ─── STATUS PILL ──────────────────────────────────────────────────────────────
+function StatusPill({ status }) {
+  const s = STATUS_META[status] || STATUS_META.active;
+  return (
+    <span className="status-pill" style={{background:s.bg, color:s.color}}>
+      <span className="w-1.5 h-1.5 rounded-full" style={{background:s.color}}></span>
+      {s.label}
+    </span>
+  );
+}
+
+function InvoicePill({ status }) {
+  const s = INVOICE_STATUS[status];
+  return <span className="status-pill" style={{background:s.bg, color:s.color}}>{s.label}</span>;
+}
+
+// ─── HEADER ───────────────────────────────────────────────────────────────────
+function Header() {
+  return (
+    <header className="bg-white border-b border-slate-100 sticky top-0 z-30">
+      <div className="px-5 sm:px-7 h-14 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{background:'var(--brand,#2455e8)'}}>
+            <span className="text-white font-bold text-sm">V</span>
+          </div>
+          <div className="hidden sm:block">
+            <p className="text-sm font-bold text-slate-800">Vendora</p>
+            <p className="text-[11px] text-slate-400 -mt-0.5">Seller Portal · Биллинг</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500">
+            <span className="text-green-500"><Ic.shield/></span>
+            <span>Защищённое соединение</span>
+          </span>
+          <div className="flex items-center gap-2 pl-3 border-l border-slate-100">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{background:'#6366f1'}}>T</div>
+            <div className="hidden sm:block">
+              <p className="text-xs font-semibold text-slate-800">TechPro Solutions</p>
+              <p className="text-[10px] text-slate-400">vendor #1284</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ─── SIDEBAR ──────────────────────────────────────────────────────────────────
+function Sidebar({ tab, setTab }) {
+  const items = [
+    { id:'overview',  label:'Обзор',           icon:'📊' },
+    { id:'plans',     label:'Тарифы',          icon:'⭐' },
+    { id:'invoices',  label:'История счетов',  icon:'📄' },
+    { id:'payment',   label:'Способ оплаты',   icon:'💳' },
+    { id:'limits',    label:'Лимиты',          icon:'⚖️' },
+  ];
+  return (
+    <aside className="sidebar w-56 flex-shrink-0 bg-white border-r border-slate-100 min-h-[calc(100vh-3.5rem)] py-5 px-3">
+      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2">Биллинг</p>
+      <nav className="space-y-0.5">
+        {items.map(i => (
+          <div key={i.id} className={`nav-item ${tab===i.id?'active':''}`} onClick={() => setTab(i.id)}>
+            <span className="text-base leading-none">{i.icon}</span>
+            <span>{i.label}</span>
+          </div>
+        ))}
+      </nav>
+      <div className="mt-6 mx-2 p-3 rounded-xl border border-amber-200 bg-amber-50/60">
+        <p className="text-[11px] font-semibold text-amber-800 flex items-center gap-1.5"><Ic.info/> Launch-safe</p>
+        <p className="text-[11px] text-amber-700 leading-snug mt-1">Управление подпиской и оплата идут через hosted Stripe Customer Portal. В <b>R2</b> — self-serve в продукте.</p>
+      </div>
+    </aside>
+  );
+}
+
+// ─── LAUNCH BANNER ────────────────────────────────────────────────────────────
+function LaunchBanner({ visible }) {
+  if (!visible) return null;
+  return (
+    <div className="card fade-up px-4 py-2.5 flex items-center gap-3 border-amber-200" style={{background:'#fffaf0', borderColor:'#fde68a'}}>
+      <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+        <Ic.warning/>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-amber-900">Launch (R1): hosted billing portal · Target (R2): self-serve в продукте</p>
+        <p className="text-[11px] text-amber-700">Сейчас изменение тарифа, способов оплаты и реквизитов выполняется через hosted Stripe Portal. Просмотр и история — в этом интерфейсе.</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── OVERVIEW ─────────────────────────────────────────────────────────────────
+function Overview({ t, setTab, openPortal }) {
+  const plan = PLANS[t.currentPlan];
+  const status = t.subscriptionStatus;
+  const meta = STATUS_META[status];
+  const limitPct = plan.gmv > 0 ? Math.min(100, Math.round(t.monthlyGmv / plan.gmv * 100)) : 0;
+  const listingsUsed = 312;
+  const seatsUsed = 7;
+  const limitListings = plan.listings;
+  const limitSeats = plan.seats;
+  const listingsPct = limitListings > 0 ? Math.min(100, Math.round(listingsUsed/limitListings*100)) : 5;
+  const seatsPct = limitSeats > 0 ? Math.min(100, Math.round(seatsUsed/limitSeats*100)) : 5;
+
+  return (
+    <div className="space-y-5">
+      {/* Status hero */}
+      <div className="card p-5 sm:p-6 fade-up">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Текущий тариф</p>
+              <StatusPill status={status}/>
+            </div>
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <h2 className="text-2xl font-bold text-slate-900">{plan.name}</h2>
+              <span className="text-sm text-slate-500">{plan.tagline}</span>
+            </div>
+            <div className="mt-3 flex items-center gap-5 flex-wrap text-sm">
+              <div>
+                <p className="text-[11px] text-slate-400">Абонплата</p>
+                <p className="font-semibold text-slate-800">{plan.priceLabel}</p>
+              </div>
+              <div className="w-px h-8 bg-slate-100"></div>
+              <div>
+                <p className="text-[11px] text-slate-400">Комиссия с продаж</p>
+                <p className="font-semibold text-slate-800">{plan.commission.toFixed(1)}%</p>
+              </div>
+              <div className="w-px h-8 bg-slate-100"></div>
+              <div>
+                <p className="text-[11px] text-slate-400">Следующий счёт</p>
+                <p className="font-semibold text-slate-800">{status === 'cancelled' ? '—' : '01.06.2026'}</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <button className="btn-primary" onClick={openPortal}>
+              Открыть billing portal <Ic.external/>
+            </button>
+            <button className="btn-ghost" onClick={() => setTab('plans')}>Сравнить тарифы</button>
+          </div>
+        </div>
+
+        {status === 'past_due' && (
+          <div className="mt-5 p-3.5 rounded-xl border flex items-start gap-3" style={{background:'#fffbeb', borderColor:'#fde68a'}}>
+            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0"><Ic.warning/></div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-900">Платёж не прошёл</p>
+              <p className="text-xs text-amber-800 mt-0.5">Последний платёж 14 900 ₽ от 01.05 был отклонён. Доступ к продукту сохранён до 08.05.2026. Обновите способ оплаты или повторите платёж.</p>
+              <div className="mt-3 flex gap-2">
+                <button className="btn-primary text-xs" style={{padding:'6px 12px'}} onClick={openPortal}>Повторить платёж</button>
+                <button className="btn-ghost text-xs" style={{padding:'6px 12px'}} onClick={() => setTab('payment')}>Обновить карту</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {status === 'cancelled' && (
+          <div className="mt-5 p-3.5 rounded-xl border flex items-start gap-3" style={{background:'#fef2f2', borderColor:'#fecaca'}}>
+            <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center flex-shrink-0"><Ic.x size={14}/></div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-700">Подписка отменена</p>
+              <p className="text-xs text-red-600 mt-0.5">Доступ к селлерскому портфолио сохранится до 31.05.2026. После — листинги уйдут в архив, выплаты по уже завершённым заказам продолжатся.</p>
+              <button className="btn-primary mt-3 text-xs" style={{padding:'6px 12px'}} onClick={openPortal}>Возобновить подписку</button>
+            </div>
+          </div>
+        )}
+
+        {status === 'trial' && (
+          <div className="mt-5 p-3.5 rounded-xl border flex items-start gap-3" style={{background:'#ecfeff', borderColor:'#a5f3fc'}}>
+            <div className="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center flex-shrink-0"><Ic.spark/></div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-cyan-900">Триал — 11 дней до окончания</p>
+              <p className="text-xs text-cyan-800 mt-0.5">Триал закончится 20.05.2026, подписка будет автоматически активирована, с карты спишется {plan.priceLabel.toLowerCase()}.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Limits at a glance */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="stat-card fade-up">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-slate-500">Листинги</p>
+            <p className="text-[11px] font-semibold text-slate-400">{limitListings === -1 ? '∞' : `${listingsUsed}/${limitListings}`}</p>
+          </div>
+          <p className="text-2xl font-bold text-slate-900">{fmtNum(listingsUsed)}</p>
+          <div className="progress-track mt-3"><div className={`progress-bar ${listingsPct>85?'crit':listingsPct>70?'warn':''}`} style={{width:`${Math.max(listingsPct,4)}%`}}></div></div>
+          <p className="text-[11px] text-slate-400 mt-1.5">{limitListings === -1 ? 'без лимита' : `${limitListings - listingsUsed} свободно`}</p>
+        </div>
+        <div className="stat-card fade-up" style={{animationDelay:'.05s'}}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-slate-500">Команда</p>
+            <p className="text-[11px] font-semibold text-slate-400">{limitSeats === -1 ? '∞' : `${seatsUsed}/${limitSeats}`}</p>
+          </div>
+          <p className="text-2xl font-bold text-slate-900">{seatsUsed}</p>
+          <div className="progress-track mt-3"><div className={`progress-bar ${seatsPct>85?'crit':seatsPct>70?'warn':''}`} style={{width:`${Math.max(seatsPct,4)}%`}}></div></div>
+          <p className="text-[11px] text-slate-400 mt-1.5">{limitSeats === -1 ? 'без лимита' : `${limitSeats - seatsUsed} мест свободно`}</p>
+        </div>
+        <div className="stat-card fade-up" style={{animationDelay:'.1s'}}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-slate-500">GMV в этом месяце</p>
+            <p className="text-[11px] font-semibold text-slate-400">{plan.gmv === -1 ? '∞' : `${limitPct}%`}</p>
+          </div>
+          <p className="text-2xl font-bold text-slate-900">{fmt(t.monthlyGmv)}</p>
+          <div className="progress-track mt-3"><div className={`progress-bar ${limitPct>85?'crit':limitPct>70?'warn':''}`} style={{width:`${Math.max(limitPct,4)}%`}}></div></div>
+          <p className="text-[11px] text-slate-400 mt-1.5">{plan.gmv === -1 ? 'без лимита' : `лимит ${fmt(plan.gmv)}`}</p>
+        </div>
+      </div>
+
+      {/* Limit warning */}
+      {t.limitReached && (
+        <div className="card fade-up overflow-hidden border-amber-200" style={{borderColor:'#fde68a'}}>
+          <div className="px-5 py-4 flex items-start gap-4" style={{background:'linear-gradient(180deg,#fffaf0 0%,#fffbeb 100%)'}}>
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0"><Ic.warning/></div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-amber-900">Достигнут лимит листингов на тарифе {plan.name}</p>
+              <p className="text-xs text-amber-800 mt-1">Создание новых листингов временно заблокировано. Перейдите на Pro или Enterprise — старые листинги остаются активными.</p>
+              <div className="mt-3 flex gap-2 flex-wrap">
+                <button className="btn-primary text-xs" style={{padding:'7px 14px'}} onClick={() => setTab('plans')}>Перейти на Pro</button>
+                <button className="btn-ghost text-xs" style={{padding:'7px 14px'}}>Связаться с менеджером Enterprise</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent invoices */}
+      <div className="card fade-up">
+        <div className="px-5 py-3.5 flex items-center justify-between border-b border-slate-100">
+          <p className="text-sm font-semibold text-slate-800">Последние счета</p>
+          <button className="text-xs text-slate-500 hover:text-slate-800 font-medium flex items-center gap-1" onClick={() => setTab('invoices')}>Все счета <Ic.arrow/></button>
+        </div>
+        <div className="divide-y divide-slate-50">
+          {INVOICES.slice(0,3).map(inv => (
+            <div key={inv.id} className="px-5 py-3 flex items-center gap-4">
+              <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 flex-shrink-0">
+                <Ic.card/>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">{inv.id}</p>
+                <p className="text-[11px] text-slate-400">{inv.period} · {inv.method}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-slate-800">{fmt(inv.amount)}</p>
+                <p className="text-[11px] text-slate-400">{inv.date}</p>
+              </div>
+              <InvoicePill status={inv.status}/>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PLANS / COMPARISON ───────────────────────────────────────────────────────
+function PlanCard({ plan, current, onSelect, redirecting }) {
+  const isCurrent = current === plan.id;
+  return (
+    <div className={`card relative p-5 ${isCurrent?'ring-2':''}`} style={{borderColor: isCurrent ? 'var(--brand,#2455e8)' : undefined, ['--tw-ring-color']: 'var(--brand,#2455e8)'}}>
+      {plan.popular && !isCurrent && (
+        <span className="absolute -top-2.5 left-5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full text-white" style={{background:'var(--brand,#2455e8)'}}>Популярный</span>
+      )}
+      {isCurrent && (
+        <span className="absolute -top-2.5 left-5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full text-white" style={{background:'#16a34a'}}>Текущий план</span>
+      )}
+      <p className="text-sm font-semibold" style={{color:'var(--brand,#2455e8)'}}>{plan.name}</p>
+      <p className="text-xs text-slate-400 mt-0.5">{plan.tagline}</p>
+      <div className="mt-4 mb-4">
+        {plan.price !== null ? (
+          <p><span className="text-3xl font-bold text-slate-900">{fmtNum(plan.price)}</span><span className="text-sm text-slate-500"> ₽ / мес</span></p>
+        ) : (
+          <p className="text-3xl font-bold text-slate-900">По договору</p>
+        )}
+        <p className="text-xs text-slate-500 mt-1">+ <b>{plan.commission.toFixed(1)}%</b> комиссия с продаж</p>
+      </div>
+      <ul className="space-y-2 mb-5">
+        {plan.features.map((f,i) => (
+          <li key={i} className="flex items-start gap-2 text-xs text-slate-700"><span className="text-green-500 mt-0.5"><Ic.check size={12}/></span><span>{f}</span></li>
+        ))}
+      </ul>
+      {isCurrent ? (
+        <button className="btn-ghost w-full justify-center" disabled>Текущий тариф</button>
+      ) : (
+        <button className="btn-primary w-full justify-center" onClick={() => onSelect(plan.id)} disabled={redirecting}>
+          {redirecting ? <><svg className="spinner w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 16 16"/>Переходим…</> : <>{plan.id === 'enterprise' ? 'Связаться' : (PLANS[current].price === null || (plan.price && plan.price > PLANS[current].price)) ? 'Перейти на ' + plan.name : 'Сменить тариф'} <Ic.arrow/></>}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Plans({ t, setTweak, openPortal }) {
+  const [redir, setRedir] = useState(null);
+
+  function handleSelect(id) {
+    if (id === 'enterprise') return alert('Запрос отправлен менеджеру Enterprise');
+    setRedir(id);
+    setTimeout(() => {
+      setRedir(null);
+      openPortal({ kind:'plan_change', target: id });
+    }, 1200);
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Сравнение тарифов</h2>
+        <p className="text-sm text-slate-500 mt-1">Меняйте тариф в любой момент. Изменения через hosted billing portal — счёт пересчитывается пропорционально оставшимся дням.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-3">
+        {Object.values(PLANS).map(p => (
+          <div key={p.id} className="fade-up">
+            <PlanCard plan={p} current={t.currentPlan} onSelect={handleSelect} redirecting={redir===p.id}/>
+          </div>
+        ))}
+      </div>
+
+      {/* Detail compare */}
+      <div className="card overflow-hidden fade-up">
+        <div className="px-5 py-3.5 border-b border-slate-100">
+          <p className="text-sm font-semibold text-slate-800">Детальное сравнение</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+              <tr>
+                <th className="text-left px-5 py-3 font-semibold">Возможность</th>
+                {Object.values(PLANS).map(p => (
+                  <th key={p.id} className="text-left px-5 py-3 font-semibold">
+                    {p.name}{t.currentPlan===p.id && <span className="ml-1.5 text-[10px]" style={{color:'var(--brand,#2455e8)'}}>● текущий</span>}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {[
+                ['Абонплата', p => p.price === null ? 'По договору' : `${fmtNum(p.price)} ₽ / мес`],
+                ['Комиссия', p => `${p.commission.toFixed(1)}%`],
+                ['Листинги', p => p.listings === -1 ? 'без лимита' : fmtNum(p.listings)],
+                ['Команда', p => p.seats === -1 ? 'без лимита' : `${p.seats} пользователей`],
+                ['GMV / мес', p => p.gmv === -1 ? 'без лимита' : `до ${fmt(p.gmv)}`],
+                ['Payout', p => p.id==='standard' ? 'T+5' : p.id==='pro' ? 'T+2' : 'T+1'],
+                ['Поддержка', p => p.id==='standard' ? 'Email' : p.id==='pro' ? 'Приоритетная' : 'Персональный менеджер'],
+                ['SLA', p => p.id==='enterprise' ? <span className="text-green-600 inline-flex items-center gap-1"><Ic.check size={12}/>с гарантией</span> : <span className="text-slate-300">—</span>],
+              ].map(([label,fn],i) => (
+                <tr key={i}>
+                  <td className="px-5 py-3 text-slate-600">{label}</td>
+                  {Object.values(PLANS).map(p => (
+                    <td key={p.id} className={`px-5 py-3 ${t.currentPlan===p.id?'bg-blue-50/40':''}`}>{fn(p)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── INVOICES ─────────────────────────────────────────────────────────────────
+function Invoices() {
+  const [filter, setFilter] = useState('all');
+  const [retrying, setRetrying] = useState(null);
+
+  const filtered = INVOICES.filter(i => filter === 'all' ? true : i.status === filter);
+
+  function retry(id) {
+    setRetrying(id);
+    setTimeout(() => setRetrying(null), 1400);
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">История счетов</h2>
+        <p className="text-sm text-slate-500 mt-1">Счета формируются 1-го числа каждого месяца. Скачайте PDF для бухгалтерии.</p>
+      </div>
+
+      <div className="card fade-up">
+        <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2 flex-wrap">
+          {[['all','Все', INVOICES.length], ['paid','Оплаченные', INVOICES.filter(i=>i.status==='paid').length], ['pending','Ожидающие', INVOICES.filter(i=>i.status==='pending').length], ['failed','С ошибкой', INVOICES.filter(i=>i.status==='failed').length]].map(([k,l,n]) => (
+            <button key={k} className={`tab-btn ${filter===k?'active':''}`} style={{padding:'8px 4px'}} onClick={() => setFilter(k)}>
+              {l} <span className="text-slate-400 ml-1">({n})</span>
+            </button>
+          ))}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-slate-400 bg-slate-50/40">
+              <tr>
+                <th className="text-left px-5 py-2.5 font-semibold">Счёт</th>
+                <th className="text-left px-5 py-2.5 font-semibold">Период</th>
+                <th className="text-left px-5 py-2.5 font-semibold">Способ оплаты</th>
+                <th className="text-right px-5 py-2.5 font-semibold">Сумма</th>
+                <th className="text-left px-5 py-2.5 font-semibold">Статус</th>
+                <th className="text-right px-5 py-2.5 font-semibold">Действия</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filtered.map(inv => (
+                <React.Fragment key={inv.id}>
+                  <tr className="hover:bg-slate-50/50">
+                    <td className="px-5 py-3.5">
+                      <p className="text-sm font-semibold text-slate-800">{inv.id}</p>
+                      <p className="text-[11px] text-slate-400">{inv.date}</p>
+                    </td>
+                    <td className="px-5 py-3.5 text-slate-600">{inv.period}</td>
+                    <td className="px-5 py-3.5 text-slate-600">
+                      <span className="inline-flex items-center gap-1.5"><Ic.card/>{inv.method}</span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right font-semibold text-slate-800">{fmt(inv.amount)}</td>
+                    <td className="px-5 py-3.5"><InvoicePill status={inv.status}/></td>
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="inline-flex gap-1.5">
+                        {inv.status === 'failed' && (
+                          <button className="btn-primary" style={{padding:'6px 12px', fontSize:12}} onClick={() => retry(inv.id)} disabled={retrying===inv.id}>
+                            {retrying === inv.id ? <><svg className="spinner w-3 h-3 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 16 16"/>Повтор</> : <><Ic.refresh/> Повторить</>}
+                          </button>
+                        )}
+                        <button className="btn-ghost" style={{padding:'6px 10px', fontSize:12}}><Ic.download/> PDF</button>
+                      </div>
+                    </td>
+                  </tr>
+                  {inv.status === 'failed' && (
+                    <tr className="bg-red-50/40">
+                      <td colSpan={6} className="px-5 py-2.5 text-xs text-red-700 flex items-center gap-2">
+                        <Ic.warning/><span><b>Причина:</b> {inv.failReason}. Рекомендуем обновить способ оплаты в hosted portal.</span>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={6} className="px-5 py-12 text-center text-slate-400 text-sm">Нет счетов в этом фильтре</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PAYMENT METHOD ───────────────────────────────────────────────────────────
+function Payment({ openPortal }) {
+  const [portalState, setPortalState] = useState('idle'); // idle | redirecting | error
+
+  function go() {
+    setPortalState('redirecting');
+    setTimeout(() => {
+      // 90% success
+      setPortalState('idle');
+      openPortal({ kind:'payment_method' });
+    }, 1500);
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Способ оплаты</h2>
+        <p className="text-sm text-slate-500 mt-1">Карта на файле и реквизиты управляются через hosted Stripe Customer Portal — данные карты не хранятся на стороне Vendora.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="md:col-span-2 space-y-4">
+          {/* Current card */}
+          <div className="card p-5 fade-up">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Карта на файле</p>
+              <span className="status-pill" style={{background:'#f0fdf4', color:'#16a34a'}}>● основная</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-9 rounded-md flex items-center justify-center text-white text-xs font-bold" style={{background:'linear-gradient(135deg,#1e3a8a,#1e40af)'}}>VISA</div>
+              <div className="flex-1">
+                <p className="font-semibold text-slate-800 tracking-widest">•••• •••• •••• 4242</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Срок: 12/27 · Иван Петров</p>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2 flex-wrap">
+              <button className="btn-primary" onClick={go} disabled={portalState==='redirecting'}>
+                {portalState==='redirecting' ? <><svg className="spinner w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 16 16"/>Перенаправляем в Stripe…</> : <>Изменить карту <Ic.external/></>}
+              </button>
+              <button className="btn-ghost" onClick={go}>Добавить ещё одну</button>
+            </div>
+          </div>
+
+          {/* Hosted portal redirect state */}
+          {portalState === 'redirecting' && (
+            <div className="card p-5 fade-up text-center">
+              <div className="w-12 h-12 mx-auto rounded-full flex items-center justify-center" style={{background:'color-mix(in srgb,var(--brand,#2455e8) 12%,white)'}}>
+                <svg className="spinner w-6 h-6 border-2 border-current border-t-transparent rounded-full" style={{color:'var(--brand,#2455e8)'}} viewBox="0 0 16 16"/>
+              </div>
+              <p className="mt-3 text-sm font-semibold text-slate-800">Перенаправление в Stripe Customer Portal…</p>
+              <p className="text-xs text-slate-500 mt-1">Не закрывайте окно. После завершения вы вернётесь сюда.</p>
+            </div>
+          )}
+
+          {/* Billing details */}
+          <div className="card p-5 fade-up">
+            <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">Реквизиты для счёта</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <Field label="Организация" value="ООО «ТехПро Солюшнс»"/>
+              <Field label="ИНН" value="7712345678"/>
+              <Field label="КПП" value="771201001"/>
+              <Field label="Юр. адрес" value="г. Москва, ул. Тверская, 12"/>
+              <Field label="Email для счетов" value="finance@techpro.ru"/>
+              <Field label="Контакт" value="Петров И.И., +7 495 555-12-34"/>
+            </div>
+            <button className="btn-ghost mt-4" onClick={go}>Изменить реквизиты <Ic.external/></button>
+          </div>
+        </div>
+
+        {/* Side: safe fallback */}
+        <aside className="space-y-4">
+          <div className="card p-5 fade-up">
+            <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">Manual fallback</p>
+            <p className="text-sm font-semibold text-slate-800">Не получается через Stripe?</p>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">На launch (R1) допустим manual путь: бухгалтерия отправит вам счёт на email и примет оплату по реквизитам.</p>
+            <button className="btn-ghost w-full justify-center mt-3 text-xs">Связаться с поддержкой</button>
+            <button className="btn-ghost w-full justify-center mt-2 text-xs">Запросить ручной счёт</button>
+          </div>
+          <div className="card p-5 fade-up text-xs leading-relaxed text-slate-600">
+            <p className="flex items-center gap-1.5 font-semibold text-slate-700"><Ic.shield/> Безопасность</p>
+            <p className="mt-2">Vendora не хранит номер вашей карты. Все изменения проходят через PCI-DSS сертифицированный портал Stripe.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, value }) {
+  return (
+    <div>
+      <p className="text-[11px] text-slate-400">{label}</p>
+      <p className="text-sm font-medium text-slate-800 mt-0.5 truncate">{value}</p>
+    </div>
+  );
+}
+
+// ─── LIMITS ───────────────────────────────────────────────────────────────────
+function Limits({ t, setTab }) {
+  const plan = PLANS[t.currentPlan];
+  const limitListings = plan.listings;
+  const limitSeats = plan.seats;
+  const limitGmv = plan.gmv;
+
+  const blocks = [
+    {
+      key:'listings',
+      label:'Активные листинги',
+      used: 312, limit: limitListings, unit:'',
+      hint: limitListings === -1 ? 'Без лимита на этом тарифе' : `Доступно для публикации новых: ${limitListings - 312}`,
+      blocked: t.limitReached,
+    },
+    {
+      key:'seats',
+      label:'Пользователи команды',
+      used: 7, limit: limitSeats, unit:'',
+      hint: limitSeats === -1 ? 'Без лимита' : `Можно пригласить ещё ${limitSeats - 7}`,
+    },
+    {
+      key:'gmv',
+      label:'Месячный GMV',
+      used: t.monthlyGmv, limit: limitGmv, unit:' ₽', money:true,
+      hint: limitGmv === -1 ? 'Без лимита' : `До конца месяца — лимит ${fmt(limitGmv)}`,
+    },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Лимиты</h2>
+          <p className="text-sm text-slate-500 mt-1">Тариф {plan.name}. При приближении к лимиту мы заранее предупредим — сделки не остановятся внезапно.</p>
+        </div>
+        <button className="btn-primary" onClick={() => setTab('plans')}>Сравнить тарифы <Ic.arrow/></button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {blocks.map(b => {
+          const pct = b.limit === -1 ? 6 : Math.min(100, Math.round(b.used / b.limit * 100));
+          const status = b.blocked || pct >= 100 ? 'crit' : pct > 80 ? 'warn' : 'ok';
+          return (
+            <div key={b.key} className="card p-5 fade-up">
+              <p className="text-xs text-slate-500">{b.label}</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-slate-900">{b.money ? fmt(b.used) : fmtNum(b.used)}</span>
+                <span className="text-xs text-slate-400">/ {b.limit === -1 ? '∞' : (b.money ? fmt(b.limit) : fmtNum(b.limit))}</span>
+              </div>
+              <div className="progress-track mt-3"><div className={`progress-bar ${status==='crit'?'crit':status==='warn'?'warn':''}`} style={{width:`${Math.max(pct,4)}%`}}></div></div>
+              <p className={`text-[11px] mt-1.5 ${status==='crit'?'text-red-600 font-semibold':'text-slate-400'}`}>{b.hint}</p>
+              {status === 'crit' && (
+                <div className="mt-3 p-2.5 rounded-lg flex items-start gap-2 text-[11px]" style={{background:'#fef2f2', color:'#b91c1c'}}>
+                  <Ic.warning/><span>Лимит исчерпан. Перейдите на следующий тариф или запросите Enterprise.</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {t.limitReached && (
+        <div className="card overflow-hidden fade-up" style={{background:'linear-gradient(120deg,#1e3a8a 0%,#2455e8 60%,#3b74f3 100%)', borderColor:'transparent'}}>
+          <div className="p-6 sm:p-8 text-white flex flex-wrap items-center gap-6 justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Лимит достигнут</p>
+              <h3 className="text-xl sm:text-2xl font-bold mt-1.5">Перейдите на Pro и снимите ограничение</h3>
+              <p className="text-sm opacity-90 mt-2">До 500 листингов, 10 мест в команде, GMV до 5 000 000 ₽ / мес. Изменение пропорционально оставшимся дням периода.</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button className="bg-white text-slate-900 font-semibold rounded-lg px-5 py-2.5 text-sm hover:bg-slate-100 transition" onClick={() => setTab('plans')}>Перейти на Pro</button>
+              <button className="text-white/90 text-xs font-medium hover:text-white">Запросить Enterprise →</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── HOSTED PORTAL MODAL ──────────────────────────────────────────────────────
+function HostedPortalModal({ open, onClose, onConfirm, intent }) {
+  if (!open) return null;
+  const labels = {
+    plan_change: { title:'Изменение тарифа', desc:'Вас перенаправит в hosted Stripe Customer Portal для подтверждения смены тарифа. Изменение комиссии и лимитов вступит в силу мгновенно.' },
+    payment_method: { title:'Управление картой', desc:'Stripe откроет защищённую форму для добавления или замены карты на файле. Vendora не получит и не сохранит номер карты.' },
+    default: { title:'Billing portal', desc:'Откроем hosted Stripe Customer Portal — счета, карты, реквизиты, квитанции для бухгалтерии.' },
+  };
+  const meta = labels[intent?.kind] || labels.default;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(15,23,42,.4)'}} onClick={onClose}>
+      <div className="card max-w-md w-full p-6 pop" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'color-mix(in srgb,var(--brand,#2455e8) 12%,white)', color:'var(--brand,#2455e8)'}}>
+            <Ic.external/>
+          </div>
+          <div className="flex-1">
+            <p className="text-base font-bold text-slate-900">{meta.title}</p>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">{meta.desc}</p>
+          </div>
+        </div>
+        <div className="mt-4 p-3 rounded-lg bg-slate-50 text-xs text-slate-600 leading-relaxed">
+          <p><b>Launch (R1):</b> hosted Stripe Customer Portal · <b>Target (R2):</b> self-serve в Vendora без редиректа.</p>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-ghost" onClick={onClose}>Отмена</button>
+          <button className="btn-primary" onClick={onConfirm}>Перейти в Stripe <Ic.external/></button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [tab, setTab] = useState('overview');
+  const [portal, setPortal] = useState({ open:false, intent:null });
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', t.primaryColor);
+  }, [t.primaryColor]);
+
+  function openPortal(intent) {
+    setPortal({ open:true, intent: intent || { kind:'default' } });
+  }
+  function closePortal() {
+    setPortal({ open:false, intent:null });
+  }
+  function confirmPortal() {
+    setPortal({ open:false, intent:null });
+    // Nothing happens visually — simulate redirect "completed"
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header/>
+      <div className="flex-1 flex">
+        <Sidebar tab={tab} setTab={setTab}/>
+        <main className="flex-1 p-5 sm:p-7 max-w-6xl">
+          <div className="space-y-5">
+            {t.showLaunchBanner && <LaunchBanner visible={t.showLaunchBanner}/>}
+            {tab === 'overview'  && <Overview  t={t} setTab={setTab} openPortal={openPortal}/>}
+            {tab === 'plans'     && <Plans     t={t} setTweak={setTweak} openPortal={openPortal}/>}
+            {tab === 'invoices'  && <Invoices/>}
+            {tab === 'payment'   && <Payment   openPortal={openPortal}/>}
+            {tab === 'limits'    && <Limits    t={t} setTab={setTab}/>}
+          </div>
+        </main>
+      </div>
+
+      <HostedPortalModal open={portal.open} onClose={closePortal} onConfirm={confirmPortal} intent={portal.intent}/>
+
+      <TweaksPanel>
+        <TweakSection label="Тема"/>
+        <TweakColor label="Акцент" value={t.primaryColor} onChange={v => setTweak('primaryColor', v)}/>
+
+        <TweakSection label="Подписка"/>
+        <TweakSelect label="Текущий тариф" value={t.currentPlan} options={[{value:'standard',label:'Standard'},{value:'pro',label:'Pro'},{value:'enterprise',label:'Enterprise'}]} onChange={v => setTweak('currentPlan', v)}/>
+        <TweakSelect label="Статус" value={t.subscriptionStatus} options={[{value:'active',label:'Активна'},{value:'trial',label:'Триал'},{value:'past_due',label:'Просрочка'},{value:'cancelled',label:'Отменена'}]} onChange={v => setTweak('subscriptionStatus', v)}/>
+        <TweakToggle label="Лимит достигнут" value={t.limitReached} onChange={v => setTweak('limitReached', v)}/>
+
+        <TweakSection label="Использование"/>
+        <TweakSlider label="GMV в этом месяце" min={0} max={6000000} step={50000} unit=" ₽" value={t.monthlyGmv} onChange={v => setTweak('monthlyGmv', v)}/>
+
+        <TweakSection label="Контекст"/>
+        <TweakToggle label="Показывать launch banner" value={t.showLaunchBanner} onChange={v => setTweak('showLaunchBanner', v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

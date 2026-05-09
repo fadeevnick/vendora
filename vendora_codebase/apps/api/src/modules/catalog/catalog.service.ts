@@ -1,0 +1,282 @@
+import { prisma } from '../../shared/db.js'
+
+interface CreateProductInput {
+  name: string
+  description?: string
+  category?: string
+  price: number
+  currency?: string
+  stock?: number
+  vendorId: string
+}
+
+interface CreateListingInput {
+  title: string
+  description: string
+  category: string
+  priceMinor: number
+  currency: string
+  stockQty: number
+  vendorId: string
+}
+
+interface UpdateListingInput {
+  listingId: string
+  vendorId: string
+  title?: string
+  description?: string
+  category?: string
+  priceMinor?: number
+  currency?: string
+  stockQty?: number
+}
+
+interface CatalogQuery {
+  q?: string
+  category?: string
+  vendorId?: string
+  inStock?: boolean
+  page?: number
+  pageSize?: number
+}
+
+function priceMinorToDecimal(priceMinor: number) {
+  return priceMinor / 100
+}
+
+function decimalToMinor(price: unknown) {
+  return Math.round(Number(price) * 100)
+}
+
+function listingStatus(product: { published: boolean }) {
+  return product.published ? 'PUBLISHED' : 'DRAFT'
+}
+
+function toListingView(product: {
+  id: string
+  vendorId: string
+  name: string
+  description: string | null
+  category: string
+  price: unknown
+  currency: string
+  stock: number
+  published: boolean
+  publishedAt: Date | null
+  unpublishedReason: string | null
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: product.id,
+    listingId: product.id,
+    vendorId: product.vendorId,
+    title: product.name,
+    name: product.name,
+    description: product.description,
+    category: product.category,
+    priceMinor: decimalToMinor(product.price),
+    price: String(product.price),
+    currency: product.currency,
+    stockQty: product.stock,
+    stock: product.stock,
+    status: listingStatus(product),
+    published: product.published,
+    publishedAt: product.publishedAt,
+    unpublishedReason: product.unpublishedReason,
+    createdAt: product.createdAt,
+    updatedAt: product.updatedAt,
+  }
+}
+
+function toPublicProductView(product: Parameters<typeof toListingView>[0] & {
+  vendor: { id: string; name: string; status?: string }
+}) {
+  return {
+    ...toListingView(product),
+    vendor: {
+      id: product.vendor.id,
+      name: product.vendor.name,
+    },
+    availability: {
+      inStock: product.stock > 0,
+      stockQty: product.stock,
+    },
+  }
+}
+
+async function requireApprovedVendor(vendorId: string) {
+  const vendor = await prisma.vendor.findUnique({ where: { id: vendorId } })
+  if (!vendor) throw new Error('RESOURCE_NOT_FOUND: Vendor not found')
+  if (vendor.status !== 'APPROVED') throw new Error('FORBIDDEN: Vendor must be approved before managing listings')
+  return vendor
+}
+
+export async function createProduct(input: CreateProductInput) {
+  await requireApprovedVendor(input.vendorId)
+
+  return prisma.product.create({
+    data: {
+      name: input.name,
+      description: input.description,
+      category: input.category ?? 'general',
+      price: input.price,
+      currency: input.currency ?? 'RUB',
+      stock: input.stock ?? 0,
+      vendorId: input.vendorId,
+    },
+  })
+}
+
+export async function createListing(input: CreateListingInput) {
+  await requireApprovedVendor(input.vendorId)
+
+  const product = await prisma.product.create({
+    data: {
+      name: input.title,
+      description: input.description,
+      category: input.category,
+      price: priceMinorToDecimal(input.priceMinor),
+      currency: input.currency.toUpperCase(),
+      stock: input.stockQty,
+      vendorId: input.vendorId,
+      published: false,
+    },
+  })
+
+  return toListingView(product)
+}
+
+export async function getVendorProducts(vendorId: string) {
+  return prisma.product.findMany({
+    where: { vendorId },
+    orderBy: { createdAt: 'desc' },
+  })
+}
+
+export async function getVendorListings(vendorId: string) {
+  const products = await prisma.product.findMany({
+    where: { vendorId },
+    orderBy: { createdAt: 'desc' },
+  })
+  return products.map(toListingView)
+}
+
+export async function getPublishedProducts(query: CatalogQuery = {}) {
+  const page = Math.max(query.page ?? 1, 1)
+  const pageSize = Math.min(Math.max(query.pageSize ?? 50, 1), 100)
+  const where = {
+    published: true,
+    vendor: {
+      status: 'APPROVED' as const,
+      ...(query.vendorId ? { id: query.vendorId } : {}),
+    },
+    ...(query.category ? { category: query.category } : {}),
+    ...(query.inStock ? { stock: { gt: 0 } } : {}),
+    ...(query.q
+      ? {
+          OR: [
+            { name: { contains: query.q, mode: 'insensitive' as const } },
+            { description: { contains: query.q, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}),
+  }
+
+  return prisma.product.findMany({
+    where,
+    include: { vendor: { select: { id: true, name: true } } },
+    orderBy: { publishedAt: 'desc' },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  })
+}
+
+export async function getCatalogProducts(query: CatalogQuery = {}) {
+  const products = await getPublishedProducts(query)
+  return products.map(toPublicProductView)
+}
+
+export async function getCatalogProductById(productId: string) {
+  const product = await prisma.product.findFirst({
+    where: {
+      id: productId,
+      published: true,
+      vendor: {
+        status: 'APPROVED',
+      },
+    },
+    include: { vendor: { select: { id: true, name: true } } },
+  })
+
+  if (!product) throw new Error('RESOURCE_NOT_FOUND: Product not found')
+  return toPublicProductView(product)
+}
+
+export async function updateListing(input: UpdateListingInput) {
+  await requireApprovedVendor(input.vendorId)
+  const product = await prisma.product.findFirst({
+    where: { id: input.listingId, vendorId: input.vendorId },
+  })
+  if (!product) throw new Error('RESOURCE_NOT_FOUND: Listing not found')
+  if (product.published) throw new Error('CATALOG_INVALID_STATE: published listings cannot be edited in R1')
+
+  const updated = await prisma.product.update({
+    where: { id: product.id },
+    data: {
+      name: input.title,
+      description: input.description,
+      category: input.category,
+      price: input.priceMinor === undefined ? undefined : priceMinorToDecimal(input.priceMinor),
+      currency: input.currency?.toUpperCase(),
+      stock: input.stockQty,
+    },
+  })
+
+  return toListingView(updated)
+}
+
+export async function publishProduct(productId: string, vendorId: string) {
+  await requireApprovedVendor(vendorId)
+  const product = await prisma.product.findFirst({
+    where: { id: productId, vendorId },
+  })
+  if (!product) throw new Error('RESOURCE_NOT_FOUND: Product not found')
+  if (!product.description || !product.category || Number(product.price) <= 0) {
+    throw new Error('VALIDATION_ERROR: Listing is missing required publish fields')
+  }
+
+  const updated = await prisma.product.update({
+    where: { id: productId },
+    data: {
+      published: true,
+      publishedAt: product.publishedAt ?? new Date(),
+      unpublishedReason: null,
+    },
+  })
+
+  return updated
+}
+
+export async function publishListing(productId: string, vendorId: string) {
+  const product = await publishProduct(productId, vendorId)
+  return toListingView(product)
+}
+
+export async function unpublishListing(productId: string, vendorId: string, reason?: string) {
+  const product = await prisma.product.findFirst({
+    where: { id: productId, vendorId },
+  })
+  if (!product) throw new Error('RESOURCE_NOT_FOUND: Listing not found')
+
+  const updated = await prisma.product.update({
+    where: { id: product.id },
+    data: {
+      published: false,
+      publishedAt: null,
+      unpublishedReason: reason ?? 'vendor_unpublished',
+    },
+  })
+
+  return toListingView(updated)
+}

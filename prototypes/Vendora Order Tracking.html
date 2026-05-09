@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendora — Order Tracking B-4</title>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: #f1f4f9; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; color: #0f172a; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.28s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes slideIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+    .slide-in { animation: slideIn 0.28s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes pop { 0% { transform: scale(.88); opacity: 0; } 70% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+    .pop { animation: pop 0.34s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .42; } }
+    .pulse-dot { animation: pulse 1.8s ease infinite; }
+
+    .card { background: #fff; border-radius: 14px; border: 1px solid #e4e9f2; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+    .soft-card { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border: 1px solid #e7edf7; border-radius: 16px; }
+
+    .btn-primary {
+      background: var(--brand,#2455e8);
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: filter .15s, box-shadow .15s, transform .1s;
+    }
+    .btn-primary:hover { filter: brightness(.88); box-shadow: 0 4px 14px color-mix(in srgb, var(--brand,#2455e8) 30%, transparent); }
+    .btn-primary:active { transform: scale(.97); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; filter: none; box-shadow: none; }
+
+    .btn-ghost {
+      background: transparent;
+      color: #64748b;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 9px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: border-color .15s, color .15s, background .15s;
+    }
+    .btn-ghost:hover { border-color: #94a3b8; color: #1e293b; background: #f8fafc; }
+
+    .btn-danger {
+      background: #fff;
+      color: #ef4444;
+      border: 1.5px solid #fecaca;
+      border-radius: 9px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-danger:hover { background: #fef2f2; border-color: #ef4444; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1.5px solid #e2e8f0;
+      background: #fff;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .chip.active {
+      color: var(--brand,#2455e8);
+      border-color: var(--brand,#2455e8);
+      background: color-mix(in srgb, var(--brand,#2455e8) 8%, white);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .order-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) auto auto auto;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid #f1f4f9;
+      cursor: pointer;
+      transition: background .12s;
+    }
+    .order-row:hover { background: #f8fafc; }
+    .order-row:last-child { border-bottom: none; }
+    .order-row.active { background: color-mix(in srgb, var(--brand,#2455e8) 5%, white); }
+
+    .timeline-row {
+      display: flex;
+      gap: 12px;
+      padding-bottom: 16px;
+      position: relative;
+    }
+    .timeline-row:last-child { padding-bottom: 0; }
+    .timeline-row:last-child .timeline-line { display: none; }
+
+    .timeline-dot {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .timeline-line {
+      position: absolute;
+      left: 14px;
+      top: 30px;
+      bottom: 0;
+      width: 2px;
+      background: #e2e8f0;
+    }
+
+    .stat-card { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border: 1px solid #e7edf7; border-radius: 14px; padding: 16px 18px; }
+
+    .notice {
+      border-radius: 14px;
+      padding: 14px 16px;
+      border: 1px solid;
+    }
+
+    .progress-track {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .progress-step {
+      position: relative;
+      padding: 10px 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+    }
+    .progress-step.active {
+      color: var(--brand,#2455e8);
+      border-color: color-mix(in srgb, var(--brand,#2455e8) 24%, white);
+      background: color-mix(in srgb, var(--brand,#2455e8) 7%, white);
+    }
+    .progress-step.done {
+      color: #166534;
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+    }
+
+    .email-row {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #eef2f7;
+    }
+    .email-row:last-child { border-bottom: none; }
+
+    @media(max-width: 1024px) {
+      .tracking-layout { grid-template-columns: 1fr; }
+    }
+
+    @media(max-width: 768px) {
+      .order-row { grid-template-columns: 1fr auto; }
+      .order-row .hide-mobile { display: none; }
+      .progress-track { grid-template-columns: 1fr; }
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const STATUS_META = {
+  payment_held: { label: 'PAYMENT_HELD', short: 'Ожидает подтверждения', color: '#f59e0b', bg: '#fffbeb', icon: '💳' },
+  confirmed: { label: 'CONFIRMED', short: 'Подтверждён', color: '#6366f1', bg: '#eef2ff', icon: '✅' },
+  shipped: { label: 'SHIPPED', short: 'В пути', color: '#7c3aed', bg: '#f5f3ff', icon: '🚚' },
+  delivered: { label: 'DELIVERED', short: 'Доставлен', color: '#0891b2', bg: '#ecfeff', icon: '📬' },
+  completed: { label: 'COMPLETED', short: 'Завершён', color: '#16a34a', bg: '#f0fdf4', icon: '🎉' },
+  disputed: { label: 'DISPUTED', short: 'В споре', color: '#ef4444', bg: '#fef2f2', icon: '⚖️' },
+  cancelled: { label: 'CANCELLED', short: 'Отменён', color: '#64748b', bg: '#f8fafc', icon: '✕' },
+};
+
+const STATUS_FLOW = ['payment_held', 'confirmed', 'shipped', 'delivered', 'completed'];
+
+function makeOrders() {
+  return [
+    {
+      id: 'VND-8821-A',
+      vendorName: 'TechPro Solutions',
+      status: 'delivered',
+      total: 213000,
+      itemsCount: 2,
+      createdAt: '01.05.2026 09:14',
+      updatedAt: '05.05.2026 15:10',
+      deliveryType: 'Экспресс доставка',
+      address: 'г. Москва, ул. Тверская, 12, офис 304',
+      contact: 'Алексеев Д.В. · +7 495 321-11-22',
+      payment: 'Банковская карта',
+      escrow: 'Средства удерживались до подтверждения получения',
+      trackingNumber: 'EM123456789RU',
+      carrier: 'СДЭК',
+      expectedWindow: '04.05.2026, 10:00–18:00',
+      deliveryNote: 'Курьер доставил заказ на ресепшн. Нужна проверка комплектации.',
+      disputeWindow: 'до 08.05.2026 23:59',
+      items: [
+        { id: 'i1', name: 'Ноутбук Dell Latitude 5540', sku: 'DL-5540-I7', qty: 2, price: 89500, icon: '💻' },
+        { id: 'i2', name: 'Мышь Logitech MX Master 3', sku: 'LG-MX3-BLK', qty: 5, price: 6800, icon: '🖱️' },
+      ],
+      timeline: [
+        { state: 'payment_held', title: 'Оплата подтверждена', time: '01.05.2026 09:16', note: 'Средства зарезервированы в protected hold.' },
+        { state: 'confirmed', title: 'Продавец подтвердил заказ', time: '01.05.2026 10:05', note: 'Товары подтверждены и переданы в сборку.' },
+        { state: 'shipped', title: 'Заказ отправлен', time: '03.05.2026 13:22', note: 'СДЭК, трек EM123456789RU.' },
+        { state: 'delivered', title: 'Доставлено', time: '05.05.2026 15:10', note: 'Ожидается подтверждение buyer.' },
+      ],
+      notifications: [
+        { id: 'n1', subject: 'Заказ подтверждён продавцом', sentAt: '01.05.2026 10:06', body: 'TechPro Solutions подтвердил заказ VND-8821-A. Следующее обновление придёт после отправки.' },
+        { id: 'n2', subject: 'Заказ отправлен', sentAt: '03.05.2026 13:24', body: 'Добавлен трек EM123456789RU. Доставка ожидается 04–05 мая.' },
+        { id: 'n3', subject: 'Заказ доставлен', sentAt: '05.05.2026 15:12', body: 'Пожалуйста, подтвердите получение или откройте спор в течение допустимого окна.' },
+      ],
+    },
+    {
+      id: 'VND-8818-A',
+      vendorName: 'OfficeMax Россия',
+      status: 'shipped',
+      total: 145000,
+      itemsCount: 1,
+      createdAt: '29.04.2026 11:40',
+      updatedAt: '02.05.2026 18:50',
+      deliveryType: 'Стандартная доставка',
+      address: 'г. Санкт-Петербург, Невский пр., 88, оф. 12',
+      contact: 'Семёнова К.А. · +7 495 555-66-77',
+      payment: 'Счёт на оплату',
+      escrow: 'Средства ещё удерживаются до delivery confirmation',
+      trackingNumber: 'OM99887766RU',
+      carrier: 'Деловые Линии',
+      expectedWindow: '06.05.2026, в течение дня',
+      deliveryNote: 'Товар в пути на склад клиента.',
+      disputeWindow: 'появится после DELIVERED',
+      items: [
+        { id: 'i3', name: 'Кресло Herman Miller Aeron', sku: 'HM-AERON-C', qty: 1, price: 145000, icon: '🪑' },
+      ],
+      timeline: [
+        { state: 'payment_held', title: 'Оплата зафиксирована', time: '29.04.2026 11:42', note: 'Платёж прошёл, заказ активен.' },
+        { state: 'confirmed', title: 'Заказ принят продавцом', time: '29.04.2026 13:10', note: 'Продавец подтвердил наличие товара.' },
+        { state: 'shipped', title: 'Передано в доставку', time: '02.05.2026 18:50', note: 'Добавлен carrier и номер отправления.' },
+      ],
+      notifications: [
+        { id: 'n4', subject: 'OfficeMax Россия принял заказ', sentAt: '29.04.2026 13:12', body: 'Заказ готовится к отправке.' },
+        { id: 'n5', subject: 'Заказ передан в доставку', sentAt: '02.05.2026 18:52', body: 'Следите за обновлениями статуса в buyer cabinet.' },
+      ],
+    },
+    {
+      id: 'VND-8812-A',
+      vendorName: 'CleanMaster Pro',
+      status: 'payment_held',
+      total: 12000,
+      itemsCount: 1,
+      createdAt: '06.05.2026 09:05',
+      updatedAt: '06.05.2026 09:05',
+      deliveryType: 'Самовывоз',
+      address: 'г. Москва, Промышленный пр-д, 8, стр. 2',
+      contact: 'Волков С.Г. · +7 916 111-22-33',
+      payment: 'Корпоративный кредит',
+      escrow: 'Средства удерживаются, ждём реакции продавца.',
+      trackingNumber: '',
+      carrier: '',
+      expectedWindow: 'Ожидает подтверждения продавца',
+      deliveryNote: 'Pickup slot появится после подтверждения заказа.',
+      disputeWindow: 'недоступно до DELIVERED',
+      items: [
+        { id: 'i4', name: 'Pro-Clean Multi 5L', sku: 'CM-PRO5-UN', qty: 10, price: 1200, icon: '🧴' },
+      ],
+      timeline: [
+        { state: 'payment_held', title: 'Заказ создан и оплачен', time: '06.05.2026 09:05', note: 'Vendor ещё не подтвердил исполнение.' },
+      ],
+      notifications: [
+        { id: 'n6', subject: 'Заказ создан', sentAt: '06.05.2026 09:07', body: 'Продавец получит уведомление и подтвердит заказ в рабочее окно.' },
+      ],
+    },
+    {
+      id: 'VND-8809-A',
+      vendorName: 'TechPro Solutions',
+      status: 'completed',
+      total: 94200,
+      itemsCount: 2,
+      createdAt: '22.04.2026 10:20',
+      updatedAt: '27.04.2026 12:14',
+      deliveryType: 'Экспресс доставка',
+      address: 'г. Москва, ул. Садовая, 5',
+      contact: 'Никитина Е.В. · +7 495 777-88-99',
+      payment: 'Банковская карта',
+      escrow: 'Средства уже релизнуты продавцу.',
+      trackingNumber: 'EM77755544RU',
+      carrier: 'Яндекс Доставка',
+      expectedWindow: 'Завершено',
+      deliveryNote: 'Buyer подтвердил получение.',
+      disputeWindow: 'истекло',
+      items: [
+        { id: 'i5', name: 'Монитор LG UltraWide 34"', sku: 'LG-34WN80C', qty: 2, price: 42000, icon: '🖥️' },
+        { id: 'i6', name: 'Сумка Samsonite', sku: 'SM-NBG-14', qty: 1, price: 10200, icon: '👜' },
+      ],
+      timeline: [
+        { state: 'payment_held', title: 'Оплата подтверждена', time: '22.04.2026 10:22', note: '' },
+        { state: 'confirmed', title: 'Продавец подтвердил заказ', time: '22.04.2026 12:00', note: '' },
+        { state: 'shipped', title: 'Отправлен', time: '24.04.2026 09:30', note: 'Трек EM77755544RU.' },
+        { state: 'delivered', title: 'Доставлен', time: '26.04.2026 17:20', note: '' },
+        { state: 'completed', title: 'Buyer подтвердил получение', time: '27.04.2026 12:14', note: 'Заказ закрыт успешно.' },
+      ],
+      notifications: [
+        { id: 'n7', subject: 'Заказ завершён', sentAt: '27.04.2026 12:16', body: 'Спасибо за подтверждение. Заказ закрыт, деньги разблокированы продавцу.' },
+      ],
+    },
+    {
+      id: 'VND-8803-A',
+      vendorName: 'DigitalHub Store',
+      status: 'disputed',
+      total: 68000,
+      itemsCount: 1,
+      createdAt: '20.04.2026 14:10',
+      updatedAt: '25.04.2026 09:40',
+      deliveryType: 'Стандартная доставка',
+      address: 'г. Екатеринбург, ул. Ленина, 50',
+      contact: 'Зубов А.П. · +7 495 200-30-40',
+      payment: 'Счёт на оплату',
+      escrow: 'Спорная сумма заморожена до решения.',
+      trackingNumber: 'DH12300098RU',
+      carrier: 'ПЭК',
+      expectedWindow: 'Спор открыт',
+      deliveryNote: 'Buyer сообщил о несоответствии комплектации.',
+      disputeWindow: 'спор уже создан',
+      items: [
+        { id: 'i7', name: 'Маршрутизатор enterprise series', sku: 'DH-RT-ENT', qty: 1, price: 68000, icon: '🌐' },
+      ],
+      timeline: [
+        { state: 'payment_held', title: 'Оплата подтверждена', time: '20.04.2026 14:12', note: '' },
+        { state: 'confirmed', title: 'Заказ подтверждён', time: '20.04.2026 15:40', note: '' },
+        { state: 'shipped', title: 'Отправлен', time: '22.04.2026 11:20', note: '' },
+        { state: 'delivered', title: 'Доставлен', time: '24.04.2026 16:55', note: '' },
+        { state: 'disputed', title: 'Открыт спор', time: '25.04.2026 09:40', note: 'Ожидается ответ продавца.' },
+      ],
+      notifications: [
+        { id: 'n8', subject: 'Спор открыт по заказу', sentAt: '25.04.2026 09:42', body: 'Средства по спорной сумме заморожены. Продолжение — в dispute flow.' },
+      ],
+    },
+  ];
+}
+
+const Ic = {
+  check: ({ size = 14 }) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3L11.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  chevronLeft: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L6 8l4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  chevronRight: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  search: () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5"/><path d="M10 10l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  bell: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 014 4v2.4l1.2 1.8H2.8L4 8.4V6a4 4 0 014-4z" stroke="currentColor" strokeWidth="1.4"/><path d="M6.5 12.2a1.5 1.5 0 003 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  truck: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 10V4a1 1 0 011-1h8v7H1z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 6h3l2 3v1h-5V6z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><circle cx="4" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.3"/><circle cx="12.5" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.3"/></svg>,
+  shield: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L2 4v4c0 3.5 2.5 6 6 7 3.5-1 6-3.5 6-7V4L8 1.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M5.5 8l2 2L11 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  mail: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.8" stroke="currentColor" strokeWidth="1.4"/><path d="M3 4.5l5 3.5 5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  alert: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L1.5 13h13L8 2z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6.4V9.5M8 11.6v.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  refresh: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 2v4H8M2 12V8h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 6A6 6 0 102 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  checkCircle: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4"/><path d="M5 8.2l2 2 4-4.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+};
+
+const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
+
+function StatusBadge({ status }) {
+  const s = STATUS_META[status];
+  if (!s) return null;
+  return (
+    <span className="status-badge" style={{ background: s.bg, color: s.color }}>
+      <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
+      {s.short}
+    </span>
+  );
+}
+
+function progressState(step, current) {
+  const stepIndex = STATUS_FLOW.indexOf(step);
+  const currentIndex = STATUS_FLOW.indexOf(current);
+  if (current === 'disputed' || current === 'cancelled') {
+    const lastStable = current === 'disputed' ? 'delivered' : 'payment_held';
+    const stableIndex = STATUS_FLOW.indexOf(lastStable);
+    return stepIndex <= stableIndex ? 'done' : '';
+  }
+  if (stepIndex < currentIndex) return 'done';
+  if (stepIndex === currentIndex) return 'active';
+  return '';
+}
+
+function Header({ screen, onBack, brandName, buyerName, showNotifications, onNotifications, completedCount }) {
+  return (
+    <header className="bg-white border-b border-slate-100 sticky top-0 z-30">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          {onBack && <button className="btn-ghost px-2 py-1.5 text-xs" onClick={onBack}><Ic.chevronLeft /> Назад</button>}
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold shadow-sm" style={{ background: 'var(--brand,#2455e8)' }}>V</div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-slate-900 text-sm">{brandName}</span>
+              <span className="status-badge" style={{ background: '#eef2ff', color: 'var(--brand,#2455e8)' }}>B-4</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {screen === 'complete' ? 'Receipt confirmation and order closure' : 'Buyer order tracking and receipt confirmation'}
+            </p>
+          </div>
+        </div>
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <span className="status-badge" style={{ background: '#f8fafc', color: '#64748b' }}>
+            <Ic.shield />
+            buyer: {buyerName}
+          </span>
+          <span className="status-badge" style={{ background: '#f0fdf4', color: '#166534' }}>
+            <Ic.checkCircle />
+            {completedCount} completed
+          </span>
+          {showNotifications && <button className="btn-ghost !px-3" onClick={onNotifications}><Ic.bell /> Уведомления</button>}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function OrdersList({ orders, activeFilter, setActiveFilter, selectedId, onSelect }) {
+  const stats = {
+    active: orders.filter((o) => ['payment_held', 'confirmed', 'shipped', 'delivered'].includes(o.status)).length,
+    issues: orders.filter((o) => ['disputed', 'cancelled'].includes(o.status)).length,
+    completed: orders.filter((o) => o.status === 'completed').length,
+  };
+
+  const filtered = orders.filter((order) => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'active') return ['payment_held', 'confirmed', 'shipped', 'delivered'].includes(order.status);
+    if (activeFilter === 'issues') return ['disputed', 'cancelled'].includes(order.status);
+    if (activeFilter === 'completed') return order.status === 'completed';
+    return true;
+  });
+
+  return (
+    <div className="space-y-5 fade-up">
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="stat-card">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Active orders</p>
+          <p className="text-3xl font-bold text-slate-900 mt-2">{stats.active}</p>
+          <p className="text-xs text-slate-500 mt-2">Заказы в post-purchase обработке</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Issues</p>
+          <p className="text-3xl font-bold text-slate-900 mt-2">{stats.issues}</p>
+          <p className="text-xs text-slate-500 mt-2">Споры и отмены требуют отдельного внимания</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Completed</p>
+          <p className="text-3xl font-bold text-slate-900 mt-2">{stats.completed}</p>
+          <p className="text-xs text-slate-500 mt-2">Подтверждены buyer и закрыты корректно</p>
+        </div>
+      </div>
+
+      <div className="card p-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Мои заказы</p>
+            <p className="text-xs text-slate-500 mt-1">Launch-версия показывает список, текущий статус и вход в конкретный order detail.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'all', label: 'Все' },
+              { id: 'active', label: 'Активные' },
+              { id: 'issues', label: 'Проблемные' },
+              { id: 'completed', label: 'Завершённые' },
+            ].map((item) => (
+              <button key={item.id} className={`chip ${activeFilter === item.id ? 'active' : ''}`} onClick={() => setActiveFilter(item.id)}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 overflow-hidden mt-4">
+          {filtered.map((order) => (
+            <div key={order.id} className={`order-row ${selectedId === order.id ? 'active' : ''}`} onClick={() => onSelect(order.id)}>
+              <div className="min-w-0">
+                <div className="flex items-start gap-3">
+                  <div className="w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center text-xl" style={{ background: STATUS_META[order.status].bg }}>
+                    {STATUS_META[order.status].icon}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{order.id}</p>
+                    <p className="text-xs text-slate-500 mt-1">{order.vendorName} · {order.itemsCount} поз. · {order.deliveryType}</p>
+                    <p className="text-xs text-slate-400 mt-1">Обновлено {order.updatedAt}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="hide-mobile text-sm font-semibold text-slate-900">{fmt(order.total)}</div>
+              <div className="hide-mobile"><StatusBadge status={order.status} /></div>
+              <div className="text-slate-400"><Ic.chevronRight /></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OrderProgress({ order }) {
+  return (
+    <div className="progress-track">
+      {STATUS_FLOW.map((step) => {
+        const state = progressState(step, order.status);
+        const meta = STATUS_META[step];
+        return (
+          <div key={step} className={`progress-step ${state}`}>
+            <div className="text-lg mb-1">{meta.icon}</div>
+            {meta.label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DetailTimeline({ order, showTimeline }) {
+  if (!showTimeline) {
+    return (
+      <div className="soft-card p-4">
+        <p className="text-sm font-semibold text-slate-800">Minimal launch detail</p>
+        <p className="text-xs text-slate-500 mt-2">В `R1` достаточно текущего статуса и базовой shipment context. Полная timeline может быть усилена позже.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">История статусов</p>
+          <p className="text-xs text-slate-500 mt-1">Timeline полезна для `R2`, но уже визуально увязывает B-4 с V-3 и B-5.</p>
+        </div>
+        <span className="status-badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}>timeline</span>
+      </div>
+      <div className="mt-5">
+        {order.timeline.map((event, index) => {
+          const meta = STATUS_META[event.state];
+          return (
+            <div key={index} className="timeline-row">
+              <div className="timeline-dot" style={{ background: meta.bg, color: meta.color }}>{meta.icon}</div>
+              <div className="timeline-line" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-slate-900">{event.title}</p>
+                  <span className="text-xs text-slate-400">{event.time}</span>
+                </div>
+                {event.note && <p className="text-xs text-slate-500 mt-1 leading-5">{event.note}</p>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function NotificationsPanel({ order, onClose }) {
+  return (
+    <div className="card p-5 pop">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Order notifications</p>
+          <p className="text-xs text-slate-500 mt-1">`FR-NOTIF-002`: buyer получает email по изменениям статуса заказа.</p>
+        </div>
+        <button className="btn-ghost !px-3 !py-1.5 !text-xs" onClick={onClose}>Скрыть</button>
+      </div>
+      <div className="mt-4">
+        {order.notifications.map((notification) => (
+          <div key={notification.id} className="email-row">
+            <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+              <Ic.mail />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm font-semibold text-slate-800">{notification.subject}</p>
+                <span className="text-xs text-slate-400">{notification.sentAt}</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1 leading-5">{notification.body}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OrderDetail({ order, showTimeline, showNotifications, onBack, onConfirmReceipt, onOpenDispute, onCloseNotifications }) {
+  const canConfirm = order.status === 'delivered';
+  const canDispute = order.status === 'delivered';
+
+  return (
+    <div className="tracking-layout grid xl:grid-cols-[1.02fr_0.98fr] gap-6 fade-up">
+      <div className="space-y-6">
+        <div className="card p-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <button className="btn-ghost mb-4" onClick={onBack}><Ic.chevronLeft /> Ко всем заказам</button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl font-bold text-slate-900">{order.id}</h1>
+                <StatusBadge status={order.status} />
+              </div>
+              <p className="text-sm text-slate-500 mt-2">{order.vendorName} · Создан {order.createdAt} · Обновлён {order.updatedAt}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a href="Vendora Search.html" className="btn-ghost">Вернуться в B-2</a>
+              {canDispute && <button className="btn-danger" onClick={() => onOpenDispute(order.id)}>Открыть спор</button>}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <OrderProgress order={order} />
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 mt-6">
+            <div className="soft-card p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Shipment context</p>
+              <p className="text-sm font-semibold text-slate-800 mt-2">{order.expectedWindow}</p>
+              <p className="text-xs text-slate-500 mt-2 leading-5">{order.deliveryNote}</p>
+              {order.trackingNumber && (
+                <div className="mt-3 text-xs text-slate-500">
+                  Carrier: <span className="font-semibold text-slate-700">{order.carrier}</span><br />
+                  Tracking: <span className="font-semibold text-slate-700">{order.trackingNumber}</span>
+                </div>
+              )}
+            </div>
+            <div className="soft-card p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Escrow / dispute context</p>
+              <p className="text-sm font-semibold text-slate-800 mt-2">{order.escrow}</p>
+              <p className="text-xs text-slate-500 mt-2">Dispute window: {order.disputeWindow}</p>
+            </div>
+          </div>
+        </div>
+
+        <DetailTimeline order={order} showTimeline={showTimeline} />
+
+        <div className="card p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Состав заказа</p>
+              <p className="text-xs text-slate-500 mt-1">Buyer видит базовые order details и может сверить поставку перед подтверждением.</p>
+            </div>
+            <span className="text-sm font-semibold text-slate-900">{fmt(order.total)}</span>
+          </div>
+          <div className="mt-4 space-y-3">
+            {order.items.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center text-xl shrink-0">{item.icon}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-800">{item.name}</p>
+                  <p className="text-xs text-slate-500 mt-1">SKU {item.sku} · {item.qty} шт.</p>
+                </div>
+                <div className="text-sm font-semibold text-slate-900">{fmt(item.price * item.qty)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-6 slide-in">
+        <div className="card p-5">
+          <p className="text-sm font-semibold text-slate-800">Delivery details</p>
+          <div className="mt-4 space-y-3 text-sm text-slate-600">
+            <div><span className="font-semibold text-slate-800">Способ:</span> {order.deliveryType}</div>
+            <div><span className="font-semibold text-slate-800">Адрес:</span> {order.address}</div>
+            <div><span className="font-semibold text-slate-800">Контакт:</span> {order.contact}</div>
+            <div><span className="font-semibold text-slate-800">Оплата:</span> {order.payment}</div>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <p className="text-sm font-semibold text-slate-800">Buyer actions</p>
+          <div className="space-y-3 mt-4">
+            <button className="btn-primary w-full justify-center" disabled={!canConfirm} onClick={() => onConfirmReceipt(order.id)}>
+              <Ic.check />
+              Подтвердить получение
+            </button>
+            <button className="btn-danger w-full justify-center" disabled={!canDispute} onClick={() => onOpenDispute(order.id)}>
+              <Ic.alert />
+              Открыть спор
+            </button>
+            {!canConfirm && (
+              <div className="notice" style={{ background: '#f8fafc', color: '#64748b', borderColor: '#e2e8f0' }}>
+                <p className="text-sm font-semibold">
+                  {order.status === 'payment_held' ? 'Ждём подтверждения продавца' :
+                   order.status === 'shipped' ? 'Подтверждение receipt станет доступно после delivery event' :
+                   order.status === 'completed' ? 'Заказ уже закрыт successfully; dispute entry из COMPLETED относится к later path' :
+                   order.status === 'disputed' ? 'Дальнейшие действия идут через dispute flow' :
+                   'Подтверждение сейчас недоступно'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {showNotifications && <NotificationsPanel order={order} onClose={onCloseNotifications} />}
+
+        <div className="card p-5">
+          <p className="text-sm font-semibold text-slate-800">Связанные флоу</p>
+          <div className="grid gap-3 mt-4">
+            <a href="Vendora Checkout.html" className="soft-card p-4 flex items-center justify-between gap-3 hover:bg-white">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">B-3 Checkout</p>
+                <p className="text-xs text-slate-500 mt-1">Где эти buyer orders были созданы после оплаты.</p>
+              </div>
+              <Ic.chevronRight />
+            </a>
+            <a href="Vendora Dispute Flow.html" className="soft-card p-4 flex items-center justify-between gap-3 hover:bg-white">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">B-5 Dispute Opening</p>
+                <p className="text-xs text-slate-500 mt-1">Следующий путь, если delivery outcome неудовлетворителен.</p>
+              </div>
+              <Ic.chevronRight />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompletionScreen({ order, onBackToOrder, onBackToList }) {
+  return (
+    <div className="max-w-4xl mx-auto fade-up">
+      <div className="card p-6 sm:p-8 text-center pop">
+        <div className="w-16 h-16 rounded-full bg-green-50 text-green-600 flex items-center justify-center mx-auto mb-5">
+          <Ic.check size={28} />
+        </div>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-green-600">Receipt confirmed</p>
+        <h1 className="text-3xl font-bold text-slate-900 mt-2">Заказ завершён</h1>
+        <p className="text-sm text-slate-500 mt-3 max-w-2xl mx-auto">Buyer подтвердил получение по заказу <span className="font-semibold text-slate-700">{order.id}</span>. Заказ перешёл в `COMPLETED`, а удержанные средства стали releasable для payout flow продавца.</p>
+
+        <div className="grid sm:grid-cols-3 gap-4 mt-8 text-left">
+          <div className="soft-card p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">State</p>
+            <p className="text-sm font-semibold text-slate-800 mt-2">`DELIVERED -> COMPLETED`</p>
+          </div>
+          <div className="soft-card p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Money</p>
+            <p className="text-sm font-semibold text-slate-800 mt-2">Escrow-like hold снимается по правилам платформы</p>
+          </div>
+          <div className="soft-card p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Next</p>
+            <p className="text-sm font-semibold text-slate-800 mt-2">Vendor payout logic продолжается уже вне buyer UI</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-3 mt-8">
+          <button className="btn-primary" onClick={onBackToOrder}>Вернуться в заказ</button>
+          <button className="btn-ghost" onClick={onBackToList}>Ко всем заказам</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DisputeHandoff({ order, onBack, onContinue }) {
+  return (
+    <div className="max-w-4xl mx-auto fade-up">
+      <div className="card p-6 sm:p-8">
+        <button className="btn-ghost mb-5" onClick={onBack}><Ic.chevronLeft /> Назад в заказ</button>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-500">Dispute handoff</p>
+        <h1 className="text-3xl font-bold text-slate-900 mt-2">Переход к dispute flow</h1>
+        <p className="text-sm text-slate-500 mt-3 max-w-2xl">`B-4` не моделирует весь спор внутри себя. Он показывает точку входа из order detail, после которой спорная сумма замораживается и открывается отдельный buyer flow.</p>
+
+        <div className="grid md:grid-cols-2 gap-6 mt-8">
+          <div className="soft-card p-5">
+            <p className="text-sm font-semibold text-slate-800">Что уже известно из order context</p>
+            <div className="mt-4 space-y-3 text-sm text-slate-600">
+              <div><span className="font-semibold text-slate-800">Заказ:</span> {order.id}</div>
+              <div><span className="font-semibold text-slate-800">Vendor:</span> {order.vendorName}</div>
+              <div><span className="font-semibold text-slate-800">Сумма:</span> {fmt(order.total)}</div>
+              <div><span className="font-semibold text-slate-800">Carrier:</span> {order.carrier || 'ещё не назначен'}</div>
+            </div>
+          </div>
+          <div className="soft-card p-5">
+            <p className="text-sm font-semibold text-slate-800">Что произойдёт дальше</p>
+            <div className="space-y-3 mt-4">
+              {[
+                'Buyer выбирает причину спора',
+                'Прикладывает evidence',
+                'Система переводит заказ в DISPUTED',
+                'Спорная сумма замораживается',
+              ].map((text) => (
+                <div key={text} className="flex items-center gap-3 text-sm text-slate-700">
+                  <div className="w-7 h-7 rounded-full bg-red-50 text-red-500 flex items-center justify-center shrink-0"><Ic.alert /></div>
+                  {text}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3 mt-8">
+          <button className="btn-primary" onClick={onContinue}>Открыть B-5 dispute flow</button>
+          <a href="Vendora Dispute Flow.html" className="btn-ghost">Перейти по ссылке</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#2455e8",
+  "brandName": "Vendora",
+  "buyerName": "ООО «ТехноСтарт»",
+  "showTimeline": true,
+  "showNotifications": true,
+  "defaultOrderId": "VND-8821-A"
+}/*EDITMODE-END*/;
+
+function App() {
+  const tweakApi = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : null;
+  const [tweaks, setTweak] = Array.isArray(tweakApi) ? tweakApi : [TWEAK_DEFAULTS, () => {}];
+  const TweaksPanel = window.TweaksPanel;
+  const TweakSection = window.TweakSection;
+  const TweakColor = window.TweakColor;
+  const TweakText = window.TweakText;
+  const TweakToggle = window.TweakToggle;
+  const TweakSelect = window.TweakSelect;
+
+  const [screen, setScreen] = useState('list');
+  const [orders, setOrders] = useState(makeOrders);
+  const [selectedId, setSelectedId] = useState(TWEAK_DEFAULTS.defaultOrderId);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [showNotifications, setShowNotifications] = useState(!!tweaks.showNotifications);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', tweaks.accentColor || '#2455e8');
+  }, [tweaks.accentColor]);
+
+  useEffect(() => {
+    setShowNotifications(!!tweaks.showNotifications);
+  }, [tweaks.showNotifications]);
+
+  useEffect(() => {
+    if (tweaks.defaultOrderId && orders.some((order) => order.id === tweaks.defaultOrderId)) {
+      setSelectedId(tweaks.defaultOrderId);
+    }
+  }, [tweaks.defaultOrderId, orders]);
+
+  const selectedOrder = orders.find((order) => order.id === selectedId) || orders[0];
+  const completedCount = orders.filter((order) => order.status === 'completed').length;
+
+  function openOrder(id) {
+    setSelectedId(id);
+    setScreen('detail');
+  }
+
+  function confirmReceipt(id) {
+    setOrders((prev) => prev.map((order) => {
+      if (order.id !== id) return order;
+      return {
+        ...order,
+        status: 'completed',
+        updatedAt: '07.05.2026 14:22',
+        escrow: 'Средства подтверждены buyer и стали releasable для payout.',
+        disputeWindow: 'истекло после подтверждения',
+        deliveryNote: 'Buyer подтвердил получение без открытия спора.',
+        timeline: [
+          ...order.timeline,
+          { state: 'completed', title: 'Buyer подтвердил получение', time: '07.05.2026 14:22', note: 'Заказ закрыт successfully.' },
+        ],
+        notifications: [
+          ...order.notifications,
+          { id: `${order.id}-complete`, subject: 'Заказ завершён', sentAt: '07.05.2026 14:23', body: 'Спасибо за подтверждение. Заказ переведён в COMPLETED.' },
+        ],
+      };
+    }));
+    setScreen('complete');
+  }
+
+  function continueToDispute(id) {
+    setSelectedId(id);
+    setScreen('dispute');
+  }
+
+  return (
+    <div style={{ '--brand': tweaks.accentColor || '#2455e8' }}>
+      <Header
+        screen={screen}
+        onBack={screen === 'detail' || screen === 'complete' || screen === 'dispute' ? (() => setScreen(screen === 'detail' ? 'list' : 'detail')) : null}
+        brandName={tweaks.brandName || 'Vendora'}
+        buyerName={tweaks.buyerName || 'ООО «ТехноСтарт»'}
+        showNotifications={screen === 'detail' && !!tweaks.showNotifications}
+        onNotifications={() => setShowNotifications((prev) => !prev)}
+        completedCount={completedCount}
+      />
+
+      <main className="max-w-7xl mx-auto px-4 py-6 pb-16">
+        {screen === 'list' && (
+          <OrdersList
+            orders={orders}
+            activeFilter={activeFilter}
+            setActiveFilter={setActiveFilter}
+            selectedId={selectedId}
+            onSelect={openOrder}
+          />
+        )}
+
+        {screen === 'detail' && selectedOrder && (
+          <OrderDetail
+            order={selectedOrder}
+            showTimeline={!!tweaks.showTimeline}
+            showNotifications={showNotifications}
+            onBack={() => setScreen('list')}
+            onConfirmReceipt={confirmReceipt}
+            onOpenDispute={continueToDispute}
+            onCloseNotifications={() => setShowNotifications(false)}
+          />
+        )}
+
+        {screen === 'complete' && selectedOrder && (
+          <CompletionScreen
+            order={selectedOrder}
+            onBackToOrder={() => setScreen('detail')}
+            onBackToList={() => setScreen('list')}
+          />
+        )}
+
+        {screen === 'dispute' && selectedOrder && (
+          <DisputeHandoff
+            order={selectedOrder}
+            onBack={() => setScreen('detail')}
+            onContinue={() => window.location.href = 'Vendora Dispute Flow.html'}
+          />
+        )}
+      </main>
+
+      {TweaksPanel && TweakSection && TweakColor && TweakText && TweakToggle && TweakSelect && (
+        <TweaksPanel title="B-4 Tweaks">
+          <TweakSection label="Брендинг">
+            <TweakColor label="Цвет акцента" value={tweaks.accentColor} onChange={(value) => setTweak('accentColor', value)} />
+            <TweakText label="Бренд" value={tweaks.brandName} onChange={(value) => setTweak('brandName', value)} />
+            <TweakText label="Buyer name" value={tweaks.buyerName} onChange={(value) => setTweak('buyerName', value)} />
+          </TweakSection>
+          <TweakSection label="Экран">
+            <TweakToggle label="Показывать timeline" value={!!tweaks.showTimeline} onChange={(value) => setTweak('showTimeline', value)} />
+            <TweakToggle label="Показывать уведомления" value={!!tweaks.showNotifications} onChange={(value) => setTweak('showNotifications', value)} />
+            <TweakSelect
+              label="Стартовый заказ"
+              value={tweaks.defaultOrderId}
+              options={[
+                { value: 'VND-8821-A', label: 'Delivered / confirmable' },
+                { value: 'VND-8818-A', label: 'Shipped' },
+                { value: 'VND-8812-A', label: 'Payment held' },
+                { value: 'VND-8809-A', label: 'Completed' },
+                { value: 'VND-8803-A', label: 'Disputed' },
+              ]}
+              onChange={(value) => setTweak('defaultOrderId', value)}
+            />
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

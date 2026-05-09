@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendora — Поиск и выбор товара B-2</title>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin:0; background:#f1f4f9; font-family:'Inter',system-ui,sans-serif; min-height:100vh; }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .fade-up { animation: fadeUp .28s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .fade-in { animation: fadeIn .2s ease both; }
+
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .spinner { animation: spin .7s linear infinite; }
+
+    @keyframes pop { 0%{transform:scale(.9);opacity:0} 70%{transform:scale(1.03)} 100%{transform:scale(1);opacity:1} }
+    .pop { animation: pop .3s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+    .slide-down { animation: slideDown .2s ease both; }
+
+    .card { background:#fff; border-radius:14px; border:1px solid #e4e9f2; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+
+    .btn-primary {
+      background:var(--brand,#2455e8); color:#fff; border:none; border-radius:9px;
+      padding:10px 20px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;
+      display:inline-flex; align-items:center; gap:7px;
+      transition:filter .15s, box-shadow .15s, transform .1s;
+    }
+    .btn-primary:hover { filter:brightness(.88); box-shadow:0 4px 14px color-mix(in srgb,var(--brand,#2455e8) 30%,transparent); }
+    .btn-primary:active { transform:scale(.97); }
+    .btn-primary:disabled { opacity:.5; cursor:not-allowed; filter:none; box-shadow:none; }
+
+    .btn-ghost {
+      background:transparent; color:#64748b; border:1.5px solid #e2e8f0;
+      border-radius:9px; padding:9px 16px; font-size:13px; font-weight:500; font-family:inherit;
+      cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+      transition:border-color .15s, color .15s, background .15s;
+    }
+    .btn-ghost:hover { border-color:#94a3b8; color:#1e293b; background:#f8fafc; }
+
+    .btn-outline-brand {
+      background:transparent; color:var(--brand,#2455e8);
+      border:1.5px solid var(--brand,#2455e8); border-radius:9px;
+      padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit;
+      cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+      transition:background .15s;
+    }
+    .btn-outline-brand:hover { background:color-mix(in srgb,var(--brand,#2455e8) 6%,white); }
+
+    .input-field {
+      width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px;
+      font-size:14px; font-family:inherit; background:#fff; color:#1e293b;
+      transition:border-color .15s, box-shadow .15s; outline:none;
+    }
+    .input-field:focus { border-color:var(--brand,#2455e8); box-shadow:0 0 0 3px color-mix(in srgb,var(--brand,#2455e8) 12%,transparent); }
+
+    /* Search bar large */
+    .search-bar-large {
+      width:100%; padding:14px 20px 14px 52px; border:2px solid #e2e8f0; border-radius:14px;
+      font-size:15px; font-family:inherit; background:#fff; color:#1e293b; outline:none;
+      transition:border-color .15s, box-shadow .15s;
+    }
+    .search-bar-large:focus { border-color:var(--brand,#2455e8); box-shadow:0 0 0 4px color-mix(in srgb,var(--brand,#2455e8) 10%,transparent); }
+
+    /* Autocomplete */
+    .autocomplete { position:absolute; top:calc(100% + 6px); left:0; right:0; background:#fff; border:1.5px solid #e4e9f2; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,.1); z-index:100; overflow:hidden; }
+    .autocomplete-item { padding:10px 16px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:10px; transition:background .1s; }
+    .autocomplete-item:hover { background:#f8fafc; }
+
+    /* Filter sidebar */
+    .filter-sidebar { width:220px; flex-shrink:0; }
+    @media(max-width:768px) { .filter-sidebar { display:none; } }
+
+    /* Product card */
+    .product-card { background:#fff; border-radius:14px; border:1px solid #e4e9f2; overflow:hidden; cursor:pointer; transition:box-shadow .2s, transform .15s, border-color .15s; }
+    .product-card:hover { box-shadow:0 8px 28px rgba(0,0,0,.1); transform:translateY(-2px); border-color:#c7d2e8; }
+
+    /* Gallery thumb */
+    .gallery-thumb { border-radius:8px; border:2px solid transparent; cursor:pointer; transition:border-color .15s; }
+    .gallery-thumb.active { border-color:var(--brand,#2455e8); }
+    .gallery-thumb:hover { border-color:#94a3b8; }
+
+    /* Star */
+    .star-filled { color:#f59e0b; }
+    .star-empty { color:#e2e8f0; }
+
+    /* Tab */
+    .tab-btn { padding:10px 16px; font-size:13px; font-weight:500; cursor:pointer; border-bottom:2px solid transparent; transition:color .15s, border-color .15s; color:#64748b; background:none; border-top:none; border-left:none; border-right:none; font-family:inherit; white-space:nowrap; }
+    .tab-btn.active { color:var(--brand,#2455e8); border-bottom-color:var(--brand,#2455e8); font-weight:600; }
+    .tab-btn:hover:not(.active) { color:#1e293b; }
+
+    /* Vendor badge */
+    .vendor-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+
+    /* Range slider */
+    .range-slider { -webkit-appearance:none; width:100%; height:4px; border-radius:2px; outline:none; }
+    .range-slider::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--brand,#2455e8); cursor:pointer; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.2); }
+
+    /* Breadcrumb */
+    .breadcrumb { display:flex; align-items:center; gap:6px; font-size:12px; color:#94a3b8; }
+    .breadcrumb a { color:#64748b; cursor:pointer; transition:color .15s; }
+    .breadcrumb a:hover { color:var(--brand,#2455e8); }
+
+    /* Sticky add-to-cart bar */
+    .sticky-cart { position:sticky; bottom:0; background:#fff; border-top:1px solid #e4e9f2; padding:12px 20px; z-index:20; display:flex; align-items:center; gap:12px; box-shadow:0 -4px 16px rgba(0,0,0,.06); }
+
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
+const VENDORS = {
+  techpro:    { id:'techpro',    name:'TechPro Solutions',  color:'#6366f1', bg:'#eef2ff', rating:4.8, reviews:1240, since:'2019', verified:true,  orders:8420,  desc:'Официальный дистрибьютор Dell, Logitech, LG. Специализация — корпоративные поставки IT-оборудования.' },
+  officemax:  { id:'officemax',  name:'OfficeMax Россия',   color:'#0891b2', bg:'#ecfeff', rating:4.6, reviews:889,  since:'2017', verified:true,  orders:5310,  desc:'Лидер в сегменте офисной мебели и эргономичных решений для B2B клиентов.' },
+  cleanmaster:{ id:'cleanmaster',name:'CleanMaster Pro',    color:'#059669', bg:'#ecfdf5', rating:4.9, reviews:2107, since:'2015', verified:true,  orders:12880, desc:'Профессиональная химия и оборудование для клининга. Работаем с сетями отелей и ТЦ.' },
+  digitalhub: { id:'digitalhub', name:'DigitalHub Store',   color:'#dc2626', bg:'#fef2f2', rating:4.3, reviews:432,  since:'2021', verified:false, orders:1200,  desc:'Широкий ассортимент электроники и аксессуаров по конкурентным ценам.' },
+  furnicraft:  { id:'furnicraft', name:'FurniCraft B2B',     color:'#d97706', bg:'#fffbeb', rating:4.7, reviews:673,  since:'2018', verified:true,  orders:3990,  desc:'Производитель и поставщик офисной мебели собственного производства.' },
+};
+
+const CATEGORIES = [
+  { id:'all',         label:'Все категории',      icon:'🗂️', count:248 },
+  { id:'electronics', label:'Электроника и IT',   icon:'💻', count:84 },
+  { id:'office',      label:'Офисная мебель',     icon:'🪑', count:56 },
+  { id:'supplies',    label:'Расходники',         icon:'📎', count:37 },
+  { id:'cleaning',    label:'Хозтовары',          icon:'🧹', count:29 },
+  { id:'networking',  label:'Сетевое оборудование',icon:'🌐',count:22 },
+  { id:'audio',       label:'Аудио и видео',      icon:'🎧', count:20 },
+];
+
+const PRODUCTS = [
+  {
+    id:'p001', vendorId:'techpro', category:'electronics',
+    name:'Ноутбук Dell Latitude 5540', shortName:'Dell Latitude 5540',
+    sku:'DL-5540-I7', brand:'Dell',
+    price:89500, oldPrice:96000, minOrder:1, bulkPrices:[{from:5,price:86000},{from:10,price:82000}],
+    inStock:true, stockQty:47,
+    rating:4.8, reviewCount:124,
+    tags:['Хит продаж','Корпоративный'],
+    image:'💻', images:['💻','🖥️','⌨️','🔋'],
+    description:'Профессиональный ноутбук для корпоративного сегмента. Intel Core i7-1365U, 16 GB DDR5, 512 GB SSD NVMe. Сертифицирован по MIL-STD-810H. Идеально подходит для мобильных сотрудников.',
+    specs:{ 'Процессор':'Intel Core i7-1365U','Память':'16 GB DDR5','Накопитель':'512 GB SSD NVMe','Дисплей':'15.6" FHD IPS','ОС':'Windows 11 Pro','Гарантия':'3 года (ProSupport)','Вес':'1.78 кг' },
+    delivery:'3–5 дней', weight:'1.78 кг',
+    variants:[
+      { id:'v1', label:'i5 / 8GB / 256GB', price:72000, sku:'DL-5540-I5', inStock:true },
+      { id:'v2', label:'i7 / 16GB / 512GB', price:89500, sku:'DL-5540-I7', inStock:true },
+      { id:'v3', label:'i7 / 32GB / 1TB', price:112000, sku:'DL-5540-I7X', inStock:false },
+    ],
+  },
+  {
+    id:'p002', vendorId:'techpro', category:'electronics',
+    name:'Монитор LG UltraWide 34" 4K', shortName:'LG UltraWide 34"',
+    sku:'LG-34WN80C', brand:'LG',
+    price:42000, oldPrice:null, minOrder:1, bulkPrices:[{from:3,price:39500}],
+    inStock:true, stockQty:12,
+    rating:4.7, reviewCount:89,
+    tags:['Новинка'],
+    image:'🖥️', images:['🖥️','🔌','📦'],
+    description:'Изогнутый монитор с разрешением QHD 3440×1440. IPS-матрица, HDR400, 75 Гц. Поддержка USB-C с мощностью зарядки 96W. Для профессиональной работы с графикой и документами.',
+    specs:{ 'Диагональ':'34" (изогнутый)','Разрешение':'3440×1440 QHD','Матрица':'IPS','Частота':'75 Гц','Интерфейсы':'USB-C, HDMI, DisplayPort','Гарантия':'2 года','Вес':'6.4 кг' },
+    delivery:'2–4 дня', weight:'6.4 кг',
+    variants:[
+      { id:'v1', label:'34" QHD / 75 Гц', price:42000, sku:'LG-34WN80C', inStock:true },
+      { id:'v2', label:'38" 4K / 144 Гц', price:68000, sku:'LG-38WN95C', inStock:true },
+    ],
+  },
+  {
+    id:'p003', vendorId:'officemax', category:'office',
+    name:'Кресло Herman Miller Aeron (размер C)', shortName:'Herman Miller Aeron',
+    sku:'HM-AERON-C', brand:'Herman Miller',
+    price:145000, oldPrice:158000, minOrder:1, bulkPrices:[{from:5,price:138000},{from:20,price:130000}],
+    inStock:true, stockQty:8,
+    rating:4.9, reviewCount:312,
+    tags:['Премиум','Хит продаж'],
+    image:'🪑', images:['🪑','🏢','📦'],
+    description:'Эргономичное кресло для руководителей. Запатентованная подвеска 8Z Pellicle распределяет вес равномерно. 12-летняя гарантия производителя. Регулировка: высота, подлокотники, поясничная поддержка, наклон.',
+    specs:{ 'Материал':'8Z Pellicle (сетка)','Нагрузка':'до 159 кг','Размер':'C (крупный)','Гарантия':'12 лет','Производство':'США','Сертификат':'BIFMA, Greenguard','Вес':'18.1 кг' },
+    delivery:'5–7 дней', weight:'18.1 кг',
+    variants:[
+      { id:'v1', label:'Размер A (малый)', price:138000, sku:'HM-AERON-A', inStock:true },
+      { id:'v2', label:'Размер B (средний)', price:140000, sku:'HM-AERON-B', inStock:true },
+      { id:'v3', label:'Размер C (крупный)', price:145000, sku:'HM-AERON-C', inStock:true },
+    ],
+  },
+  {
+    id:'p004', vendorId:'furnicraft', category:'office',
+    name:'Стол переговорный 2400×1200 мм (дуб)', shortName:'Стол переговорный 2400',
+    sku:'TBL-2412-OAK', brand:'FurniCraft',
+    price:78000, oldPrice:85000, minOrder:1, bulkPrices:[],
+    inStock:false, stockQty:0,
+    rating:4.5, reviewCount:41,
+    tags:['Под заказ'],
+    image:'🪵', images:['🪵','🏢'],
+    description:'Представительский стол для переговорных комнат. Столешница ЛДСП 38 мм с финишным покрытием под дуб натуральный. Хромированные опоры. Возможна индивидуальная конфигурация размеров.',
+    specs:{ 'Размер':'2400×1200×760 мм','Материал':'ЛДСП 38 мм','Цвет':'Дуб натуральный','Опоры':'Хром','Максимум мест':'10','Сборка':'Включена','Вес':'95 кг' },
+    delivery:'10–14 дней (под заказ)', weight:'95 кг',
+    variants:[
+      { id:'v1', label:'2400×1200 (дуб)', price:78000, sku:'TBL-2412-OAK', inStock:false },
+      { id:'v2', label:'3000×1200 (дуб)', price:94000, sku:'TBL-3012-OAK', inStock:false },
+      { id:'v3', label:'2400×1200 (венге)', price:78000, sku:'TBL-2412-VNG', inStock:true },
+    ],
+  },
+  {
+    id:'p005', vendorId:'techpro', category:'electronics',
+    name:'Мышь Logitech MX Master 3S для Mac', shortName:'Logitech MX Master 3S',
+    sku:'LG-MX3S-GR', brand:'Logitech',
+    price:8200, oldPrice:9500, minOrder:1, bulkPrices:[{from:10,price:7400},{from:50,price:6800}],
+    inStock:true, stockQty:156,
+    rating:4.8, reviewCount:578,
+    tags:['Хит продаж','Скидка'],
+    image:'🖱️', images:['🖱️','🔋','📦'],
+    description:'Эргономичная беспроводная мышь с сенсором 8000 DPI. Технология MagSpeed — прокрутка до 1000 строк в секунду. Bluetooth + USB-приёмник. Заряд 70 дней от одной зарядки.',
+    specs:{ 'Сенсор':'Darkfield 8000 DPI','Кнопки':'7 программируемых','Подключение':'Bluetooth + USB','Автономность':'70 дней','Совместимость':'Win / Mac / Linux','Гарантия':'2 года','Вес':'141 г' },
+    delivery:'1–2 дня', weight:'141 г',
+    variants:[
+      { id:'v1', label:'Графитовый', price:8200, sku:'LG-MX3S-GR', inStock:true },
+      { id:'v2', label:'Светло-серый', price:8200, sku:'LG-MX3S-WH', inStock:true },
+      { id:'v3', label:'Pale Rose', price:8200, sku:'LG-MX3S-PR', inStock:false },
+    ],
+  },
+  {
+    id:'p006', vendorId:'cleanmaster', category:'cleaning',
+    name:'Средство Pro-Clean Multi 5L концентрат', shortName:'Pro-Clean Multi 5L',
+    sku:'CM-PRO5-UN', brand:'CleanMaster',
+    price:1200, oldPrice:null, minOrder:5, bulkPrices:[{from:24,price:1050},{from:120,price:950}],
+    inStock:true, stockQty:840,
+    rating:4.9, reviewCount:892,
+    tags:['Эко','Концентрат'],
+    image:'🧴', images:['🧴','🧹','📦'],
+    description:'Универсальный концентрированный очиститель для профессионального клининга. Безопасен для всех поверхностей. Разбавление 1:10. Сертификаты: ECO Label, ISO 9001. Используется в отелях Hilton и Marriott.',
+    specs:{ 'Объём':'5 литров','Концентрат':'1:10','pH':'7 (нейтральный)','Запах':'Лимон / Нейтральный','Поверхности':'Все виды','Сертификаты':'ECO Label, ISO 9001','Срок хранения':'24 месяца' },
+    delivery:'1–3 дня', weight:'5.3 кг',
+    variants:[
+      { id:'v1', label:'5L · Лимон', price:1200, sku:'CM-PRO5-LM', inStock:true },
+      { id:'v2', label:'5L · Нейтральный', price:1200, sku:'CM-PRO5-UN', inStock:true },
+      { id:'v3', label:'10L · Лимон', price:2100, sku:'CM-PRO10-LM', inStock:true },
+      { id:'v4', label:'20L · Нейтральный', price:3800, sku:'CM-PRO20-UN', inStock:true },
+    ],
+  },
+  {
+    id:'p007', vendorId:'digitalhub', category:'networking',
+    name:'Коммутатор TP-Link TL-SG108E 8-портовый', shortName:'TP-Link TL-SG108E',
+    sku:'TP-SG108E', brand:'TP-Link',
+    price:4800, oldPrice:5200, minOrder:1, bulkPrices:[{from:5,price:4400}],
+    inStock:true, stockQty:23,
+    rating:4.4, reviewCount:167,
+    tags:['Управляемый'],
+    image:'🌐', images:['🌐','🔌'],
+    description:'Управляемый гигабитный коммутатор 8 портов. Поддержка VLAN, QoS, IGMP. Металлический корпус. Монтаж в стойку или на стену. Идеально для малого офиса.',
+    specs:{ 'Портов':'8 × Gigabit','Тип':'Управляемый','Стандарт':'802.3u/ab','VLAN':'802.1Q','Монтаж':'Desktop / настенный','Гарантия':'2 года','Вес':'0.8 кг' },
+    delivery:'2–4 дня', weight:'0.8 кг',
+    variants:[
+      { id:'v1', label:'8 портов', price:4800, sku:'TP-SG108E', inStock:true },
+      { id:'v2', label:'16 портов', price:8900, sku:'TP-SG1016E', inStock:true },
+      { id:'v3', label:'24 порта', price:14500, sku:'TP-SG1024E', inStock:true },
+    ],
+  },
+  {
+    id:'p008', vendorId:'officemax', category:'supplies',
+    name:'Бумага для принтера A4 500л Premium', shortName:'Бумага A4 Premium 500л',
+    sku:'PP-A4-500', brand:'OfficeMax',
+    price:680, oldPrice:null, minOrder:5, bulkPrices:[{from:50,price:620},{from:200,price:580}],
+    inStock:true, stockQty:1200,
+    rating:4.5, reviewCount:234,
+    tags:['Расходник'],
+    image:'📄', images:['📄','📦'],
+    description:'Бумага офисная 80 г/м², класс A, белизна 162 CIE. Подходит для лазерных и струйных принтеров, копиров. Производство Финляндия.',
+    specs:{ 'Формат':'A4 (210×297 мм)','Плотность':'80 г/м²','Белизна':'162 CIE','Количество':'500 листов','Класс':'A','Производство':'Финляндия','Упаковка':'5 стоп / коробка' },
+    delivery:'1–2 дня', weight:'2.5 кг',
+    variants:[
+      { id:'v1', label:'A4 · 80 г/м² · 500 л', price:680, sku:'PP-A4-500', inStock:true },
+      { id:'v2', label:'A4 · 80 г/м² · 250 л', price:370, sku:'PP-A4-250', inStock:true },
+      { id:'v3', label:'A3 · 80 г/м² · 500 л', price:1350, sku:'PP-A3-500', inStock:true },
+    ],
+  },
+];
+
+const SUGGESTIONS = ['Ноутбук Dell', 'Монитор 4K', 'Кресло эргономичное', 'Коммутатор гигабит', 'Бумага A4', 'Мышь беспроводная', 'Стол переговорный', 'Чистящее средство'];
+
+const RECENT_SEARCHES = ['Ноутбук корпоративный', 'Мышь Logitech', 'Кресло Herman Miller'];
+
+const POPULAR_CATEGORIES = [
+  { id:'electronics', label:'Электроника', icon:'💻', count:'84 товара' },
+  { id:'office',      label:'Мебель',      icon:'🪑', count:'56 товаров' },
+  { id:'supplies',    label:'Расходники',  icon:'📎', count:'37 товаров' },
+  { id:'cleaning',    label:'Хозтовары',   icon:'🧹', count:'29 товаров' },
+  { id:'networking',  label:'Сети',        icon:'🌐', count:'22 товара' },
+  { id:'audio',       label:'Аудио',       icon:'🎧', count:'20 товаров' },
+];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+const fmt = n => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
+
+function Stars({ rating, size=12 }) {
+  return (
+    <span className="flex items-center gap-0.5">
+      {[1,2,3,4,5].map(i => (
+        <svg key={i} width={size} height={size} viewBox="0 0 12 12" fill="none">
+          <path d="M6 1l1.4 3h3.1l-2.5 2 1 3L6 7.5 3 9l1-3L1.5 4H4.6L6 1z"
+            fill={i <= Math.round(rating) ? '#f59e0b' : '#e2e8f0'}
+            stroke={i <= Math.round(rating) ? '#f59e0b' : '#e2e8f0'} strokeWidth="0.5"/>
+        </svg>
+      ))}
+    </span>
+  );
+}
+
+function VendorTag({ vendor }) {
+  return (
+    <span className="vendor-badge" style={{background:vendor.bg, color:vendor.color}}>
+      <span className="w-1.5 h-1.5 rounded-full" style={{background:vendor.color}}/>
+      {vendor.name}
+      {vendor.verified && ' ✓'}
+    </span>
+  );
+}
+
+// ─── ICONS ───────────────────────────────────────────────────────────────────
+
+const Ic = {
+  search: ({size=16})=><svg width={size} height={size} viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.6"/><path d="M11 11l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>,
+  filter: ()=><svg width={14} height={14} viewBox="0 0 14 14" fill="none"><path d="M1.5 3.5h11M4 7h6M6.5 10.5h1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  chevLeft: ()=><svg width={16} height={16} viewBox="0 0 16 16" fill="none"><path d="M10 3L6 8l4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  chevRight: ()=><svg width={14} height={14} viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  heart: ({filled})=><svg width={16} height={16} viewBox="0 0 16 16" fill={filled?'#ef4444':'none'}><path d="M8 13.5S1.5 9.5 1.5 5.5a3.5 3.5 0 016.5-1.8A3.5 3.5 0 0114.5 5.5C14.5 9.5 8 13.5 8 13.5z" stroke={filled?'#ef4444':'currentColor'} strokeWidth="1.4"/></svg>,
+  share: ()=><svg width={14} height={14} viewBox="0 0 14 14" fill="none"><circle cx="11" cy="3" r="2" stroke="currentColor" strokeWidth="1.3"/><circle cx="11" cy="11" r="2" stroke="currentColor" strokeWidth="1.3"/><circle cx="3" cy="7" r="2" stroke="currentColor" strokeWidth="1.3"/><path d="M9 3.9L5 5.9M5 8.1l4 2" stroke="currentColor" strokeWidth="1.3"/></svg>,
+  grid: ()=><svg width={14} height={14} viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/></svg>,
+  list: ()=><svg width={14} height={14} viewBox="0 0 14 14" fill="none"><path d="M4 3.5h8M4 7h8M4 10.5h8M1.5 3.5h.5M1.5 7h.5M1.5 10.5h.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  cart: ()=><svg width={16} height={16} viewBox="0 0 16 16" fill="none"><path d="M1 1h2l2.5 8.5h7L14 4H4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="6.5" cy="13" r="1.5" stroke="currentColor" strokeWidth="1.3"/><circle cx="11.5" cy="13" r="1.5" stroke="currentColor" strokeWidth="1.3"/></svg>,
+  check: ({size=13})=><svg width={size} height={size} viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3L11 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  x: ()=><svg width={12} height={12} viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
+  truck: ()=><svg width={14} height={14} viewBox="0 0 14 14" fill="none"><path d="M1 9V4a1 1 0 011-1h7v6H1z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M9 5.5h2.5L13 8v1h-4V5.5z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><circle cx="3.5" cy="10.5" r="1.5" stroke="currentColor" strokeWidth="1.2"/><circle cx="11" cy="10.5" r="1.5" stroke="currentColor" strokeWidth="1.2"/></svg>,
+  shield: ()=><svg width={13} height={13} viewBox="0 0 13 13" fill="none"><path d="M6.5 1L1.5 3.5v3.5c0 3 2.5 5 5 5.5 2.5-.5 5-2.5 5-5.5V3.5L6.5 1z" stroke="currentColor" strokeWidth="1.3"/><path d="M4.5 6.5l1.5 1.5L9 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  tag: ()=><svg width={13} height={13} viewBox="0 0 13 13" fill="none"><path d="M1.5 7L6.5 2H12v5.5L7 12.5 1.5 7z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><circle cx="9.5" cy="4" r="1" fill="currentColor"/></svg>,
+  info: ()=><svg width={14} height={14} viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/><path d="M7 6.5V10M7 5v.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+};
+
+// ─── TOP NAVBAR ───────────────────────────────────────────────────────────────
+
+function Navbar({ cartCount, searchQuery, onSearchChange, onSearch, onCartClick }) {
+  return (
+    <nav className="bg-white border-b border-slate-100 sticky top-0 z-40">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{background:'var(--brand,#2455e8)'}}>
+            <span className="text-white font-bold text-sm">V</span>
+          </div>
+          <span className="font-bold text-slate-800 hidden sm:block">Vendora</span>
+        </div>
+        {/* Search bar small in nav */}
+        <div className="flex-1 relative max-w-xl">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Ic.search size={14}/></span>
+          <input className="input-field pl-9 py-2 text-sm"
+            placeholder="Поиск товаров и поставщиков..."
+            value={searchQuery}
+            onChange={e => onSearchChange(e.target.value)}
+            onKeyDown={e => e.key==='Enter' && onSearch(searchQuery)} />
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button className="relative w-9 h-9 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors"
+            onClick={onCartClick}>
+            <Ic.cart />
+            {cartCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white text-xs flex items-center justify-center font-bold" style={{background:'var(--brand,#2455e8)', fontSize:'10px'}}>{cartCount}</span>}
+          </button>
+          <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">ИВ</div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREEN 1 — HOME / SEARCH
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function HomeScreen({ onSearch, onCategorySelect }) {
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSugg, setShowSugg] = useState(false);
+  const inputRef = useRef();
+  const debounceRef = useRef();
+
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    if (query.length >= 2) {
+      debounceRef.current = setTimeout(() => {
+        setSuggestions(SUGGESTIONS.filter(s => s.toLowerCase().includes(query.toLowerCase())));
+        setShowSugg(true);
+      }, 200);
+    } else {
+      setSuggestions([]);
+      setShowSugg(false);
+    }
+  }, [query]);
+
+  function doSearch(q) {
+    if (q.trim()) { setShowSugg(false); onSearch(q.trim()); }
+  }
+
+  return (
+    <div className="fade-up">
+      {/* Hero */}
+      <div className="py-14 px-4 text-center" style={{background:'linear-gradient(135deg,color-mix(in srgb,var(--brand,#2455e8) 8%,white) 0%,#f8fafc 100%)'}}>
+        <div className="max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-5" style={{background:'color-mix(in srgb,var(--brand,#2455e8) 10%,white)', color:'var(--brand,#2455e8)'}}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{background:'var(--brand,#2455e8)'}}/>
+            248 поставщиков · 12 000+ товаров
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3 leading-tight">
+            B2B маркетплейс<br/>для корпоративных закупок
+          </h1>
+          <p className="text-slate-500 text-base mb-8">Проверенные поставщики, оптовые цены, единый счёт</p>
+
+          {/* Search */}
+          <div className="relative">
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 z-10"><Ic.search size={18}/></span>
+            <input
+              ref={inputRef}
+              className="search-bar-large"
+              placeholder="Ноутбуки Dell, кресла Herman Miller, чистящие средства..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => e.key==='Enter' && doSearch(query)}
+              onFocus={() => query.length>=2 && setShowSugg(true)}
+              onBlur={() => setTimeout(()=>setShowSugg(false),150)}
+            />
+            <button className="btn-primary absolute right-2 top-1/2 -translate-y-1/2 py-2.5 px-5"
+              onClick={() => doSearch(query)}>
+              Найти
+            </button>
+            {/* Autocomplete */}
+            {showSugg && suggestions.length > 0 && (
+              <div className="autocomplete slide-down">
+                <div className="px-3 py-2 text-xs text-slate-400 font-semibold border-b border-slate-50">Подсказки</div>
+                {suggestions.map((s,i) => (
+                  <div key={i} className="autocomplete-item" onMouseDown={() => { setQuery(s); doSearch(s); }}>
+                    <Ic.search size={13}/>
+                    <span className="text-sm text-slate-700">{s}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!showSugg && query.length === 0 && (
+              <div className="text-left mt-2 flex items-center gap-2 flex-wrap px-2">
+                <span className="text-xs text-slate-400">Недавние:</span>
+                {RECENT_SEARCHES.map((r,i) => (
+                  <button key={i} className="text-xs px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-600 hover:border-slate-400 transition-colors"
+                    onClick={() => doSearch(r)}>{r}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Categories */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <h2 className="text-lg font-bold text-slate-900 mb-4">Категории товаров</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {POPULAR_CATEGORIES.map(cat => (
+            <div key={cat.id}
+              className="card p-4 text-center cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5 group"
+              onClick={() => onCategorySelect(cat.id)}>
+              <div className="text-3xl mb-2">{cat.icon}</div>
+              <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">{cat.label}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{cat.count}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Featured products */}
+      <div className="max-w-6xl mx-auto px-4 pb-12">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-900">Популярные товары</h2>
+          <button className="text-sm font-medium hover:underline" style={{color:'var(--brand,#2455e8)'}}
+            onClick={() => onSearch('')}>Все товары →</button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {PRODUCTS.filter(p=>p.tags.includes('Хит продаж')).slice(0,4).map(p => (
+            <MiniProductCard key={p.id} product={p} onSearch={onSearch}/>
+          ))}
+        </div>
+      </div>
+
+      {/* Trust badges */}
+      <div className="bg-white border-t border-slate-100 py-8">
+        <div className="max-w-6xl mx-auto px-4 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+          {[
+            { icon:'🔒', title:'Безопасная оплата', desc:'SSL + escrow' },
+            { icon:'✅', title:'Верифицированные', desc:'248 поставщиков' },
+            { icon:'📄', title:'Электронный документооборот', desc:'Счета, накладные, акты' },
+            { icon:'🚚', title:'Доставка по РФ', desc:'3–14 рабочих дней' },
+          ].map((t,i) => (
+            <div key={i}>
+              <div className="text-3xl mb-2">{t.icon}</div>
+              <p className="text-sm font-semibold text-slate-800">{t.title}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{t.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniProductCard({ product, onSearch }) {
+  const vendor = VENDORS[product.vendorId];
+  return (
+    <div className="product-card" onClick={() => onSearch(product.shortName)}>
+      <div className="h-28 flex items-center justify-center text-5xl bg-slate-50 border-b border-slate-100">{product.image}</div>
+      <div className="p-3">
+        <p className="text-xs font-semibold text-slate-800 leading-snug mb-1 line-clamp-2">{product.name}</p>
+        <div className="flex items-center gap-1 mb-2">
+          <Stars rating={product.rating} size={10}/>
+          <span className="text-xs text-slate-400">({product.reviewCount})</span>
+        </div>
+        <p className="text-base font-bold" style={{color:'var(--brand,#2455e8)'}}>{fmt(product.price)}</p>
+        <VendorTag vendor={vendor}/>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREEN 2 — SEARCH RESULTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function SearchResults({ query, initialCategory, onSelectProduct, onSelectVendor }) {
+  const [filterCategory, setFilterCategory] = useState(initialCategory || 'all');
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
+  const [minRating, setMinRating] = useState(0);
+  const [onlyInStock, setOnlyInStock] = useState(false);
+  const [onlyVerified, setOnlyVerified] = useState(false);
+  const [sortBy, setSortBy] = useState('relevance');
+  const [viewMode, setViewMode] = useState('grid');
+  const [activeFilters, setActiveFilters] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    const t = setTimeout(()=>setLoading(false), 500);
+    return () => clearTimeout(t);
+  }, [query, filterCategory]);
+
+  const filtered = useMemo(() => {
+    let list = PRODUCTS;
+    if (query && query.trim()) {
+      const q = query.toLowerCase();
+      list = list.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.brand.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q)
+      );
+    }
+    if (filterCategory !== 'all') list = list.filter(p => p.category === filterCategory);
+    if (priceMin) list = list.filter(p => p.price >= Number(priceMin));
+    if (priceMax) list = list.filter(p => p.price <= Number(priceMax));
+    if (minRating > 0) list = list.filter(p => p.rating >= minRating);
+    if (onlyInStock) list = list.filter(p => p.inStock);
+    if (onlyVerified) list = list.filter(p => VENDORS[p.vendorId].verified);
+    list = [...list].sort((a,b) => {
+      if (sortBy==='price_asc') return a.price - b.price;
+      if (sortBy==='price_desc') return b.price - a.price;
+      if (sortBy==='rating') return b.rating - a.rating;
+      if (sortBy==='new') return b.id.localeCompare(a.id);
+      return b.rating*b.reviewCount - a.rating*a.reviewCount;
+    });
+    return list;
+  }, [query, filterCategory, priceMin, priceMax, minRating, onlyInStock, onlyVerified, sortBy]);
+
+  function clearFilters() {
+    setFilterCategory('all'); setPriceMin(''); setPriceMax('');
+    setMinRating(0); setOnlyInStock(false); setOnlyVerified(false);
+  }
+
+  const hasFilters = filterCategory!=='all' || priceMin || priceMax || minRating>0 || onlyInStock || onlyVerified;
+
+  // Filter sidebar
+  const FilterPanel = () => (
+    <div className="filter-sidebar space-y-5">
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-bold text-slate-800">Фильтры</p>
+          {hasFilters && <button className="text-xs font-medium hover:underline" style={{color:'var(--brand,#2455e8)'}} onClick={clearFilters}>Сбросить</button>}
+        </div>
+
+        {/* Category */}
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Категория</p>
+          <div className="space-y-1">
+            {CATEGORIES.map(cat => (
+              <button key={cat.id}
+                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-sm flex items-center justify-between transition-all
+                  ${filterCategory===cat.id ? 'font-semibold' : 'text-slate-600 hover:bg-slate-50'}`}
+                style={filterCategory===cat.id ? {background:'color-mix(in srgb,var(--brand,#2455e8) 8%,white)', color:'var(--brand,#2455e8)'} : {}}
+                onClick={() => setFilterCategory(cat.id)}>
+                <span>{cat.icon} {cat.label}</span>
+                <span className="text-xs text-slate-400">{cat.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Price */}
+        <div className="mb-4 pb-4 border-b border-slate-100">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Цена (₽)</p>
+          <div className="flex gap-2">
+            <input className="input-field text-sm py-1.5" placeholder="от" type="number" value={priceMin} onChange={e=>setPriceMin(e.target.value)}/>
+            <input className="input-field text-sm py-1.5" placeholder="до" type="number" value={priceMax} onChange={e=>setPriceMax(e.target.value)}/>
+          </div>
+        </div>
+
+        {/* Rating */}
+        <div className="mb-4 pb-4 border-b border-slate-100">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Рейтинг</p>
+          <div className="space-y-1">
+            {[0,3,4,4.5].map(r => (
+              <button key={r}
+                className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center gap-2 text-sm transition-all
+                  ${minRating===r ? 'font-semibold' : 'text-slate-600 hover:bg-slate-50'}`}
+                style={minRating===r ? {background:'color-mix(in srgb,var(--brand,#2455e8) 8%,white)', color:'var(--brand,#2455e8)'} : {}}
+                onClick={() => setMinRating(r)}>
+                {r===0 ? 'Любой' : <><Stars rating={r} size={11}/><span>от {r}</span></>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Toggles */}
+        <div className="space-y-3">
+          {[
+            { label:'Только в наличии', val:onlyInStock, set:setOnlyInStock },
+            { label:'Только верифицированные', val:onlyVerified, set:setOnlyVerified },
+          ].map(({label,val,set}) => (
+            <label key={label} className="flex items-center gap-2.5 cursor-pointer">
+              <div className={`w-9 h-5 rounded-full relative transition-all flex-shrink-0 ${val?'':'bg-slate-200'}`}
+                style={val?{background:'var(--brand,#2455e8)'}:{}}
+                onClick={() => set(v=>!v)}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${val?'right-0.5':'left-0.5'}`}/>
+              </div>
+              <span className="text-sm text-slate-700">{label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-5 flex gap-5">
+      <FilterPanel />
+
+      <div className="flex-1 min-w-0">
+        {/* Results header */}
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          <div className="flex-1 min-w-0">
+            {query && <p className="text-sm text-slate-500">Результаты по запросу: <span className="font-semibold text-slate-800">«{query}»</span></p>}
+            <p className="text-xs text-slate-400 mt-0.5">
+              {loading ? 'Поиск...' : `${filtered.length} ${filtered.length===1?'товар':filtered.length<5?'товара':'товаров'}`}
+              {hasFilters && ' · Фильтры применены'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select className="input-field w-auto text-sm py-1.5" value={sortBy} onChange={e=>setSortBy(e.target.value)}>
+              <option value="relevance">По релевантности</option>
+              <option value="price_asc">Цена ↑</option>
+              <option value="price_desc">Цена ↓</option>
+              <option value="rating">По рейтингу</option>
+              <option value="new">Новинки</option>
+            </select>
+            <div className="flex rounded-lg overflow-hidden border border-slate-200">
+              {[['grid',<Ic.grid/>],['list',<Ic.list/>]].map(([m,ic]) => (
+                <button key={m}
+                  className={`w-8 h-8 flex items-center justify-center transition-colors ${viewMode===m?'text-white':'text-slate-400 hover:text-slate-600 bg-white'}`}
+                  style={viewMode===m?{background:'var(--brand,#2455e8)'}:{}}
+                  onClick={() => setViewMode(m)}>{ic}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Active filter chips */}
+        {hasFilters && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {filterCategory!=='all' && <FilterChip label={CATEGORIES.find(c=>c.id===filterCategory)?.label} onRemove={()=>setFilterCategory('all')}/>}
+            {priceMin && <FilterChip label={`от ${fmt(priceMin)}`} onRemove={()=>setPriceMin('')}/>}
+            {priceMax && <FilterChip label={`до ${fmt(priceMax)}`} onRemove={()=>setPriceMax('')}/>}
+            {minRating>0 && <FilterChip label={`★ от ${minRating}`} onRemove={()=>setMinRating(0)}/>}
+            {onlyInStock && <FilterChip label="В наличии" onRemove={()=>setOnlyInStock(false)}/>}
+            {onlyVerified && <FilterChip label="Верифицированные" onRemove={()=>setOnlyVerified(false)}/>}
+          </div>
+        )}
+
+        {/* Results */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+            <svg className="spinner w-8 h-8 border-3 border-slate-200 border-t-transparent rounded-full" viewBox="0 0 32 32" style={{borderWidth:'3px'}}/>
+            <p className="text-sm">Ищем товары...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="card py-16 text-center fade-up">
+            <div className="text-5xl mb-4">🔍</div>
+            <p className="font-semibold text-slate-700 text-lg">Ничего не найдено</p>
+            <p className="text-slate-400 text-sm mt-2 mb-5">Попробуйте изменить запрос или сбросить фильтры</p>
+            {hasFilters && <button className="btn-outline-brand" onClick={clearFilters}>Сбросить фильтры</button>}
+          </div>
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filtered.map((p,i) => (
+              <ProductCard key={p.id} product={p} idx={i} onSelect={()=>onSelectProduct(p.id)} onVendorSelect={()=>onSelectVendor(p.vendorId)}/>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((p,i) => (
+              <ProductListRow key={p.id} product={p} idx={i} onSelect={()=>onSelectProduct(p.id)} onVendorSelect={()=>onSelectVendor(p.vendorId)}/>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({ label, onRemove }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border"
+      style={{background:'color-mix(in srgb,var(--brand,#2455e8) 8%,white)', color:'var(--brand,#2455e8)', borderColor:'color-mix(in srgb,var(--brand,#2455e8) 30%,white)'}}>
+      {label}
+      <button className="hover:opacity-70" onClick={onRemove}><Ic.x/></button>
+    </span>
+  );
+}
+
+function ProductCard({ product, idx, onSelect, onVendorSelect }) {
+  const vendor = VENDORS[product.vendorId];
+  const [wished, setWished] = useState(false);
+  return (
+    <div className="product-card fade-up" style={{animationDelay:`${idx*40}ms`}}>
+      {/* Image */}
+      <div className="relative h-36 flex items-center justify-center text-5xl bg-slate-50 border-b border-slate-100 cursor-pointer" onClick={onSelect}>
+        {product.image}
+        {/* Tags */}
+        <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+          {product.tags.map(tag => (
+            <span key={tag} className="text-xs px-2 py-0.5 rounded-full font-semibold"
+              style={tag==='Хит продаж'?{background:'#fef3c7',color:'#92400e'}:tag==='Новинка'?{background:'#dbeafe',color:'#1e40af'}:tag==='Скидка'?{background:'#fce7f3',color:'#9d174d'}:{background:'#f1f5f9',color:'#64748b'}}>
+              {tag}
+            </span>
+          ))}
+        </div>
+        <button className={`absolute top-2 right-2 w-7 h-7 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm transition-transform hover:scale-110 ${wished?'text-red-500':'text-slate-300'}`}
+          onClick={e=>{e.stopPropagation();setWished(v=>!v)}}><Ic.heart filled={wished}/></button>
+        {!product.inStock && (
+          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+            <span className="text-xs font-bold text-red-500 bg-white px-3 py-1 rounded-full border border-red-100">Нет в наличии</span>
+          </div>
+        )}
+      </div>
+      {/* Content */}
+      <div className="p-3">
+        <button className="text-left w-full" onClick={onVendorSelect}>
+          <VendorTag vendor={vendor}/>
+        </button>
+        <p className="text-sm font-semibold text-slate-800 mt-1.5 mb-1 leading-snug cursor-pointer hover:text-blue-600 transition-colors line-clamp-2" onClick={onSelect}>
+          {product.name}
+        </p>
+        <p className="text-xs text-slate-400 mb-2">Арт: {product.sku}</p>
+        <div className="flex items-center gap-1.5 mb-2">
+          <Stars rating={product.rating} size={11}/>
+          <span className="text-xs text-slate-500">{product.rating} ({product.reviewCount})</span>
+        </div>
+        {/* Price */}
+        <div className="flex items-baseline gap-2 mb-1">
+          <span className="text-lg font-bold text-slate-900">{fmt(product.price)}</span>
+          {product.oldPrice && <span className="text-xs text-slate-400 line-through">{fmt(product.oldPrice)}</span>}
+        </div>
+        {product.minOrder > 1 && <p className="text-xs text-slate-400">Мин. заказ: {product.minOrder} шт.</p>}
+        {product.bulkPrices.length > 0 && (
+          <p className="text-xs text-green-600 mt-0.5">↓ от {product.bulkPrices[0].from} шт. — {fmt(product.bulkPrices[0].price)}</p>
+        )}
+        <button className="btn-primary w-full mt-3 py-2 text-sm justify-center" onClick={onSelect} disabled={!product.inStock}>
+          {product.inStock ? <><Ic.cart/> В корзину</> : 'Под заказ'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProductListRow({ product, idx, onSelect, onVendorSelect }) {
+  const vendor = VENDORS[product.vendorId];
+  return (
+    <div className="card p-4 flex gap-4 cursor-pointer hover:shadow-md transition-all fade-up" style={{animationDelay:`${idx*30}ms`}} onClick={onSelect}>
+      <div className="w-20 h-20 flex-shrink-0 bg-slate-50 rounded-xl flex items-center justify-center text-4xl border border-slate-100">{product.image}</div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start gap-2 flex-wrap mb-1">
+          <button className="text-left" onClick={e=>{e.stopPropagation();onVendorSelect();}}><VendorTag vendor={vendor}/></button>
+          {product.tags.map(tag => <span key={tag} className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">{tag}</span>)}
+        </div>
+        <p className="text-sm font-semibold text-slate-800 mb-1">{product.name}</p>
+        <p className="text-xs text-slate-400 mb-1.5">Арт: {product.sku} · Доставка: {product.delivery}</p>
+        <div className="flex items-center gap-1.5">
+          <Stars rating={product.rating} size={11}/>
+          <span className="text-xs text-slate-500">{product.rating} ({product.reviewCount})</span>
+          {!product.inStock && <span className="text-xs text-red-500 font-medium ml-2">Нет в наличии</span>}
+          {product.inStock && <span className="text-xs text-green-600 font-medium ml-2">В наличии ({product.stockQty} шт.)</span>}
+        </div>
+      </div>
+      <div className="flex-shrink-0 text-right flex flex-col items-end gap-2">
+        <div>
+          <p className="text-lg font-bold text-slate-900">{fmt(product.price)}</p>
+          {product.oldPrice && <p className="text-xs text-slate-400 line-through">{fmt(product.oldPrice)}</p>}
+        </div>
+        <button className="btn-primary text-sm py-2 px-4" disabled={!product.inStock}>
+          {product.inStock ? 'В корзину' : 'Под заказ'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREEN 3 — PRODUCT DETAIL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const REVIEWS_DATA = [
+  { name:'Анна С.', company:'ООО «Мегатех»', rating:5, date:'15.04.2026', text:'Отличное качество, быстрая доставка. Заказывали 10 штук — все пришли в идеальном состоянии.' },
+  { name:'Дмитрий К.', company:'АО «Прогресс»', rating:4, date:'10.04.2026', text:'Хороший продукт за свои деньги. Единственный минус — упаковка могла бы быть лучше.' },
+  { name:'Елена В.', company:'ИП Волков', rating:5, date:'02.04.2026', text:'Уже второй раз заказываем у этого поставщика. Всегда чётко, всегда вовремя.' },
+];
+
+function ProductDetail({ productId, onBack, onVendorSelect, onAddToCart, cartCount }) {
+  const product = PRODUCTS.find(p=>p.id===productId);
+  if (!product) return null;
+  const vendor = VENDORS[product.vendorId];
+
+  const [activeImage, setActiveImage] = useState(0);
+  const [activeVariant, setActiveVariant] = useState(product.variants[product.variants.findIndex(v=>v.inStock)] || product.variants[0]);
+  const [qty, setQty] = useState(product.minOrder || 1);
+  const [activeTab, setActiveTab] = useState('desc');
+  const [wished, setWished] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
+
+  const currentPrice = activeVariant.price;
+  const bulkPrice = product.bulkPrices.find(b=>qty>=b.from);
+  const effectivePrice = bulkPrice ? bulkPrice.price : currentPrice;
+  const savings = product.oldPrice ? product.oldPrice - currentPrice : 0;
+
+  function handleAddToCart() {
+    onAddToCart();
+    setAddedToCart(true);
+    setTimeout(()=>setAddedToCart(false), 2500);
+  }
+
+  const tabs = [
+    { id:'desc', label:'Описание' },
+    { id:'specs', label:'Характеристики' },
+    { id:'delivery', label:'Доставка' },
+    { id:'reviews', label:`Отзывы (${product.reviewCount})` },
+  ];
+
+  return (
+    <div>
+      <div className="max-w-6xl mx-auto px-4 py-4">
+        {/* Breadcrumb */}
+        <div className="breadcrumb mb-4">
+          <a onClick={onBack}>Главная</a>
+          <span>/</span>
+          <a onClick={onBack}>Поиск</a>
+          <span>/</span>
+          <span className="text-slate-600 font-medium truncate">{product.shortName}</span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Gallery */}
+          <div className="fade-up">
+            <div className="card aspect-square flex items-center justify-center text-8xl mb-3 bg-slate-50">
+              {product.images[activeImage]}
+            </div>
+            <div className="flex gap-2">
+              {product.images.map((img,i) => (
+                <button key={i}
+                  className={`gallery-thumb w-14 h-14 flex items-center justify-center text-2xl bg-slate-50 ${activeImage===i?'active':''}`}
+                  onClick={() => setActiveImage(i)}>{img}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="fade-up space-y-4">
+            {/* Tags */}
+            <div className="flex flex-wrap gap-2">
+              {product.tags.map(tag => (
+                <span key={tag} className="text-xs px-2.5 py-1 rounded-full font-semibold"
+                  style={tag==='Хит продаж'?{background:'#fef3c7',color:'#92400e'}:{background:'#f1f5f9',color:'#64748b'}}>{tag}</span>
+              ))}
+            </div>
+
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">{product.name}</h1>
+
+            {/* Rating + sku */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <Stars rating={product.rating} size={14}/>
+                <span className="text-sm font-semibold text-slate-700">{product.rating}</span>
+                <span className="text-sm text-slate-400">({product.reviewCount} отзывов)</span>
+              </div>
+              <span className="text-slate-300">·</span>
+              <span className="text-xs text-slate-400">Арт: {activeVariant.sku}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                {product.inStock ? <><span className="w-1.5 h-1.5 rounded-full bg-green-500"/>В наличии ({product.stockQty} шт.)</> : <span className="text-red-500">Нет в наличии</span>}
+              </span>
+            </div>
+
+            {/* Vendor */}
+            <button className="card p-3 w-full text-left hover:shadow-md transition-all" onClick={onVendorSelect}>
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0" style={{background:vendor.color}}>{vendor.name[0]}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold text-slate-800">{vendor.name}</p>
+                    {vendor.verified && <span className="text-xs px-1.5 py-0.5 rounded font-bold text-white" style={{background:vendor.color, opacity:.9}}>✓</span>}
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Stars rating={vendor.rating} size={10}/>
+                    <span className="text-xs text-slate-500">{vendor.rating} · {vendor.reviews.toLocaleString('ru')} отзывов</span>
+                  </div>
+                </div>
+                <Ic.chevRight/>
+              </div>
+            </button>
+
+            {/* Variants */}
+            {product.variants.length > 1 && (
+              <div>
+                <p className="text-sm font-semibold text-slate-700 mb-2">Вариант</p>
+                <div className="flex flex-wrap gap-2">
+                  {product.variants.map(v => (
+                    <button key={v.id}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${!v.inStock?'opacity-40 cursor-not-allowed':''}`}
+                      style={activeVariant.id===v.id ? {borderColor:'var(--brand,#2455e8)', background:'color-mix(in srgb,var(--brand,#2455e8) 8%,white)', color:'var(--brand,#2455e8)'} : {borderColor:'#e2e8f0', color:'#475569'}}
+                      onClick={() => v.inStock && setActiveVariant(v)}
+                      disabled={!v.inStock}>
+                      {v.label}{!v.inStock && ' (нет)'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Price */}
+            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50">
+              <div className="flex items-baseline gap-3 mb-1">
+                <span className="text-3xl font-bold text-slate-900">{fmt(effectivePrice)}</span>
+                {product.oldPrice && <span className="text-base text-slate-400 line-through">{fmt(product.oldPrice)}</span>}
+                {savings > 0 && <span className="text-sm font-bold text-green-600">−{fmt(savings)}</span>}
+              </div>
+              {bulkPrice && <p className="text-xs text-green-600 mb-1">✓ Оптовая цена от {bulkPrice.from} шт.</p>}
+              <p className="text-xs text-slate-500">Без НДС · НДС 20% = {fmt(Math.round(effectivePrice * 0.2))}</p>
+
+              {/* Bulk table */}
+              {product.bulkPrices.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-slate-200">
+                  <p className="text-xs font-semibold text-slate-600 mb-2">Оптовые цены:</p>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>1–{product.bulkPrices[0].from-1} шт.</span>
+                      <span className="font-medium text-slate-700">{fmt(currentPrice)}</span>
+                    </div>
+                    {product.bulkPrices.map((bp,i) => (
+                      <div key={i} className={`flex justify-between text-xs ${qty>=bp.from?'text-green-700 font-medium':'text-slate-500'}`}>
+                        <span>от {bp.from} шт. {qty>=bp.from && '✓'}</span>
+                        <span>{fmt(bp.price)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Qty + add */}
+            <div className="flex gap-2">
+              <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden">
+                <button className="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors font-bold text-lg"
+                  onClick={()=>setQty(q=>Math.max(product.minOrder,q-1))}>−</button>
+                <span className="w-12 text-center font-semibold text-slate-800">{qty}</span>
+                <button className="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors font-bold text-lg"
+                  onClick={()=>setQty(q=>q+1)}>+</button>
+              </div>
+              <button
+                className="btn-primary flex-1 justify-center"
+                onClick={handleAddToCart}
+                disabled={!product.inStock && !activeVariant.inStock}
+                style={addedToCart?{background:'#16a34a', filter:'none'}:{}}>
+                {addedToCart ? <><Ic.check size={16}/>Добавлено!</> : <><Ic.cart/>В корзину · {fmt(effectivePrice * qty)}</>}
+              </button>
+              <button className={`w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center flex-shrink-0 transition-colors ${wished?'text-red-500 border-red-200 bg-red-50':'text-slate-400 hover:text-red-400'}`}
+                onClick={()=>setWished(v=>!v)}>
+                <Ic.heart filled={wished}/>
+              </button>
+            </div>
+
+            {/* Quick info */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {[
+                { icon:<Ic.truck/>, label:'Доставка', val:product.delivery },
+                { icon:<Ic.shield/>, label:'Гарантия', val:product.specs['Гарантия']||'По договору' },
+                { icon:<Ic.tag/>, label:'Мин. заказ', val:`${product.minOrder} шт.` },
+                { icon:<Ic.info/>, label:'Вес', val:product.weight },
+              ].map(({icon,label,val},i)=>(
+                <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2">
+                  <span className="text-slate-400">{icon}</span>
+                  <div>
+                    <p className="text-slate-400">{label}</p>
+                    <p className="font-medium text-slate-700">{val}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="card overflow-hidden fade-up">
+          <div className="flex border-b border-slate-100 overflow-x-auto">
+            {tabs.map(t => (
+              <button key={t.id} className={`tab-btn ${activeTab===t.id?'active':''}`}
+                onClick={()=>setActiveTab(t.id)}>{t.label}</button>
+            ))}
+          </div>
+          <div className="p-5">
+            {activeTab==='desc' && (
+              <div>
+                <p className="text-sm text-slate-600 leading-relaxed">{product.description}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {product.tags.map(tag => (
+                    <span key={tag} className="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {activeTab==='specs' && (
+              <div className="divide-y divide-slate-50">
+                {Object.entries(product.specs).map(([k,v])=>(
+                  <div key={k} className="flex py-2.5 gap-4">
+                    <span className="text-sm text-slate-500 w-40 flex-shrink-0">{k}</span>
+                    <span className="text-sm font-medium text-slate-800">{v}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {activeTab==='delivery' && (
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-3 bg-green-50 rounded-xl">
+                  <span className="text-xl">📦</span>
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Стандартная доставка</p>
+                    <p className="text-xs text-green-700 mt-0.5">{product.delivery} · Бесплатно от 50 000 ₽</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-xl">
+                  <span className="text-xl">⚡</span>
+                  <div>
+                    <p className="text-sm font-semibold text-blue-800">Экспресс доставка</p>
+                    <p className="text-xs text-blue-700 mt-0.5">1–2 рабочих дня · 2 500 ₽</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
+                  <span className="text-xl">🏪</span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">Самовывоз</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Бесплатно · 3 пункта в Москве</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {activeTab==='reviews' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-6 mb-5">
+                  <div className="text-center">
+                    <p className="text-5xl font-bold text-slate-900">{product.rating}</p>
+                    <Stars rating={product.rating} size={16}/>
+                    <p className="text-xs text-slate-400 mt-1">{product.reviewCount} отзывов</p>
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    {[5,4,3,2,1].map(s=>{
+                      const pct = s===5?68:s===4?22:s===3?7:2;
+                      return (
+                        <div key={s} className="flex items-center gap-2">
+                          <span className="text-xs text-slate-500 w-4">{s}★</span>
+                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{width:`${pct}%`,background:'#f59e0b'}}/>
+                          </div>
+                          <span className="text-xs text-slate-400 w-6">{pct}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                {REVIEWS_DATA.map((r,i)=>(
+                  <div key={i} className="border-b border-slate-50 pb-4 last:border-0">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{r.name} <span className="text-slate-400 font-normal">· {r.company}</span></p>
+                        <div className="flex items-center gap-1 mt-0.5"><Stars rating={r.rating} size={11}/></div>
+                      </div>
+                      <span className="text-xs text-slate-400 flex-shrink-0">{r.date}</span>
+                    </div>
+                    <p className="text-sm text-slate-600 leading-relaxed">{r.text}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Related products */}
+        <div className="mt-6">
+          <h3 className="text-base font-bold text-slate-900 mb-3">Похожие товары</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {PRODUCTS.filter(p=>p.id!==productId && p.category===product.category).slice(0,4).map(p=>(
+              <div key={p.id} className="product-card" onClick={()=>{}}>
+                <div className="h-20 flex items-center justify-center text-3xl bg-slate-50 border-b border-slate-100">{p.image}</div>
+                <div className="p-2.5">
+                  <p className="text-xs font-semibold text-slate-700 leading-snug mb-1 line-clamp-2">{p.shortName}</p>
+                  <p className="text-sm font-bold" style={{color:'var(--brand,#2455e8)'}}>{fmt(p.price)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Sticky bar */}
+      <div className="sticky-cart">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-800 truncate">{product.shortName}</p>
+          <p className="text-base font-bold" style={{color:'var(--brand,#2455e8)'}}>{fmt(effectivePrice * qty)}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden">
+            <button className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-50 font-bold"
+              onClick={()=>setQty(q=>Math.max(product.minOrder,q-1))}>−</button>
+            <span className="w-8 text-center text-sm font-semibold">{qty}</span>
+            <button className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-50 font-bold"
+              onClick={()=>setQty(q=>q+1)}>+</button>
+          </div>
+          <button className="btn-primary text-sm py-2.5" onClick={handleAddToCart}
+            style={addedToCart?{background:'#16a34a', filter:'none'}:{}}
+            disabled={!product.inStock}>
+            {addedToCart ? '✓ Добавлено' : 'В корзину'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREEN 4 — VENDOR PROFILE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function VendorProfile({ vendorId, onBack, onSelectProduct }) {
+  const vendor = VENDORS[vendorId];
+  if (!vendor) return null;
+  const vendorProducts = PRODUCTS.filter(p=>p.vendorId===vendorId);
+  const [activeTab, setActiveTab] = useState('products');
+
+  const tabs = [
+    { id:'products', label:`Товары (${vendorProducts.length})` },
+    { id:'about', label:'О компании' },
+    { id:'reviews', label:'Отзывы' },
+  ];
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-5 fade-up">
+      {/* Header */}
+      <div className="card p-5 mb-4">
+        <div className="flex items-start gap-4 flex-wrap">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white flex-shrink-0" style={{background:vendor.color}}>
+            {vendor.name[0]}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <h1 className="text-xl font-bold text-slate-900">{vendor.name}</h1>
+              {vendor.verified && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white" style={{background:vendor.color}}>✓ Верифицирован</span>
+              )}
+            </div>
+            <p className="text-sm text-slate-500 mb-3">{vendor.desc}</p>
+            <div className="flex flex-wrap gap-4">
+              {[
+                { label:'Рейтинг', val:<><span className="font-bold">{vendor.rating}</span> <Stars rating={vendor.rating} size={12}/></> },
+                { label:'Отзывов', val:vendor.reviews.toLocaleString('ru') },
+                { label:'Заказов', val:vendor.orders.toLocaleString('ru') },
+                { label:'На платформе', val:`с ${vendor.since} г.` },
+              ].map(({label,val},i)=>(
+                <div key={i} className="text-sm">
+                  <span className="text-slate-400">{label}: </span>
+                  <span className="font-semibold text-slate-800">{val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <button className="btn-primary text-sm py-2 px-4">💬 Написать</button>
+            <button className="btn-ghost text-sm py-2 px-4">📋 Запрос КП</button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
+          {[
+            { icon:'⭐', val:`${vendor.rating}/5`, label:'Средний рейтинг' },
+            { icon:'📦', val:`${vendor.orders.toLocaleString('ru')}+`, label:'Выполненных заказов' },
+            { icon:'🚚', val:'98%', label:'Своевременная доставка' },
+          ].map(({icon,val,label},i)=>(
+            <div key={i} className="text-center p-3 bg-slate-50 rounded-xl">
+              <div className="text-xl mb-1">{icon}</div>
+              <p className="text-base font-bold text-slate-900">{val}</p>
+              <p className="text-xs text-slate-500">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="card overflow-hidden">
+        <div className="flex border-b border-slate-100">
+          {tabs.map(t=>(
+            <button key={t.id} className={`tab-btn ${activeTab===t.id?'active':''}`}
+              onClick={()=>setActiveTab(t.id)}>{t.label}</button>
+          ))}
+        </div>
+        <div className="p-5">
+          {activeTab==='products' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {vendorProducts.map((p,i)=>(
+                <ProductCard key={p.id} product={p} idx={i} onSelect={()=>onSelectProduct(p.id)} onVendorSelect={()=>{}}/>
+              ))}
+            </div>
+          )}
+          {activeTab==='about' && (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600 leading-relaxed">{vendor.desc}</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label:'Год основания', val:vendor.since },
+                  { label:'Статус', val:vendor.verified?'Верифицированный':'Не верифицирован' },
+                  { label:'Минимальный заказ', val:'По товару' },
+                  { label:'Время ответа', val:'< 2 часов' },
+                ].map(({label,val},i)=>(
+                  <div key={i} className="bg-slate-50 rounded-xl p-3">
+                    <p className="text-xs text-slate-500">{label}</p>
+                    <p className="text-sm font-semibold text-slate-800 mt-0.5">{val}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-blue-50 rounded-xl p-4">
+                <p className="text-sm font-semibold text-blue-800 mb-2">Преимущества</p>
+                <ul className="space-y-1.5">
+                  {['Официальный дистрибьютор', 'Гарантия производителя', 'Электронный документооборот', 'Кредитная линия для корпоративных клиентов'].map((item,i)=>(
+                    <li key={i} className="flex items-center gap-2 text-xs text-blue-700">
+                      <span className="w-4 h-4 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0"><Ic.check size={10}/></span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          {activeTab==='reviews' && (
+            <div className="space-y-4">
+              {REVIEWS_DATA.concat(REVIEWS_DATA).slice(0,4).map((r,i)=>(
+                <div key={i} className="border-b border-slate-50 pb-4 last:border-0">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{r.name} <span className="text-slate-400 font-normal">· {r.company}</span></p>
+                      <div className="flex items-center gap-1 mt-0.5"><Stars rating={r.rating} size={11}/></div>
+                    </div>
+                    <span className="text-xs text-slate-400">{r.date}</span>
+                  </div>
+                  <p className="text-sm text-slate-600">{r.text}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROOT APP
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#2455e8",
+  "defaultView": "grid",
+  "showBulkPrices": true,
+  "currency": "RUB",
+  "productsPerRow": "3"
+}/*EDITMODE-END*/;
+
+function App() {
+  const hookResult = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : {};
+  const tweaks = (hookResult && hookResult.tweaks) || TWEAK_DEFAULTS;
+  const TweaksPanel = (hookResult && hookResult.TweaksPanel) || window.TweaksPanel;
+  const TweakSection = (hookResult && hookResult.TweakSection) || window.TweakSection;
+  const TweakColor = (hookResult && hookResult.TweakColor) || window.TweakColor;
+  const TweakToggle = (hookResult && hookResult.TweakToggle) || window.TweakToggle;
+  const TweakSelect = (hookResult && hookResult.TweakSelect) || window.TweakSelect;
+
+  const [screen, setScreen] = useState('home');       // home | results | product | vendor
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [initialCategory, setInitialCategory] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', tweaks.accentColor || '#2455e8');
+  }, [tweaks.accentColor]);
+
+  function push(nextScreen) {
+    setHistory(h => [...h, screen]);
+    setScreen(nextScreen);
+  }
+
+  function goBack() {
+    setHistory(h => {
+      const prev = [...h];
+      const last = prev.pop();
+      setScreen(last || 'home');
+      return prev;
+    });
+  }
+
+  function handleSearch(q) {
+    setSearchQuery(q);
+    setInitialCategory(null);
+    push('results');
+  }
+
+  function handleCategorySelect(cat) {
+    setSearchQuery('');
+    setInitialCategory(cat);
+    push('results');
+  }
+
+  function handleSelectProduct(id) {
+    setSelectedProduct(id);
+    push('product');
+  }
+
+  function handleSelectVendor(id) {
+    setSelectedVendor(id);
+    push('vendor');
+  }
+
+  return (
+    <div style={{'--brand': tweaks.accentColor || '#2455e8'}}>
+      <Navbar
+        cartCount={cartCount}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearch={handleSearch}
+        onCartClick={() => {}}
+      />
+      <main>
+        {screen === 'home' && (
+          <HomeScreen onSearch={handleSearch} onCategorySelect={handleCategorySelect} />
+        )}
+        {screen === 'results' && (
+          <SearchResults
+            query={searchQuery}
+            initialCategory={initialCategory}
+            onSelectProduct={handleSelectProduct}
+            onSelectVendor={handleSelectVendor}
+          />
+        )}
+        {screen === 'product' && selectedProduct && (
+          <ProductDetail
+            productId={selectedProduct}
+            onBack={goBack}
+            onVendorSelect={() => handleSelectVendor(PRODUCTS.find(p=>p.id===selectedProduct)?.vendorId)}
+            onAddToCart={() => setCartCount(c => c + 1)}
+            cartCount={cartCount}
+          />
+        )}
+        {screen === 'vendor' && selectedVendor && (
+          <VendorProfile
+            vendorId={selectedVendor}
+            onBack={goBack}
+            onSelectProduct={handleSelectProduct}
+          />
+        )}
+      </main>
+
+      {TweaksPanel && TweakSection && (
+        <TweaksPanel>
+          <TweakSection title="Брендинг">
+            {TweakColor && <TweakColor id="accentColor" label="Цвет акцента" />}
+          </TweakSection>
+          <TweakSection title="Каталог">
+            {TweakSelect && <TweakSelect id="defaultView" label="Вид по умолчанию" options={[
+              { value:'grid', label:'Сетка' },
+              { value:'list', label:'Список' },
+            ]} />}
+            {TweakToggle && <TweakToggle id="showBulkPrices" label="Оптовые цены" />}
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

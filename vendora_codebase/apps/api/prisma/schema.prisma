@@ -1,0 +1,621 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                  String      @id @default(uuid())
+  email               String      @unique
+  accountType         AccountType @default(BUYER)
+  password            String?
+  emailVerifiedAt     DateTime?
+  isPlatformAdmin     Boolean     @default(false)
+  failedLoginAttempts Int         @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  vendor                VendorMember[]
+  orders                Order[]
+  carts                 Cart[]
+  checkoutSessions      CheckoutSession[]
+  idempotencyRecords    IdempotencyRecord[]
+  submittedApplications VendorApplication[]         @relation("SubmittedApplications")
+  reviewedApplications  VendorApplication[]         @relation("ReviewedApplications")
+  uploadedKycDocuments  VendorApplicationDocument[]
+  auditEvents           AuditEvent[]
+}
+
+model Vendor {
+  id              String       @id @default(uuid())
+  name            String
+  inn             String       @unique
+  status          VendorStatus @default(PENDING_REVIEW)
+  legalEntityName String?
+  country         String?
+  addressJson     Json?
+  salesCategory   String?
+  approvedAt      DateTime?
+  reviewedAt      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  members          VendorMember[]
+  products         Product[]
+  orders           Order[]
+  cartItems        CartItem[]
+  orderFunds       OrderFund[]
+  payoutExecutions PayoutProviderExecution[]
+  balanceLedger    VendorBalanceLedger[]
+  applications     VendorApplication[]
+}
+
+enum VendorStatus {
+  ONBOARDING
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  BLOCKED
+  SUSPENDED
+}
+
+model VendorApplication {
+  id                  String               @id @default(uuid())
+  vendorId            String
+  submittedByUserId   String?
+  status              KycApplicationStatus @default(DRAFT)
+  businessName        String?
+  legalEntityName     String?
+  taxId               String?
+  country             String?
+  addressJson         Json?
+  salesCategory       String?
+  reviewNote          String?
+  rejectionReasonCode String?
+  reviewedByUserId    String?
+  submittedAt         DateTime?
+  reviewedAt          DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  vendor      Vendor                      @relation(fields: [vendorId], references: [id])
+  submittedBy User?                       @relation("SubmittedApplications", fields: [submittedByUserId], references: [id])
+  reviewedBy  User?                       @relation("ReviewedApplications", fields: [reviewedByUserId], references: [id])
+  documents   VendorApplicationDocument[]
+
+  @@unique([vendorId])
+  @@index([status])
+}
+
+enum KycApplicationStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  REQUEST_MORE_INFO
+  BLOCKED
+}
+
+model VendorApplicationDocument {
+  id                  String            @id @default(uuid())
+  vendorApplicationId String
+  documentType        String
+  fileName            String
+  contentType         String
+  sizeBytes           Int
+  storageKey          String
+  storageProvider     String            @default("local_private")
+  storedSizeBytes     Int?
+  contentSha256       String?
+  status              KycDocumentStatus @default(UPLOAD_PENDING)
+  uploadedByUserId    String
+  createdAt           DateTime          @default(now())
+  completedAt         DateTime?
+  storageConfirmedAt  DateTime?
+
+  application VendorApplication @relation(fields: [vendorApplicationId], references: [id])
+  uploadedBy  User              @relation(fields: [uploadedByUserId], references: [id])
+
+  @@index([vendorApplicationId])
+}
+
+enum KycDocumentStatus {
+  UPLOAD_PENDING
+  UPLOADED
+}
+
+model AuditEvent {
+  id           String   @id @default(uuid())
+  actorUserId  String?
+  action       String
+  resourceType String
+  resourceId   String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  actor User? @relation(fields: [actorUserId], references: [id])
+
+  @@index([resourceType, resourceId])
+  @@index([actorUserId])
+}
+
+model NotificationOutbox {
+  id                String                     @id @default(uuid())
+  eventType         String
+  recipientUserId   String?
+  recipientEmail    String
+  subject           String
+  templateKey       String
+  payload           Json
+  status            NotificationDeliveryStatus @default(PENDING)
+  providerName      String?
+  providerMessageId String?
+  attempts          Int                        @default(0)
+  lastError         String?
+  referenceType     String?
+  referenceId       String?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  sentAt            DateTime?
+
+  @@index([status])
+  @@index([eventType])
+  @@index([recipientUserId])
+  @@index([referenceType, referenceId])
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SUPPRESSED
+}
+
+model VendorMember {
+  id       String     @id @default(uuid())
+  userId   String
+  vendorId String
+  role     VendorRole @default(MANAGER)
+
+  user   User   @relation(fields: [userId], references: [id])
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+
+  @@unique([userId, vendorId])
+}
+
+enum VendorRole {
+  OWNER
+  ADMIN
+  MANAGER
+  VIEWER
+}
+
+enum AccountType {
+  BUYER
+  VENDOR_OWNER
+}
+
+model Product {
+  id                String    @id @default(uuid())
+  vendorId          String
+  name              String
+  description       String?
+  category          String    @default("general")
+  price             Decimal   @db.Decimal(10, 2)
+  currency          String    @default("RUB")
+  stock             Int       @default(0)
+  published         Boolean   @default(false)
+  publishedAt       DateTime?
+  unpublishedReason String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  vendor            Vendor             @relation(fields: [vendorId], references: [id])
+  orderItems        OrderItem[]
+  cartItems         CartItem[]
+  stockReservations StockReservation[]
+
+  @@index([published])
+  @@index([category])
+  @@index([vendorId])
+}
+
+model Cart {
+  id          String   @id @default(uuid())
+  buyerUserId String   @unique
+  currency    String   @default("RUB")
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  buyer            User              @relation(fields: [buyerUserId], references: [id])
+  items            CartItem[]
+  checkoutSessions CheckoutSession[]
+
+  @@index([buyerUserId])
+}
+
+model CartItem {
+  id                     String   @id @default(uuid())
+  cartId                 String
+  productId              String
+  vendorId               String
+  quantity               Int
+  unitPriceMinorSnapshot Int
+  currency               String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+  vendor  Vendor  @relation(fields: [vendorId], references: [id])
+
+  @@unique([cartId, productId])
+  @@index([vendorId])
+}
+
+model CheckoutSession {
+  id                  String                @id @default(uuid())
+  buyerUserId         String
+  cartId              String
+  cartVersion         Int
+  shippingAddressJson Json
+  totalMinor          Int
+  currency            String
+  providerName        String                @default("dev")
+  providerSessionId   String                @unique
+  status              CheckoutSessionStatus @default(AWAITING_PAYMENT)
+  expiresAt           DateTime
+  completedAt         DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  buyer                 User                   @relation(fields: [buyerUserId], references: [id])
+  cart                  Cart                   @relation(fields: [cartId], references: [id])
+  orders                Order[]
+  paymentProviderEvents PaymentProviderEvent[]
+  stockReservations     StockReservation[]
+
+  @@index([buyerUserId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+enum CheckoutSessionStatus {
+  AWAITING_PAYMENT
+  SUCCEEDED
+  FAILED
+  EXPIRED
+}
+
+model StockReservation {
+  id                String                 @id @default(uuid())
+  checkoutSessionId String
+  productId         String
+  quantity          Int
+  status            StockReservationStatus @default(RESERVED)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  checkoutSession CheckoutSession @relation(fields: [checkoutSessionId], references: [id])
+  product         Product         @relation(fields: [productId], references: [id])
+
+  @@unique([checkoutSessionId, productId])
+  @@index([productId])
+  @@index([status])
+}
+
+enum StockReservationStatus {
+  RESERVED
+  COMMITTED
+  RELEASED
+}
+
+model IdempotencyRecord {
+  id              String   @id @default(uuid())
+  actorUserId     String
+  routeKey        String
+  idempotencyKey  String
+  requestHash     String
+  responseRefType String
+  responseRefId   String
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
+
+  actor User @relation(fields: [actorUserId], references: [id])
+
+  @@unique([actorUserId, routeKey, idempotencyKey])
+}
+
+model PaymentProviderEvent {
+  id                String    @id @default(uuid())
+  providerName      String
+  providerEventId   String    @unique
+  checkoutSessionId String?
+  eventType         String
+  payloadHash       String
+  processedAt       DateTime?
+  createdAt         DateTime  @default(now())
+
+  checkoutSession CheckoutSession? @relation(fields: [checkoutSessionId], references: [id])
+}
+
+model Order {
+  id                     String      @id @default(uuid())
+  checkoutSessionId      String?
+  orderNumber            String      @unique @default(uuid())
+  buyerId                String
+  vendorId               String
+  status                 OrderStatus @default(PAYMENT_HELD)
+  total                  Decimal     @db.Decimal(10, 2)
+  shippingAddressJson    Json?
+  shipmentCarrier        String?
+  shipmentTrackingNumber String?
+  shipmentMetadataJson   Json?
+  shippedAt              DateTime?
+  deliveredAt            DateTime?
+  buyerEmailSnapshot     String?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  checkoutSession CheckoutSession?      @relation(fields: [checkoutSessionId], references: [id])
+  buyer           User                  @relation(fields: [buyerId], references: [id])
+  vendor          Vendor                @relation(fields: [vendorId], references: [id])
+  items           OrderItem[]
+  dispute         Dispute?
+  funds           OrderFund?
+  balanceLedger   VendorBalanceLedger[]
+
+  @@index([checkoutSessionId])
+  @@index([buyerId])
+  @@index([vendorId])
+}
+
+enum OrderStatus {
+  PAYMENT_HELD
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+model OrderItem {
+  id                   String  @id @default(uuid())
+  orderId              String
+  productId            String
+  qty                  Int
+  price                Decimal @db.Decimal(10, 2)
+  listingTitleSnapshot String?
+  unitPriceMinor       Int?
+  lineTotalMinor       Int?
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model OrderFund {
+  id                  String          @id @default(uuid())
+  orderId             String          @unique
+  vendorId            String
+  status              OrderFundStatus @default(HELD)
+  amountMinor         Int
+  refundedAmountMinor Int             @default(0)
+  currency            String
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  order           Order                    @relation(fields: [orderId], references: [id])
+  vendor          Vendor                   @relation(fields: [vendorId], references: [id])
+  payoutExecution PayoutProviderExecution?
+
+  @@index([vendorId])
+  @@index([status])
+}
+
+enum OrderFundStatus {
+  HELD
+  RELEASABLE
+  FROZEN_DISPUTE
+  RETURNED_TO_BUYER
+  PAID_OUT
+  PAYOUT_FAILED_REVIEW
+}
+
+model Dispute {
+  id                      String                 @id @default(uuid())
+  orderId                 String                 @unique
+  reason                  String
+  status                  DisputeStatus          @default(VENDOR_RESPONSE)
+  vendorResponse          String?
+  vendorRespondedByUserId String?
+  vendorRespondedAt       DateTime?
+  resolutionType          DisputeResolutionType?
+  resolvedByUserId        String?
+  resolvedAt              DateTime?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  order           Order                    @relation(fields: [orderId], references: [id])
+  refundExecution RefundProviderExecution?
+}
+
+enum DisputeStatus {
+  VENDOR_RESPONSE
+  PLATFORM_REVIEW
+  RESOLVED
+}
+
+enum DisputeResolutionType {
+  BUYER_FAVOR_FULL_REFUND
+  BUYER_FAVOR_PARTIAL_REFUND
+  VENDOR_FAVOR_RELEASE
+}
+
+model RefundProviderExecution {
+  id               String               @id @default(uuid())
+  disputeId        String               @unique
+  orderId          String
+  providerName     String
+  providerRefundId String
+  amountMinor      Int
+  currency         String
+  status           RefundProviderStatus
+  errorMessage     String?
+  reviewedAt       DateTime?
+  reviewedByUserId String?
+  reviewNote       String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  dispute Dispute @relation(fields: [disputeId], references: [id])
+
+  @@unique([providerName, providerRefundId])
+  @@index([orderId])
+  @@index([status])
+}
+
+enum RefundProviderStatus {
+  SUCCEEDED
+  FAILED
+}
+
+model PayoutProviderExecution {
+  id               String               @id @default(uuid())
+  vendorId         String
+  orderFundId      String               @unique
+  orderId          String
+  providerName     String
+  providerPayoutId String
+  amountMinor      Int
+  currency         String
+  status           PayoutProviderStatus
+  errorMessage     String?
+  reviewedAt       DateTime?
+  reviewedByUserId String?
+  reviewNote       String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  vendor    Vendor    @relation(fields: [vendorId], references: [id])
+  orderFund OrderFund @relation(fields: [orderFundId], references: [id])
+
+  @@unique([providerName, providerPayoutId])
+  @@index([vendorId])
+  @@index([orderId])
+  @@index([status])
+}
+
+enum PayoutProviderStatus {
+  SUCCEEDED
+  FAILED
+}
+
+model MoneyReconciliationRun {
+  id              String                    @id @default(uuid())
+  scope           String                    @default("money_provider_artifacts")
+  status          MoneyReconciliationStatus
+  checkedPayments Int                       @default(0)
+  checkedRefunds  Int                       @default(0)
+  checkedPayouts  Int                       @default(0)
+  mismatches      Int                       @default(0)
+  createdAt       DateTime                  @default(now())
+  completedAt     DateTime?
+
+  items MoneyReconciliationItem[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model MoneyReconciliationItem {
+  id         String                        @id @default(uuid())
+  runId      String
+  itemType   MoneyReconciliationType
+  resourceId String
+  status     MoneyReconciliationItemStatus
+  detail     Json
+  createdAt  DateTime                      @default(now())
+
+  run MoneyReconciliationRun @relation(fields: [runId], references: [id])
+
+  @@index([runId])
+  @@index([itemType])
+  @@index([resourceId])
+  @@index([status])
+}
+
+model WorkerHeartbeat {
+  id              String                @id @default(uuid())
+  workerName      String
+  instanceId      String
+  status          WorkerHeartbeatStatus @default(RUNNING)
+  runs            Int                   @default(0)
+  processed       Int                   @default(0)
+  idleRuns        Int                   @default(0)
+  lastStartedAt   DateTime?
+  lastHeartbeatAt DateTime?
+  lastStoppedAt   DateTime?
+  lastError       String?
+  metadata        Json?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@unique([workerName, instanceId])
+  @@index([workerName])
+  @@index([status])
+  @@index([lastHeartbeatAt])
+}
+
+enum WorkerHeartbeatStatus {
+  RUNNING
+  STOPPED
+  ERROR
+}
+
+enum MoneyReconciliationStatus {
+  SUCCEEDED
+  FAILED
+}
+
+enum MoneyReconciliationType {
+  PAYMENT_EVENT
+  REFUND_EXECUTION
+  PAYOUT_EXECUTION
+}
+
+enum MoneyReconciliationItemStatus {
+  MATCHED
+  MISMATCHED
+}
+
+model VendorBalanceLedger {
+  id            String                @id @default(uuid())
+  vendorId      String
+  orderId       String?
+  entryType     VendorLedgerEntryType
+  amountMinor   Int
+  currency      String
+  referenceType String
+  referenceId   String
+  createdAt     DateTime              @default(now())
+
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+  order  Order? @relation(fields: [orderId], references: [id])
+
+  @@index([vendorId])
+  @@index([orderId])
+  @@index([referenceType, referenceId])
+}
+
+enum VendorLedgerEntryType {
+  FROZEN
+  RELEASED
+  REFUNDED
+  PAID_OUT
+}

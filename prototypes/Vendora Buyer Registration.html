@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendora — Регистрация покупателя B-1</title>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: #f3f6fb; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; color: #0f172a; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.32s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes slideLeft { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+    .slide-left { animation: slideLeft 0.28s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand,#2455e8) 22%, transparent); } 100% { box-shadow: 0 0 0 12px transparent; } }
+    .pulse-ring { animation: pulseRing 1.5s ease-out infinite; }
+
+    .card { background: #fff; border-radius: 18px; border: 1px solid #e5ebf5; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05); }
+    .card-soft { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 16px; border: 1px solid #e8eef8; }
+
+    .btn-primary {
+      background: var(--brand, #2455e8);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: filter 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+    .btn-primary:hover { filter: brightness(0.9); box-shadow: 0 6px 18px color-mix(in srgb, var(--brand,#2455e8) 28%, transparent); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; filter: none; box-shadow: none; }
+
+    .btn-ghost {
+      background: transparent;
+      color: #64748b;
+      border: 1.5px solid #dbe3f0;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .btn-ghost:hover { border-color: #94a3b8; color: #0f172a; background: #f8fafc; }
+
+    .btn-soft {
+      background: color-mix(in srgb, var(--brand,#2455e8) 8%, white);
+      color: var(--brand, #2455e8);
+      border: 1px solid color-mix(in srgb, var(--brand,#2455e8) 16%, white);
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #dbe3f0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+      color: #0f172a;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .input-field:focus { border-color: var(--brand, #2455e8); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand,#2455e8) 12%, transparent); }
+    .input-field.error { border-color: #ef4444; }
+    .input-field:disabled { background: #f8fafc; color: #94a3b8; }
+
+    .input-label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 600; color: #475569; }
+    .input-hint { margin-top: 5px; font-size: 11px; color: #94a3b8; }
+    .input-error { margin-top: 5px; font-size: 11px; color: #ef4444; }
+
+    .step-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid #dbe3f0;
+      background: #fff;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .step-pill.active {
+      color: var(--brand, #2455e8);
+      border-color: color-mix(in srgb, var(--brand,#2455e8) 30%, white);
+      background: color-mix(in srgb, var(--brand,#2455e8) 7%, white);
+    }
+    .step-pill.done {
+      color: #166534;
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1.5px solid #dbe3f0;
+      background: #fff;
+      color: #475569;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .chip:hover { border-color: var(--brand,#2455e8); color: var(--brand,#2455e8); }
+    .chip.active {
+      color: var(--brand,#2455e8);
+      border-color: var(--brand,#2455e8);
+      background: color-mix(in srgb, var(--brand,#2455e8) 8%, white);
+      font-weight: 600;
+    }
+
+    .tab-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      color: #64748b;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .tab-btn.active { color: var(--brand,#2455e8); background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06); }
+
+    .progress-track { height: 4px; border-radius: 999px; background: #e8eef7; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 999px; background: var(--brand,#2455e8); transition: width 0.35s ease; }
+    .strength-bar { height: 5px; border-radius: 999px; transition: width 0.3s ease, background 0.3s ease; }
+
+    .mail-preview {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid #e2e8f3;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .benefit-card {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid #e7edf7;
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .search-card {
+      background: linear-gradient(145deg, #ffffff 0%, #f5f8fe 100%);
+      border: 1px solid #e6edf8;
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .hero-gradient {
+      background:
+        radial-gradient(circle at top left, color-mix(in srgb, var(--brand,#2455e8) 18%, white), transparent 40%),
+        linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%);
+    }
+
+    .check-list-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #eef2f8;
+    }
+    .check-list-row:last-child { border-bottom: none; }
+
+    textarea.input-field { resize: vertical; min-height: 92px; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const TRUST_PILLARS = [
+  {
+    id: 'escrow',
+    icon: '🛡️',
+    title: 'Безопасная оплата',
+    desc: 'Деньги удерживаются в escrow-like hold до подтверждения получения или решения по спору.',
+  },
+  {
+    id: 'vendors',
+    icon: '🏪',
+    title: 'Проверенные продавцы',
+    desc: 'В launch-срезе buyer видит только опубликованные листинги approved vendor-аккаунтов.',
+  },
+  {
+    id: 'disputes',
+    icon: '⚖️',
+    title: 'Понятный dispute path',
+    desc: 'Если заказ не соответствует ожиданиям, можно открыть спор и приложить доказательства.',
+  },
+];
+
+const CATEGORY_OPTIONS = [
+  { id: 'electronics', label: 'Электроника и IT', icon: '💻' },
+  { id: 'office', label: 'Офисная мебель', icon: '🪑' },
+  { id: 'supplies', label: 'Расходники и канцелярия', icon: '📎' },
+  { id: 'cleaning', label: 'Хозтовары и клининг', icon: '🧴' },
+  { id: 'logistics', label: 'Логистика и упаковка', icon: '📦' },
+  { id: 'services', label: 'Услуги для бизнеса', icon: '🛠️' },
+];
+
+const FIRST_RESULTS = [
+  { id: 'r1', name: 'Ноутбук Dell Latitude 5540', vendor: 'TechPro Solutions', price: '89 500 ₽', meta: 'Есть в наличии · доставка 3–5 дней', icon: '💻' },
+  { id: 'r2', name: 'Кресло Herman Miller Aeron', vendor: 'OfficeMax Россия', price: '145 000 ₽', meta: 'Топ-рейтинг поставщика · 12 лет гарантии', icon: '🪑' },
+  { id: 'r3', name: 'Средство Pro-Clean Multi 5L', vendor: 'CleanMaster Pro', price: '1 200 ₽', meta: 'Мин. заказ 5 шт. · eco label', icon: '🧴' },
+];
+
+const SAFE_FLOW = [
+  { title: 'Вы выбираете товар', desc: 'Каталог и поиск показывают только опубликованные позиции.', icon: '🔎' },
+  { title: 'Оплата резервируется', desc: 'После checkout средства переходят в protected hold.', icon: '💳' },
+  { title: 'Продавец исполняет заказ', desc: 'Buyer получает обновления по заказу и может открыть спор.', icon: '📬' },
+  { title: 'Средства релизятся после completion', desc: 'Vendor получает payout only after valid completion.', icon: '✅' },
+];
+
+const EXISTING_EMAILS = ['buyer@technostart.ru', 'office@megagroup.ru'];
+
+const SCREEN_ORDER = ['auth', 'verify', 'trust', 'entry'];
+
+function passwordStrength(password) {
+  if (!password) return { score: 0, label: 'Введите пароль', color: '#cbd5e1', width: '0%' };
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[A-Za-z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  const levels = [
+    { label: 'Слабый', color: '#ef4444', width: '25%' },
+    { label: 'Ниже нормы', color: '#f97316', width: '40%' },
+    { label: 'Подходит', color: '#f59e0b', width: '60%' },
+    { label: 'Хороший', color: '#3b82f6', width: '80%' },
+    { label: 'Сильный', color: '#22c55e', width: '100%' },
+  ];
+  return levels[score];
+}
+
+function validEmail(value) {
+  return /\S+@\S+\.\S+/.test(value);
+}
+
+function validPassword(value) {
+  return value.length >= 8 && /[A-Za-z]/.test(value) && /[0-9]/.test(value);
+}
+
+function initials(name = '') {
+  return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'B';
+}
+
+const Ic = {
+  check: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path d="M3 8l3.5 3.5L13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  arrowRight: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  arrowLeft: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  mail: ({ size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <rect x="2" y="3.5" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M3 5l6 4 6-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  shield: ({ size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <path d="M9 2l5.5 2v4c0 3.5-2.2 5.9-5.5 7-3.3-1.1-5.5-3.5-5.5-7V4L9 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6.5 9l1.7 1.7L11.8 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  clock: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8 4.5V8l2.5 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  sparkle: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path d="M8 1l1.4 3.6L13 6l-3.6 1.4L8 11 6.6 7.4 3 6l3.6-1.4L8 1zM13 11l.7 1.8L15.5 13l-1.8.7L13 15.5l-.7-1.8-1.8-.7 1.8-.7L13 11zM3 10.5l.5 1.2 1.2.5-1.2.5L3 14l-.5-1.3-1.2-.5 1.2-.5L3 10.5z" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  lock: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <rect x="3" y="7" width="10" height="7" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M5.5 7V5.5a2.5 2.5 0 115 0V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+};
+
+function Header({ brandName, screen, guestMode }) {
+  const labels = {
+    auth: 'Создание buyer-аккаунта',
+    guest: 'Guest-compatible checkout entry',
+    verify: 'Подтверждение email',
+    trust: 'Первый trust-intro',
+    entry: guestMode ? 'Первый вход как гость' : 'Первый вход в каталог',
+    'guest-success': 'Конверсия guest -> account',
+  };
+
+  return (
+    <header className="bg-white border-b border-slate-100 sticky top-0 z-30">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold shadow-sm" style={{ background: 'var(--brand,#2455e8)' }}>V</div>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-900 text-sm">{brandName}</span>
+            <span className="status-badge" style={{ background: '#eef2ff', color: 'var(--brand,#2455e8)' }}>B-1</span>
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">{labels[screen]}</p>
+        </div>
+        <div className="ml-auto flex items-center gap-2 text-xs text-slate-500">
+          <span className="status-badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}><Ic.shield size={14} /> launch-safe auth</span>
+          <span className="status-badge" style={{ background: '#f8fafc', color: '#64748b' }}><Ic.mail size={14} /> email verification required</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function StepBar({ screen, guestCheckout, guestMode }) {
+  const currentIndex = SCREEN_ORDER.indexOf(screen);
+  const isGuestBranch = screen === 'guest' || screen === 'guest-success';
+  const guestLabel = screen === 'guest-success' ? 'Заказ как гость завершён' : 'Опциональный guest path';
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 pt-5">
+      <div className="flex flex-wrap gap-2">
+        {SCREEN_ORDER.map((step, index) => {
+          const meta = {
+            auth: 'Аккаунт',
+            verify: 'Email',
+            trust: 'Trust',
+            entry: guestMode ? 'Каталог (guest)' : 'Каталог',
+          }[step];
+          const done = currentIndex > index && !isGuestBranch;
+          const active = currentIndex === index && !isGuestBranch;
+          return (
+            <span key={step} className={`step-pill ${done ? 'done' : active ? 'active' : ''}`}>
+              {done ? <Ic.check size={14} /> : <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: active ? 'color-mix(in srgb, var(--brand,#2455e8) 12%, white)' : '#f1f5f9', color: active ? 'var(--brand,#2455e8)' : '#94a3b8' }}>{index + 1}</span>}
+              {meta}
+            </span>
+          );
+        })}
+        {guestCheckout && (
+          <span className={`step-pill ${isGuestBranch ? 'active' : ''}`}>
+            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: isGuestBranch ? 'color-mix(in srgb, var(--brand,#2455e8) 12%, white)' : '#f1f5f9', color: isGuestBranch ? 'var(--brand,#2455e8)' : '#94a3b8' }}>G</span>
+            {guestLabel}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AuthScreen({ form, setForm, onRegister, onGuestStart, guestCheckout, simulateExistingEmail }) {
+  const [mode, setMode] = useState('register');
+  const [errors, setErrors] = useState({});
+  const [signIn, setSignIn] = useState({ email: 'buyer@technostart.ru', password: '' });
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockout, setLockout] = useState(false);
+  const strength = passwordStrength(form.password);
+
+  function updateField(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleRegister() {
+    const nextErrors = {};
+    if (!form.fullName.trim()) nextErrors.fullName = 'Укажите имя и фамилию.';
+    if (!validEmail(form.email)) nextErrors.email = 'Нужен валидный email.';
+    if ((simulateExistingEmail || EXISTING_EMAILS.includes(form.email.trim().toLowerCase())) && !nextErrors.email) {
+      nextErrors.email = 'Email уже занят. Предложите вход или восстановление доступа.';
+    }
+    if (!validPassword(form.password)) nextErrors.password = 'Минимум 8 символов, хотя бы одна буква и одна цифра.';
+    if (form.password !== form.password2) nextErrors.password2 = 'Пароли не совпадают.';
+    if (!form.agree) nextErrors.agree = 'Нужно принять условия и политику.';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length === 0) onRegister();
+  }
+
+  function handleFailedLogin() {
+    const next = failedAttempts + 1;
+    setFailedAttempts(next);
+    if (next >= 5) setLockout(true);
+  }
+
+  return (
+    <div className="grid lg:grid-cols-[1.12fr_0.88fr] gap-6 items-start fade-up">
+      <div className="card p-5 sm:p-7">
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Buyer entry</p>
+            <h1 className="text-2xl font-bold text-slate-900 mt-1">Регистрация и первый доступ</h1>
+            <p className="text-sm text-slate-500 mt-2">Launch-версия ведёт buyer через email verification, короткий trust-intro и вход в buyer-facing каталог.</p>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 rounded-2xl px-3 py-2 hero-gradient border border-slate-200">
+            <Ic.shield />
+            <span className="text-xs font-semibold text-slate-700">Escrow-like safety</span>
+          </div>
+        </div>
+
+        <div className="bg-slate-100 rounded-2xl p-1 mb-6 flex">
+          <button className={`tab-btn ${mode === 'register' ? 'active' : ''}`} onClick={() => setMode('register')}>Новый buyer</button>
+          <button className={`tab-btn ${mode === 'signin' ? 'active' : ''}`} onClick={() => setMode('signin')}>Уже есть аккаунт</button>
+        </div>
+
+        {mode === 'register' ? (
+          <div className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="input-label">Имя и фамилия</label>
+                <input className={`input-field ${errors.fullName ? 'error' : ''}`} value={form.fullName} onChange={(e) => updateField('fullName', e.target.value)} placeholder="Анна Петрова" />
+                {errors.fullName && <div className="input-error">{errors.fullName}</div>}
+              </div>
+              <div>
+                <label className="input-label">Рабочий email</label>
+                <input className={`input-field ${errors.email ? 'error' : ''}`} value={form.email} onChange={(e) => updateField('email', e.target.value)} placeholder="buyer@company.ru" />
+                <div className="input-hint">Письмо подтверждения уходит в течение 60 секунд, TTL ссылки 48 часов.</div>
+                {errors.email && <div className="input-error">{errors.email}</div>}
+              </div>
+              <div>
+                <label className="input-label">Компания</label>
+                <input className="input-field" value={form.company} onChange={(e) => updateField('company', e.target.value)} placeholder="ООО «ТехноСтарт»" />
+              </div>
+              <div>
+                <label className="input-label">Пароль</label>
+                <input type="password" className={`input-field ${errors.password ? 'error' : ''}`} value={form.password} onChange={(e) => updateField('password', e.target.value)} placeholder="Минимум 8 символов" />
+                <div className="progress-track mt-3">
+                  <div className="strength-bar" style={{ width: strength.width, background: strength.color }} />
+                </div>
+                <div className="input-hint mt-2">Сила пароля: <span style={{ color: strength.color, fontWeight: 600 }}>{strength.label}</span></div>
+                {errors.password && <div className="input-error">{errors.password}</div>}
+              </div>
+              <div>
+                <label className="input-label">Повторите пароль</label>
+                <input type="password" className={`input-field ${errors.password2 ? 'error' : ''}`} value={form.password2} onChange={(e) => updateField('password2', e.target.value)} placeholder="Повторите пароль" />
+                <div className="input-hint">После 5 неудачных login attempts включается 15-минутный lockout.</div>
+                {errors.password2 && <div className="input-error">{errors.password2}</div>}
+              </div>
+            </div>
+
+            <label className="flex items-start gap-3 cursor-pointer pt-1">
+              <input type="checkbox" checked={form.agree} onChange={(e) => updateField('agree', e.target.checked)} className="mt-1" />
+              <span className="text-sm text-slate-600">Я принимаю условия платформы и понимаю, что buyer-account открывает доступ к dispute-safe покупке и сохранённой истории заказов.</span>
+            </label>
+            {errors.agree && <div className="input-error">{errors.agree}</div>}
+
+            <div className="flex flex-wrap gap-3 pt-3">
+              <button className="btn-primary" onClick={handleRegister}><Ic.mail /> Создать аккаунт</button>
+              {guestCheckout && <button className="btn-ghost" onClick={onGuestStart}>Сначала оформить как гость</button>}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="card-soft p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Существующий buyer login</p>
+                  <p className="text-xs text-slate-500 mt-1">Прототип показывает launch-правило блокировки после 5 неуспешных попыток.</p>
+                </div>
+                <span className="status-badge" style={{ background: lockout ? '#fef2f2' : '#f8fafc', color: lockout ? '#ef4444' : '#64748b' }}>
+                  <Ic.lock size={13} />
+                  {lockout ? '15 минут блокировки' : `${failedAttempts}/5 попыток`}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="input-label">Email</label>
+              <input className="input-field" value={signIn.email} onChange={(e) => setSignIn((prev) => ({ ...prev, email: e.target.value }))} disabled={lockout} />
+            </div>
+            <div>
+              <label className="input-label">Пароль</label>
+              <input type="password" className="input-field" value={signIn.password} onChange={(e) => setSignIn((prev) => ({ ...prev, password: e.target.value }))} placeholder="Введите пароль" disabled={lockout} />
+            </div>
+            {lockout ? (
+              <div className="card-soft p-4 border border-red-100 bg-red-50/70">
+                <p className="text-sm font-semibold text-red-700">Вход временно заблокирован</p>
+                <p className="text-xs text-red-600 mt-1">После пятой ошибки система ставит 15-минутный lockout и отправляет уведомление на email.</p>
+                <button className="btn-ghost mt-4" onClick={() => { setFailedAttempts(0); setLockout(false); }}>Сбросить сценарий</button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                <button className="btn-primary" onClick={handleFailedLogin}>Симулировать неверный вход</button>
+                <button className="btn-ghost" onClick={() => setFailedAttempts(0)}>Очистить попытки</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-5 slide-left">
+        <div className="card p-5 hero-gradient">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white pulse-ring" style={{ background: 'var(--brand,#2455e8)' }}>
+            <Ic.shield />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 mt-4">Что buyer понимает уже на входе</h2>
+          <div className="mt-4 space-y-3">
+            {TRUST_PILLARS.map((item) => (
+              <div key={item.id} className="benefit-card">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-lg shadow-sm">{item.icon}</div>
+                  <div>
+                    <p className="font-semibold text-slate-900">{item.title}</p>
+                    <p className="text-sm text-slate-500 mt-1">{item.desc}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Launch scope</p>
+              <p className="text-xs text-slate-500 mt-1">Регистрация, подтверждение email и первый entry в каталог закрывают обязательный B-1 slice.</p>
+            </div>
+            <span className="status-badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}>R1</span>
+          </div>
+          <div className="mt-4 space-y-1">
+            {['Email + пароль', 'Verification email', 'Trust-intro про escrow', 'Переход в buyer search'].map((text) => (
+              <div key={text} className="check-list-row">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center bg-green-50 text-green-600 shrink-0"><Ic.check size={14} /></div>
+                <div>
+                  <p className="text-sm font-medium text-slate-800">{text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {guestCheckout && (
+          <div className="card p-5">
+            <p className="text-sm font-semibold text-slate-800">Guest-compatible path</p>
+            <p className="text-xs text-slate-500 mt-1">Не обязателен для launch, но в прототипе показан как optional bridge из checkout обратно в аккаунт.</p>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {['Checkout', 'Order created', 'Create account later'].map((step) => (
+                <div key={step} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-4 text-center text-xs font-medium text-slate-600">{step}</div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GuestCheckoutScreen({ guestForm, setGuestForm, onBack, onContinue }) {
+  const [errors, setErrors] = useState({});
+
+  function updateField(key, value) {
+    setGuestForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function submit() {
+    const nextErrors = {};
+    if (!validEmail(guestForm.email)) nextErrors.email = 'Для guest checkout нужен валидный email.';
+    if (!guestForm.company.trim()) nextErrors.company = 'Добавьте компанию или ИП.';
+    if (!guestForm.intent.trim()) nextErrors.intent = 'Коротко опишите, что планируете купить.';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length === 0) onContinue();
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto fade-up">
+      <div className="card p-6 sm:p-7">
+        <button className="btn-ghost mb-5" onClick={onBack}><Ic.arrowLeft /> Назад к регистрации</button>
+        <div className="grid lg:grid-cols-[1fr_0.84fr] gap-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Optional guest path</p>
+            <h1 className="text-2xl font-bold text-slate-900 mt-1">Оформить первый заказ без полного аккаунта</h1>
+            <p className="text-sm text-slate-500 mt-2">Этот путь оставляет buyer в guest-compatible режиме, а после заказа предлагает конвертировать сессию в полноценный аккаунт.</p>
+
+            <div className="space-y-4 mt-6">
+              <div>
+                <label className="input-label">Контактный email</label>
+                <input className={`input-field ${errors.email ? 'error' : ''}`} value={guestForm.email} onChange={(e) => updateField('email', e.target.value)} placeholder="procurement@company.ru" />
+                {errors.email && <div className="input-error">{errors.email}</div>}
+              </div>
+              <div>
+                <label className="input-label">Компания</label>
+                <input className={`input-field ${errors.company ? 'error' : ''}`} value={guestForm.company} onChange={(e) => updateField('company', e.target.value)} placeholder="ООО «Новая Компания»" />
+                {errors.company && <div className="input-error">{errors.company}</div>}
+              </div>
+              <div>
+                <label className="input-label">Что ищете</label>
+                <textarea className={`input-field ${errors.intent ? 'error' : ''}`} value={guestForm.intent} onChange={(e) => updateField('intent', e.target.value)} placeholder="Например: 12 ноутбуков и 12 мониторов для нового офиса." />
+                {errors.intent && <div className="input-error">{errors.intent}</div>}
+              </div>
+              <button className="btn-primary" onClick={submit}><Ic.arrowRight /> Продолжить как гость</button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="card-soft p-5">
+              <p className="text-sm font-semibold text-slate-800">Что сохраняется в guest session</p>
+              <div className="mt-4 space-y-3 text-sm text-slate-600">
+                <div className="flex items-start gap-3"><span>🛒</span><span>Корзина и адрес хранятся до 30 дней.</span></div>
+                <div className="flex items-start gap-3"><span>📧</span><span>Order confirmation приходит на тот же email.</span></div>
+                <div className="flex items-start gap-3"><span>🔗</span><span>После заказа можно привязать историю к аккаунту.</span></div>
+              </div>
+            </div>
+            <div className="card p-5">
+              <p className="text-sm font-semibold text-slate-800">Guest checkout не отменяет trust-модель</p>
+              <p className="text-sm text-slate-500 mt-2">Escrow-like hold, buyer notifications и dispute path остаются теми же. Отличается только момент создания постоянного аккаунта.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GuestSuccessScreen({ guestForm, onCreateAccount, onContinueAsGuest }) {
+  return (
+    <div className="max-w-3xl mx-auto fade-up">
+      <div className="card p-6 sm:p-8 text-center">
+        <div className="w-16 h-16 rounded-full bg-green-50 text-green-600 flex items-center justify-center mx-auto mb-5">
+          <Ic.check size={28} />
+        </div>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-green-600">Guest order staged</p>
+        <h1 className="text-3xl font-bold text-slate-900 mt-2">Сессия гостя создана</h1>
+        <p className="text-sm text-slate-500 mt-3 max-w-xl mx-auto">Письмо о заказе и ссылка на дальнейшую активацию buyer-account отправлены на <span className="font-semibold text-slate-700">{guestForm.email}</span>.</p>
+
+        <div className="grid sm:grid-cols-3 gap-4 mt-8 text-left">
+          <div className="benefit-card">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Session</p>
+            <p className="text-sm font-semibold text-slate-800 mt-2">Корзина и заказ связаны с email</p>
+          </div>
+          <div className="benefit-card">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Later</p>
+            <p className="text-sm font-semibold text-slate-800 mt-2">Можно создать пароль после заказа</p>
+          </div>
+          <div className="benefit-card">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Safe path</p>
+            <p className="text-sm font-semibold text-slate-800 mt-2">Buyer всё равно получает dispute-safe support</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+          <button className="btn-primary" onClick={onCreateAccount}><Ic.mail /> Создать аккаунт сейчас</button>
+          <button className="btn-ghost" onClick={onContinueAsGuest}>Перейти в каталог как гость</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VerificationScreen({ email, onBack, onVerified }) {
+  const [expired, setExpired] = useState(false);
+  const [resentCount, setResentCount] = useState(0);
+
+  return (
+    <div className="max-w-5xl mx-auto fade-up">
+      <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-6 items-start">
+        <div className="card p-6 sm:p-7">
+          <button className="btn-ghost mb-5" onClick={onBack}><Ic.arrowLeft /> Назад</button>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Email verification</p>
+          <h1 className="text-2xl font-bold text-slate-900 mt-1">Подтвердите email перед первым входом</h1>
+          <p className="text-sm text-slate-500 mt-3">Launch flow требует подтверждённый email до перехода buyer в каталог и checkout history.</p>
+
+          <div className="card-soft p-4 mt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-700">
+                <Ic.mail />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">{email}</p>
+                <p className="text-xs text-slate-500 mt-1">Ссылка активна 48 часов. После истечения нужен resend.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            <div className="check-list-row">
+              <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><Ic.mail size={15} /></div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Письмо отправлено автоматически</p>
+                <p className="text-xs text-slate-500 mt-1">В проде это transactional email с delivery SLA до 60 секунд.</p>
+              </div>
+            </div>
+            <div className="check-list-row">
+              <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><Ic.clock size={15} /></div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Link TTL: 48 часов</p>
+                <p className="text-xs text-slate-500 mt-1">{expired ? 'Ссылка намеренно просрочена в прототипе.' : 'Пока срок не истёк, buyer может завершить verification одним кликом.'}</p>
+              </div>
+            </div>
+            <div className="check-list-row">
+              <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><Ic.shield size={15} /></div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Дальше откроется safe-buy intro</p>
+                <p className="text-xs text-slate-500 mt-1">Buyer сразу понимает роль escrow-like flow, verified vendor и dispute support.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3 mt-7">
+            <button className="btn-primary" onClick={onVerified} disabled={expired}><Ic.check /> Я подтвердил email</button>
+            {!expired ? (
+              <button className="btn-ghost" onClick={() => setExpired(true)}>Симулировать просроченную ссылку</button>
+            ) : (
+              <button className="btn-ghost" onClick={() => { setExpired(false); setResentCount((prev) => prev + 1); }}>Отправить письмо ещё раз</button>
+            )}
+          </div>
+          {resentCount > 0 && <p className="text-xs text-slate-400 mt-3">Resend count: {resentCount}. Последний resend сбросил TTL на 48 часов.</p>}
+        </div>
+
+        <div className="mail-preview card p-0 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600"><Ic.mail size={16} /></div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800">Vendora Security</p>
+              <p className="text-xs text-slate-500 truncate">Подтвердите ваш buyer-account</p>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500 inline-flex items-center gap-2">
+              <Ic.clock size={14} />
+              {expired ? 'Ссылка истекла' : 'Ссылка действует ещё 47:59:12'}
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mt-6">Подтвердите email</h2>
+            <p className="text-sm text-slate-500 mt-3">Нажмите кнопку ниже, чтобы активировать аккаунт и открыть buyer-facing каталог, корзину и историю заказов.</p>
+
+            <div className="hero-gradient rounded-3xl p-5 border border-slate-200 mt-6">
+              <div className="grid sm:grid-cols-3 gap-3">
+                {['Catalog access', 'Saved cart', 'Dispute-safe orders'].map((item) => (
+                  <div key={item} className="bg-white rounded-2xl border border-white/70 px-4 py-3 text-sm font-semibold text-slate-700">{item}</div>
+                ))}
+              </div>
+              <button className="btn-primary mt-5" disabled={expired}>Подтвердить email</button>
+            </div>
+
+            {expired && (
+              <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-4 mt-5">
+                <p className="text-sm font-semibold text-red-700">Link expired</p>
+                <p className="text-xs text-red-600 mt-1">FR-AUTH-003 требует новый verification email после истечения TTL.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrustIntroScreen({ selections, setSelections, onBack, onContinue }) {
+  function toggleCategory(id) {
+    setSelections((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]);
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto fade-up">
+      <div className="grid xl:grid-cols-[1.02fr_0.98fr] gap-6">
+        <div className="card p-6 sm:p-7">
+          <button className="btn-ghost mb-5" onClick={onBack}><Ic.arrowLeft /> Назад</button>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">First entry trust intro</p>
+          <h1 className="text-2xl font-bold text-slate-900 mt-1">Buyer получает короткое объяснение safe-buy модели</h1>
+          <p className="text-sm text-slate-500 mt-3">Этот экран не пытается заменить onboarding целиком. Он быстро объясняет правила денег, vendor approval и dispute path перед первым поиском.</p>
+
+          <div className="grid sm:grid-cols-3 gap-4 mt-7">
+            {TRUST_PILLARS.map((item) => (
+              <div key={item.id} className="benefit-card">
+                <div className="text-2xl">{item.icon}</div>
+                <p className="text-sm font-semibold text-slate-800 mt-4">{item.title}</p>
+                <p className="text-xs text-slate-500 mt-2 leading-5">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8">
+            <p className="text-sm font-semibold text-slate-800">Что ищете в первую очередь</p>
+            <p className="text-xs text-slate-500 mt-1">Опциональный launch-friendly signal для стартового каталога. Можно пропустить.</p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              {CATEGORY_OPTIONS.map((item) => (
+                <button key={item.id} className={`chip ${selections.includes(item.id) ? 'active' : ''}`} onClick={() => toggleCategory(item.id)}>
+                  <span>{item.icon}</span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3 mt-8">
+            <button className="btn-primary" onClick={onContinue}><Ic.sparkle /> Перейти в каталог</button>
+            <button className="btn-ghost" onClick={onContinue}>Пропустить и открыть поиск</button>
+          </div>
+        </div>
+
+        <div className="card p-6 sm:p-7">
+          <p className="text-sm font-semibold text-slate-800">Как buyer понимает жизненный цикл заказа</p>
+          <div className="mt-5 space-y-4">
+            {SAFE_FLOW.map((step, index) => (
+              <div key={step.title} className="flex gap-4">
+                <div className="w-9 h-9 rounded-2xl shrink-0 flex items-center justify-center text-white font-semibold" style={{ background: index === 0 ? 'var(--brand,#2455e8)' : '#0f172a' }}>
+                  {index + 1}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">{step.icon} {step.title}</p>
+                  <p className="text-xs text-slate-500 mt-1">{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hero-gradient rounded-3xl p-5 border border-slate-200 mt-7">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Design note</p>
+            <p className="text-sm text-slate-700 mt-2">Экран intentionally короткий: он даёт enough context для B-1, но не раздувает launch auth в полноценный educational flow.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EntryScreen({ profile, selections, guestMode, onReset }) {
+  const selectedCategories = CATEGORY_OPTIONS.filter((item) => selections.includes(item.id));
+
+  return (
+    <div className="max-w-6xl mx-auto fade-up">
+      <div className="hero-gradient border border-slate-200 rounded-[28px] p-6 sm:p-8">
+        <div className="flex flex-col lg:flex-row gap-6 lg:items-center">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-800 font-bold text-lg shrink-0">
+              {initials(profile.fullName)}
+            </div>
+            <div>
+              <div className="flex flex-wrap gap-2 items-center">
+                <h1 className="text-3xl font-bold text-slate-900">
+                  {guestMode ? `Каталог для ${profile.company || profile.email}` : `Добро пожаловать, ${profile.fullName.split(' ')[0] || 'buyer'}`}
+                </h1>
+                {guestMode ? (
+                  <span className="status-badge" style={{ background: '#fff7ed', color: '#c2410c' }}>guest-compatible</span>
+                ) : (
+                  <span className="status-badge" style={{ background: '#f0fdf4', color: '#166534' }}><Ic.check size={13} /> email confirmed</span>
+                )}
+              </div>
+              <p className="text-sm text-slate-600 mt-2 max-w-2xl">
+                {guestMode
+                  ? 'Корзина и будущий заказ привязаны к email. Создать постоянный аккаунт можно позже без потери истории.'
+                  : 'Buyer-account активен. Следующий логичный шаг — войти в поиск, собрать корзину и перейти к checkout.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="lg:ml-auto flex flex-wrap gap-3">
+            <a href="Vendora Search.html" className="btn-primary">
+              <Ic.arrowRight />
+              Открыть B-2 поиск
+            </a>
+            <a href="Vendora Checkout.html" className="btn-ghost">
+              Перейти к B-3 checkout
+            </a>
+            <button className="btn-ghost" onClick={onReset}>Повторить B-1 flow</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6 mt-6">
+        <div className="space-y-6">
+          <div className="search-card">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">First search state</p>
+                <h2 className="text-xl font-bold text-slate-900 mt-1">Buyer-ready entry в каталог</h2>
+              </div>
+              <span className="status-badge" style={{ background: '#eef2ff', color: 'var(--brand,#2455e8)' }}>B-1 → B-2</span>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-slate-200 bg-white px-4 py-4 flex items-center gap-3">
+              <span className="text-xl">🔎</span>
+              <div className="text-sm text-slate-500">Ноутбуки для офиса, переговорные столы, профессиональная химия...</div>
+            </div>
+
+            {selectedCategories.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Быстрые категории</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedCategories.map((item) => (
+                    <span key={item.id} className="chip active"><span>{item.icon}</span>{item.label}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid sm:grid-cols-3 gap-3 mt-5">
+              {FIRST_RESULTS.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="text-2xl">{item.icon}</div>
+                  <p className="text-sm font-semibold text-slate-800 mt-3">{item.name}</p>
+                  <p className="text-xs text-slate-500 mt-1">{item.vendor}</p>
+                  <p className="text-sm font-semibold text-slate-900 mt-3">{item.price}</p>
+                  <p className="text-xs text-slate-500 mt-1 leading-5">{item.meta}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Что уже закрыто этим экраном</p>
+                <p className="text-xs text-slate-500 mt-1">Регистрация не заканчивается success-toast. Buyer реально получает первый operational next step.</p>
+              </div>
+              <span className="status-badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}>Launch path</span>
+            </div>
+            <div className="mt-4 grid sm:grid-cols-2 gap-3">
+              {[
+                'Email подтверждён перед первым search session',
+                'Escrow-like flow объяснён без длинного обучения',
+                'Переход в поиск и checkout остаётся прозрачным',
+                guestMode ? 'Guest path оставлен совместимым с будущим account claim' : 'Buyer уже может сохранять историю и корзину',
+              ].map((text) => (
+                <div key={text} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">{text}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="card p-6">
+            <p className="text-sm font-semibold text-slate-800">Состояние аккаунта</p>
+            <div className="space-y-3 mt-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-600">Email verification</span>
+                <span className="status-badge" style={{ background: guestMode ? '#fff7ed' : '#f0fdf4', color: guestMode ? '#c2410c' : '#166534' }}>
+                  {guestMode ? 'отложено' : 'завершено'}
+                </span>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-600">Saved cart / identity</span>
+                <span className="status-badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}>{guestMode ? 'email-bound' : 'account-bound'}</span>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-600">Dispute-safe access</span>
+                <span className="status-badge" style={{ background: '#f5f3ff', color: '#7c3aed' }}>готово</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card p-6">
+            <p className="text-sm font-semibold text-slate-800">Связанные прототипы</p>
+            <div className="grid gap-3 mt-4">
+              <a href="Vendora Search.html" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 flex items-center justify-between gap-3 hover:bg-white">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">B-2 Search And Selection</p>
+                  <p className="text-xs text-slate-500 mt-1">Buyer-facing каталог, фильтры, карточка товара и vendor profile.</p>
+                </div>
+                <Ic.arrowRight />
+              </a>
+              <a href="Vendora Checkout.html" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 flex items-center justify-between gap-3 hover:bg-white">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">B-3 Checkout</p>
+                  <p className="text-xs text-slate-500 mt-1">Где trust-модель уже переходит в order and money flow.</p>
+                </div>
+                <Ic.arrowRight />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#2455e8",
+  "brandName": "Vendora",
+  "guestCheckout": true,
+  "simulateExistingEmail": false
+}/*EDITMODE-END*/;
+
+const INITIAL_FORM = {
+  fullName: 'Анна Петрова',
+  email: 'procurement@company.ru',
+  company: 'ООО «ТехноСтарт»',
+  password: 'Vendora2026',
+  password2: 'Vendora2026',
+  agree: true,
+};
+
+const INITIAL_GUEST_FORM = {
+  email: 'guest@newbuyer.ru',
+  company: 'ООО «Новая Компания»',
+  intent: 'Нужны ноутбуки и офисная мебель для филиала на 20 сотрудников.',
+};
+
+function App() {
+  const tweakApi = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : null;
+  const [tweaks, setTweak] = Array.isArray(tweakApi) ? tweakApi : [TWEAK_DEFAULTS, () => {}];
+  const TweaksPanel = window.TweaksPanel;
+  const TweakSection = window.TweakSection;
+  const TweakColor = window.TweakColor;
+  const TweakText = window.TweakText;
+  const TweakToggle = window.TweakToggle;
+
+  const [screen, setScreen] = useState('auth');
+  const [profile, setProfile] = useState(INITIAL_FORM);
+  const [guestForm, setGuestForm] = useState(INITIAL_GUEST_FORM);
+  const [selections, setSelections] = useState(['electronics', 'office']);
+  const [guestMode, setGuestMode] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', tweaks.accentColor || '#2455e8');
+  }, [tweaks.accentColor]);
+
+  function resetAll() {
+    setScreen('auth');
+    setProfile(INITIAL_FORM);
+    setGuestForm(INITIAL_GUEST_FORM);
+    setSelections(['electronics', 'office']);
+    setGuestMode(false);
+  }
+
+  function handleRegister() {
+    setGuestMode(false);
+    setScreen('verify');
+  }
+
+  function handleGuestContinue() {
+    setGuestMode(true);
+    setProfile((prev) => ({
+      ...prev,
+      fullName: prev.fullName || 'Guest Buyer',
+      email: guestForm.email,
+      company: guestForm.company,
+    }));
+    setScreen('guest-success');
+  }
+
+  return (
+    <div style={{ '--brand': tweaks.accentColor || '#2455e8' }}>
+      <Header brandName={tweaks.brandName || 'Vendora'} screen={screen} guestMode={guestMode} />
+      <StepBar screen={screen} guestCheckout={tweaks.guestCheckout} guestMode={guestMode} />
+
+      <main className="px-4 py-6 pb-16">
+        {screen === 'auth' && (
+          <AuthScreen
+            form={profile}
+            setForm={setProfile}
+            onRegister={handleRegister}
+            onGuestStart={() => setScreen('guest')}
+            guestCheckout={!!tweaks.guestCheckout}
+            simulateExistingEmail={!!tweaks.simulateExistingEmail}
+          />
+        )}
+
+        {screen === 'guest' && (
+          <GuestCheckoutScreen
+            guestForm={guestForm}
+            setGuestForm={setGuestForm}
+            onBack={() => setScreen('auth')}
+            onContinue={handleGuestContinue}
+          />
+        )}
+
+        {screen === 'guest-success' && (
+          <GuestSuccessScreen
+            guestForm={guestForm}
+            onCreateAccount={() => {
+              setProfile((prev) => ({ ...prev, email: guestForm.email, company: guestForm.company }));
+              setGuestMode(false);
+              setScreen('verify');
+            }}
+            onContinueAsGuest={() => {
+              setGuestMode(true);
+              setScreen('entry');
+            }}
+          />
+        )}
+
+        {screen === 'verify' && (
+          <VerificationScreen
+            email={profile.email}
+            onBack={() => setScreen('auth')}
+            onVerified={() => setScreen('trust')}
+          />
+        )}
+
+        {screen === 'trust' && (
+          <TrustIntroScreen
+            selections={selections}
+            setSelections={setSelections}
+            onBack={() => setScreen('verify')}
+            onContinue={() => setScreen('entry')}
+          />
+        )}
+
+        {screen === 'entry' && (
+          <EntryScreen
+            profile={profile}
+            selections={selections}
+            guestMode={guestMode}
+            onReset={resetAll}
+          />
+        )}
+      </main>
+
+      {TweaksPanel && TweakSection && TweakColor && TweakToggle && TweakText && (
+        <TweaksPanel title="B-1 Tweaks">
+          <TweakSection label="Брендинг">
+            <TweakColor label="Цвет акцента" value={tweaks.accentColor} onChange={(value) => setTweak('accentColor', value)} />
+            <TweakText label="Бренд" value={tweaks.brandName} onChange={(value) => setTweak('brandName', value)} />
+          </TweakSection>
+          <TweakSection label="Сценарии">
+            <TweakToggle label="Guest checkout path" value={!!tweaks.guestCheckout} onChange={(value) => setTweak('guestCheckout', value)} />
+            <TweakToggle label="Симулировать занятый email" value={!!tweaks.simulateExistingEmail} onChange={(value) => setTweak('simulateExistingEmail', value)} />
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

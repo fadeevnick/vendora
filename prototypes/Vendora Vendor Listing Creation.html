@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendora — Создание листинга V-2</title>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: #f2f5fa; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; color: #0f172a; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.3s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes slideIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+    .slide-in { animation: slideIn 0.28s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.42; } }
+    .pulse-dot { animation: pulse 1.6s ease infinite; }
+
+    .card { background: #fff; border-radius: 16px; border: 1px solid #e4ebf4; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05); }
+    .soft-card { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 16px; border: 1px solid #e7edf7; }
+
+    .btn-primary {
+      background: var(--brand, #2455e8);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: filter 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+    .btn-primary:hover { filter: brightness(0.9); box-shadow: 0 6px 16px color-mix(in srgb, var(--brand,#2455e8) 28%, transparent); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; filter: none; box-shadow: none; }
+
+    .btn-ghost {
+      background: transparent;
+      color: #64748b;
+      border: 1.5px solid #dbe4f0;
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .btn-ghost:hover { border-color: #94a3b8; color: #0f172a; background: #f8fafc; }
+
+    .btn-soft {
+      background: color-mix(in srgb, var(--brand,#2455e8) 8%, white);
+      color: var(--brand, #2455e8);
+      border: 1px solid color-mix(in srgb, var(--brand,#2455e8) 16%, white);
+      border-radius: 10px;
+      padding: 9px 15px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .input-field, .select-field, textarea.input-field {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1.5px solid #dbe4f0;
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fff;
+      color: #0f172a;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .input-field:focus, .select-field:focus, textarea.input-field:focus {
+      border-color: var(--brand, #2455e8);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand,#2455e8) 12%, transparent);
+    }
+    .input-field.error, .select-field.error { border-color: #ef4444; }
+    textarea.input-field { min-height: 108px; resize: vertical; }
+
+    .input-label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+    .input-hint { margin-top: 5px; font-size: 11px; color: #94a3b8; }
+    .input-error { margin-top: 5px; font-size: 11px; color: #ef4444; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover { background: #f6f8fc; color: #0f172a; }
+    .nav-item.active { background: color-mix(in srgb, var(--brand,#2455e8) 9%, white); color: var(--brand,#2455e8); font-weight: 600; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1.5px solid #dbe4f0;
+      background: #fff;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-chip.active {
+      color: var(--brand,#2455e8);
+      border-color: var(--brand,#2455e8);
+      background: color-mix(in srgb, var(--brand,#2455e8) 8%, white);
+    }
+
+    .stat-card { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border: 1px solid #e7edf7; border-radius: 16px; padding: 16px 18px; }
+
+    .listing-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr) 120px 110px 140px;
+      gap: 14px;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid #eef2f7;
+    }
+    .listing-row:last-child { border-bottom: none; }
+    .listing-row:hover { background: #fbfcfe; }
+
+    .media-tile {
+      border: 1.5px solid #dbe4f0;
+      border-radius: 16px;
+      padding: 14px;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+    .media-tile:hover { border-color: var(--brand,#2455e8); transform: translateY(-1px); }
+    .media-tile.selected {
+      border-color: var(--brand,#2455e8);
+      background: color-mix(in srgb, var(--brand,#2455e8) 6%, white);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand,#2455e8) 10%, transparent);
+    }
+
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px 0;
+      border-bottom: 1px solid #eef2f7;
+    }
+    .check-row:last-child { border-bottom: none; }
+
+    .preview-card {
+      background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+      border: 1px solid #e7edf7;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    .preview-cover {
+      min-height: 190px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 54px;
+      background:
+        radial-gradient(circle at top left, color-mix(in srgb, var(--brand,#2455e8) 15%, white), transparent 40%),
+        linear-gradient(135deg, #f8fbff 0%, #eff4ff 100%);
+    }
+
+    .step-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .step-tag.active { background: color-mix(in srgb, var(--brand,#2455e8) 8%, white); border-color: color-mix(in srgb, var(--brand,#2455e8) 24%, white); color: var(--brand,#2455e8); }
+    .step-tag.done { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+
+    .banner-info { border-radius: 16px; padding: 14px 16px; border: 1px solid; }
+
+    @media (max-width: 1100px) {
+      .listing-row { grid-template-columns: 1fr; gap: 8px; }
+      .sidebar { display: none; }
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const CATEGORY_OPTIONS = [
+  { id: 'electronics', label: 'Электроника и IT', icon: '💻' },
+  { id: 'office', label: 'Офисная мебель', icon: '🪑' },
+  { id: 'supplies', label: 'Расходники и канцелярия', icon: '📎' },
+  { id: 'cleaning', label: 'Хозтовары и клининг', icon: '🧴' },
+  { id: 'network', label: 'Сетевое оборудование', icon: '🌐' },
+  { id: 'services', label: 'Услуги и сервис', icon: '🛠️' },
+];
+
+const MEDIA_LIBRARY = [
+  { id: 'laptop-hero', label: 'Главное фото', note: '1600×1200 · JPEG', icon: '💻', bg: '#eef2ff' },
+  { id: 'detail-shot', label: 'Деталь / close-up', note: '1200×900 · PNG', icon: '🔍', bg: '#eff6ff' },
+  { id: 'workspace', label: 'В интерьере', note: '1440×1080 · WebP', icon: '🏢', bg: '#ecfeff' },
+  { id: 'packaging', label: 'Упаковка', note: '1000×1000 · JPEG', icon: '📦', bg: '#fefce8' },
+];
+
+const INITIAL_LISTINGS = [
+  {
+    id: 'lst-101',
+    name: 'Ноутбук Dell Latitude 5540',
+    category: 'electronics',
+    price: 89500,
+    stock: 47,
+    minOrder: 1,
+    vat: '20',
+    leadTime: '3–5 дней',
+    description: 'Профессиональный ноутбук для корпоративных закупок. Intel Core i7, 16 GB RAM, 512 GB SSD.',
+    media: ['laptop-hero', 'detail-shot'],
+    status: 'published',
+    updatedAt: '07.05.2026 10:42',
+  },
+  {
+    id: 'lst-102',
+    name: 'Стол переговорный 2400×1200 мм',
+    category: 'office',
+    price: 78000,
+    stock: 0,
+    minOrder: 1,
+    vat: '20',
+    leadTime: '10–14 дней',
+    description: 'Большой переговорный стол под заказ. Позиция не удаляется из каталога, но показывает out-of-stock.',
+    media: ['workspace'],
+    status: 'published',
+    updatedAt: '06.05.2026 18:05',
+  },
+  {
+    id: 'lst-103',
+    name: 'Чистящее средство Pro-Clean 5L',
+    category: 'cleaning',
+    price: 1200,
+    stock: 120,
+    minOrder: 5,
+    vat: '20',
+    leadTime: '1–3 дня',
+    description: 'Концентрат для профессионального клининга. Черновик ждёт публикации и обязательного media asset.',
+    media: [],
+    status: 'draft',
+    updatedAt: '05.05.2026 15:20',
+  },
+];
+
+const EMPTY_LISTING = {
+  id: null,
+  name: 'Ноутбук Dell Latitude 5540',
+  category: 'electronics',
+  price: '89500',
+  stock: '24',
+  minOrder: '1',
+  vat: '20',
+  leadTime: '3–5 дней',
+  description: 'Профессиональный ноутбук для корпоративных закупок. Intel Core i7, 16 GB RAM, 512 GB SSD. Доставка по РФ, гарантия 3 года.',
+  media: ['laptop-hero'],
+  status: 'draft',
+  updatedAt: '',
+};
+
+function fmt(value) {
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(Number(value || 0)) + ' ₽';
+}
+
+function categoryMeta(id) {
+  return CATEGORY_OPTIONS.find((item) => item.id === id) || CATEGORY_OPTIONS[0];
+}
+
+function mediaMeta(id) {
+  return MEDIA_LIBRARY.find((item) => item.id === id);
+}
+
+function currentTimestamp() {
+  return new Date().toLocaleString('ru-RU', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).replace(',', '');
+}
+
+function visibilityMeta(listing, vendorStatus) {
+  if (listing.status !== 'published') return { label: 'Черновик', color: '#64748b', bg: '#f8fafc', publicLabel: 'Не виден buyer-side' };
+  if (vendorStatus === 'blocked') return { label: 'Скрыт из каталога', color: '#b45309', bg: '#fff7ed', publicLabel: 'Снят с публичной выдачи' };
+  if (vendorStatus === 'pending') return { label: 'Ожидает approval', color: '#1d4ed8', bg: '#eff6ff', publicLabel: 'Не публикуется до approval' };
+  if (Number(listing.stock) === 0) return { label: 'Нет в наличии', color: '#ef4444', bg: '#fef2f2', publicLabel: 'Виден, но не обещает наличие' };
+  return { label: 'Опубликован', color: '#16a34a', bg: '#f0fdf4', publicLabel: 'Виден в каталоге и поиске' };
+}
+
+function buildChecks(listing, vendorStatus, quotaReached) {
+  return [
+    {
+      id: 'vendor',
+      ok: vendorStatus === 'approved',
+      title: 'Vendor approved',
+      desc: vendorStatus === 'approved' ? 'Vendor может создавать и публиковать листинги.' : 'Публикация доступна только approved vendor-аккаунтам.',
+    },
+    {
+      id: 'basics',
+      ok: Boolean(listing.name.trim() && listing.category && listing.price),
+      title: 'Базовые поля',
+      desc: 'Название, категория и цена обязательны для publish.',
+    },
+    {
+      id: 'stock',
+      ok: listing.stock !== '',
+      title: 'Остаток задан',
+      desc: 'При stock = 0 листинг остаётся в каталоге, но показывает out-of-stock.',
+    },
+    {
+      id: 'media',
+      ok: (listing.media || []).length > 0,
+      title: 'Минимум один media asset',
+      desc: 'Launch scope требует минимум одно изображение или эквивалентный asset.',
+    },
+    {
+      id: 'quota',
+      ok: !quotaReached,
+      title: 'Лимит плана не превышен',
+      desc: quotaReached ? 'В этом состоянии нужен upgrade prompt или hosted billing path.' : 'Внутри текущего плана ещё можно публиковать.',
+    },
+  ];
+}
+
+function listingCompleteForPublish(listing, vendorStatus, quotaReached) {
+  return buildChecks(listing, vendorStatus, quotaReached).every((item) => item.ok);
+}
+
+const Ic = {
+  check: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path d="M3 8l3.5 3.5L13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  plus: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+      <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+  arrowRight: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  arrowLeft: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  spark: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path d="M8 1l1.4 3.6L13 6l-3.6 1.4L8 11 6.6 7.4 3 6l3.6-1.4L8 1zM13 11l.7 1.8L15.5 13l-1.8.7L13 15.5l-.7-1.8-1.8-.7 1.8-.7L13 11z" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  image: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="5.2" cy="6" r="1.4" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M1.5 11l3.4-3.3 2.8 2.5 2.3-1.9 4 3.7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  lock: ({ size = 15 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <rect x="3" y="7" width="10" height="7" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M5.5 7V5.5a2.5 2.5 0 115 0V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+  search: ({ size = 15 }) => (
+    <svg width={size} height={size} viewBox="0 0 15 15" fill="none">
+      <circle cx="6.4" cy="6.4" r="4.6" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M10 10l3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  ),
+  duplicate: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+      <rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M2 9V2.8A.8.8 0 012.8 2H9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  ),
+  grid: () => <span>🛍️</span>,
+};
+
+function StatusBadge({ meta }) {
+  return (
+    <span className="status-badge" style={{ background: meta.bg, color: meta.color }}>
+      <span className="w-1.5 h-1.5 rounded-full" style={{ background: meta.color }} />
+      {meta.label}
+    </span>
+  );
+}
+
+function Header({ brandName, vendorStatus, quotaReached, view }) {
+  const stateLabels = {
+    approved: { label: 'approved vendor', color: '#16a34a', bg: '#f0fdf4' },
+    pending: { label: 'pending review', color: '#1d4ed8', bg: '#eff6ff' },
+    blocked: { label: 'blocked / hidden', color: '#b45309', bg: '#fff7ed' },
+  };
+  const state = stateLabels[vendorStatus] || stateLabels.approved;
+
+  return (
+    <header className="bg-white border-b border-slate-100 sticky top-0 z-30">
+      <div className="px-4 sm:px-5 py-3 flex items-center gap-3 flex-wrap">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold shadow-sm" style={{ background: 'var(--brand,#2455e8)' }}>V</div>
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-slate-900 text-sm">{brandName}</span>
+            <span className="status-badge" style={{ background: '#eef2ff', color: 'var(--brand,#2455e8)' }}>V-2</span>
+            <span className="status-badge" style={{ background: state.bg, color: state.color }}>{state.label}</span>
+            {quotaReached && <span className="status-badge" style={{ background: '#fff7ed', color: '#c2410c' }}>plan quota reached</span>}
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">{view === 'success' ? 'Publish visibility and catalog indexing' : 'Каталог продавца и launch-safe создание листинга'}</p>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <a href="Vendora Vendor Dashboard.html" className="btn-ghost">Открыть V-3 Orders</a>
+          <a href="Vendora Search.html" className="btn-ghost"><Ic.search /> B-2 Search</a>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Sidebar() {
+  const items = [
+    { id: 'overview', label: 'Обзор', icon: '🏠' },
+    { id: 'catalog', label: 'Каталог', icon: '🛍️', active: true },
+    { id: 'orders', label: 'Заказы', icon: '📦' },
+    { id: 'analytics', label: 'Аналитика', icon: '📊' },
+    { id: 'settings', label: 'Настройки', icon: '⚙️' },
+  ];
+
+  return (
+    <aside className="sidebar w-[250px] border-r border-slate-100 bg-white p-4 flex-shrink-0">
+      <div className="card p-4 mb-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Catalog flow</p>
+        <p className="text-sm font-semibold text-slate-800 mt-2">Launch scope: draft -> publish -> public visibility</p>
+      </div>
+      <nav className="space-y-1">
+        {items.map((item) => (
+          <div key={item.id} className={`nav-item ${item.active ? 'active' : ''}`}>
+            <span>{item.icon}</span>
+            {item.label}
+          </div>
+        ))}
+      </nav>
+    </aside>
+  );
+}
+
+function CatalogHome({ listings, filter, setFilter, vendorStatus, quotaReached, onCreate, onEdit, onDuplicate }) {
+  const stats = {
+    published: listings.filter((item) => item.status === 'published' && Number(item.stock) > 0).length,
+    out: listings.filter((item) => item.status === 'published' && Number(item.stock) === 0).length,
+    drafts: listings.filter((item) => item.status === 'draft').length,
+  };
+
+  const filtered = listings.filter((item) => {
+    if (filter === 'all') return true;
+    if (filter === 'draft') return item.status === 'draft';
+    if (filter === 'published') return item.status === 'published' && Number(item.stock) > 0;
+    if (filter === 'out') return item.status === 'published' && Number(item.stock) === 0;
+    return true;
+  });
+
+  const canCreate = vendorStatus === 'approved' && !quotaReached;
+
+  return (
+    <div className="flex-1 overflow-auto">
+      <div className="p-4 sm:p-6 space-y-6 fade-up">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Vendor catalog</p>
+            <h1 className="text-2xl font-bold text-slate-900 mt-1">Управление листингами</h1>
+            <p className="text-sm text-slate-500 mt-2 max-w-2xl">Прототип покрывает creation path для approved vendor: базовые поля, обязательный media asset, draft/publish и то, как опубликованный товар попадает в buyer-facing каталог.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="btn-primary" onClick={onCreate} disabled={!canCreate}>
+              <Ic.plus />
+              Новый листинг
+            </button>
+          </div>
+        </div>
+
+        {vendorStatus !== 'approved' && (
+          <div className="banner-info" style={{ background: vendorStatus === 'blocked' ? '#fff7ed' : '#eff6ff', color: vendorStatus === 'blocked' ? '#9a3412' : '#1d4ed8', borderColor: vendorStatus === 'blocked' ? '#fed7aa' : '#bfdbfe' }}>
+            <p className="text-sm font-semibold">{vendorStatus === 'blocked' ? 'Vendor заблокирован для buyer-side публичности' : 'Vendor ещё не approved'}</p>
+            <p className="text-xs mt-1">{vendorStatus === 'blocked' ? 'FR-CAT-008: опубликованные позиции остаются в workspace, но снимаются с public catalog/search.' : 'FR-CAT-001: publish доступен только после vendor approval. Черновики можно подготовить заранее.'}</p>
+          </div>
+        )}
+
+        {quotaReached && (
+          <div className="banner-info bg-amber-50 text-amber-800 border-amber-200">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-sm font-semibold">Плановый лимит достигнут</p>
+                <p className="text-xs mt-1">Alternative path из V-2: новый листинг блокируется и предлагает hosted/manual upgrade path.</p>
+              </div>
+              <button className="btn-soft">Открыть upgrade prompt</button>
+            </div>
+          </div>
+        )}
+
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="stat-card">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Published</p>
+            <p className="text-3xl font-bold text-slate-900 mt-2">{stats.published}</p>
+            <p className="text-xs text-slate-500 mt-2">Публично видимы buyer-side</p>
+          </div>
+          <div className="stat-card">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Out of stock</p>
+            <p className="text-3xl font-bold text-slate-900 mt-2">{stats.out}</p>
+            <p className="text-xs text-slate-500 mt-2">Видимы, но без обещания наличия</p>
+          </div>
+          <div className="stat-card">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Drafts</p>
+            <p className="text-3xl font-bold text-slate-900 mt-2">{stats.drafts}</p>
+            <p className="text-xs text-slate-500 mt-2">Ещё не опубликованы</p>
+          </div>
+        </div>
+
+        <div className="card p-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'all', label: 'Все' },
+                { id: 'published', label: 'Published' },
+                { id: 'out', label: 'Out of stock' },
+                { id: 'draft', label: 'Drafts' },
+              ].map((item) => (
+                <button key={item.id} className={`filter-chip ${filter === item.id ? 'active' : ''}`} onClick={() => setFilter(item.id)}>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <div className="text-xs text-slate-400">Launch coverage: create, save draft, publish, visibility</div>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="hidden lg:grid listing-row bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <div>Listing</div>
+              <div>Категория</div>
+              <div>Цена</div>
+              <div>Остаток</div>
+              <div>Статус</div>
+            </div>
+            {filtered.map((listing) => {
+              const meta = visibilityMeta(listing, vendorStatus);
+              return (
+                <div key={listing.id} className="listing-row">
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-3">
+                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0" style={{ background: mediaMeta(listing.media[0])?.bg || '#f1f5f9' }}>
+                        {mediaMeta(listing.media[0])?.icon || '📝'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{listing.name}</p>
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{listing.description}</p>
+                        <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-400">
+                          <span>Обновлено {listing.updatedAt}</span>
+                          <span>•</span>
+                          <span>{listing.media.length} media</span>
+                          <span>•</span>
+                          <span>{meta.publicLabel}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-sm text-slate-700">{categoryMeta(listing.category).label}</div>
+                  <div className="text-sm font-semibold text-slate-900">{fmt(listing.price)}</div>
+                  <div className="text-sm text-slate-700">{listing.stock}</div>
+                  <div className="flex flex-col items-start gap-2">
+                    <StatusBadge meta={meta} />
+                    <div className="flex gap-2">
+                      <button className="btn-ghost !px-3 !py-1.5 !text-xs" onClick={() => onEdit(listing.id)}>Редактировать</button>
+                      <button className="btn-ghost !px-3 !py-1.5 !text-xs" onClick={() => onDuplicate(listing.id)}><Ic.duplicate /> Дубль</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-6">
+          <div className="card p-5">
+            <p className="text-sm font-semibold text-slate-800">Что именно должен закрывать V-2</p>
+            <div className="mt-4 space-y-1">
+              {[
+                'Approved vendor создаёт листинг с названием, описанием, категорией, ценой и остатком.',
+                'Минимум один media asset обязателен для publish.',
+                'Черновик и публикация живут в одном vendor catalog flow.',
+                'После публикации товар попадает в buyer-visible catalog/search.',
+                'Stock = 0 не удаляет листинг, а переводит в out-of-stock состояние.',
+              ].map((text) => (
+                <div key={text} className="check-row">
+                  <div className="w-7 h-7 rounded-full bg-green-50 text-green-600 flex items-center justify-center shrink-0"><Ic.check size={14} /></div>
+                  <p className="text-sm text-slate-700">{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card p-5">
+            <p className="text-sm font-semibold text-slate-800">Launch vs later</p>
+            <div className="grid gap-3 mt-4">
+              <div className="soft-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Launch now</p>
+                <p className="text-sm font-semibold text-slate-800 mt-2">Single listing editor, media minimum, buyer-visible publish state.</p>
+              </div>
+              <div className="soft-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Later / R2+</p>
+                <p className="text-sm font-semibold text-slate-800 mt-2">Quota rules, async indexing details, richer validation, moderation, variants and CSV import.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepTags({ draft, vendorStatus, quotaReached }) {
+  const checks = buildChecks(draft, vendorStatus, quotaReached);
+  return (
+    <div className="flex flex-wrap gap-2">
+      {checks.map((item) => (
+        <span key={item.id} className={`step-tag ${item.ok ? 'done' : 'active'}`}>
+          {item.ok ? <Ic.check size={13} /> : <span className="w-2 h-2 rounded-full bg-current pulse-dot" />}
+          {item.title}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function VisibilityChecklist({ draft, vendorStatus, quotaReached }) {
+  const checks = buildChecks(draft, vendorStatus, quotaReached);
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Publish checklist</p>
+          <p className="text-xs text-slate-500 mt-1">Листинг может быть опубликован только если выполнены базовые launch-инварианты.</p>
+        </div>
+        <span className="status-badge" style={{ background: listingCompleteForPublish(draft, vendorStatus, quotaReached) ? '#f0fdf4' : '#fff7ed', color: listingCompleteForPublish(draft, vendorStatus, quotaReached) ? '#166534' : '#c2410c' }}>
+          {listingCompleteForPublish(draft, vendorStatus, quotaReached) ? 'готов к publish' : 'нужны правки'}
+        </span>
+      </div>
+      <div className="mt-4 space-y-1">
+        {checks.map((item) => (
+          <div key={item.id} className="check-row">
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${item.ok ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+              {item.ok ? <Ic.check size={14} /> : <span className="w-2 h-2 rounded-full bg-current pulse-dot" />}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-800">{item.title}</p>
+              <p className="text-xs text-slate-500 mt-1">{item.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MediaSelector({ selected, toggleMedia }) {
+  return (
+    <div className="grid sm:grid-cols-2 gap-3">
+      {MEDIA_LIBRARY.map((item) => {
+        const active = selected.includes(item.id);
+        return (
+          <button key={item.id} className={`media-tile ${active ? 'selected' : ''}`} onClick={() => toggleMedia(item.id)}>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style={{ background: item.bg }}>
+              {item.icon}
+            </div>
+            <p className="text-sm font-semibold text-slate-800 mt-4 text-left">{item.label}</p>
+            <p className="text-xs text-slate-500 mt-1 text-left">{item.note}</p>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function BuyerPreview({ listing, vendorStatus, indexState }) {
+  const meta = visibilityMeta({ ...listing, status: 'published' }, vendorStatus);
+  const primaryMedia = mediaMeta((listing.media || [])[0]);
+
+  return (
+    <div className="preview-card">
+      <div className="preview-cover">{primaryMedia?.icon || '📝'}</div>
+      <div className="p-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <span className="status-badge" style={{ background: '#eef2ff', color: 'var(--brand,#2455e8)' }}>
+            <Ic.search size={13} />
+            buyer-side preview
+          </span>
+          <span className="status-badge" style={{
+            background: indexState === 'visible' ? '#f0fdf4' : indexState === 'syncing' ? '#eff6ff' : '#fff7ed',
+            color: indexState === 'visible' ? '#166534' : indexState === 'syncing' ? '#1d4ed8' : '#b45309',
+          }}>
+            {indexState === 'visible' ? 'виден в поиске' : indexState === 'syncing' ? 'индексируется' : 'скрыт'}
+          </span>
+        </div>
+
+        <p className="text-lg font-bold text-slate-900 mt-4">{listing.name || 'Новый листинг'}</p>
+        <p className="text-sm text-slate-500 mt-1">{categoryMeta(listing.category).label} · {listing.leadTime || 'Lead time TBD'}</p>
+        <p className="text-xl font-bold text-slate-900 mt-4">{fmt(listing.price || 0)}</p>
+        <p className="text-xs text-slate-500 mt-2 leading-5">{listing.description || 'Описание пока не заполнено.'}</p>
+
+        <div className="grid grid-cols-2 gap-3 mt-5">
+          <div className="soft-card p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Stock</p>
+            <p className="text-sm font-semibold text-slate-800 mt-2">
+              {Number(listing.stock) === 0 ? 'Нет в наличии' : `${listing.stock || 0} шт.`}
+            </p>
+          </div>
+          <div className="soft-card p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Visibility</p>
+            <p className="text-sm font-semibold text-slate-800 mt-2">{meta.publicLabel}</p>
+          </div>
+        </div>
+
+        {(vendorStatus === 'blocked' || vendorStatus === 'pending') && (
+          <div className="rounded-2xl mt-5 px-4 py-4 border" style={{ background: vendorStatus === 'blocked' ? '#fff7ed' : '#eff6ff', borderColor: vendorStatus === 'blocked' ? '#fed7aa' : '#bfdbfe' }}>
+            <p className="text-sm font-semibold" style={{ color: vendorStatus === 'blocked' ? '#9a3412' : '#1d4ed8' }}>
+              {vendorStatus === 'blocked' ? 'Листинг скрыт из buyer catalog' : 'Листинг удерживается до vendor approval'}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ListingEditor({ draft, setDraft, vendorStatus, quotaReached, onBack, onSaveDraft, onPublish }) {
+  const [errors, setErrors] = useState({});
+
+  function updateField(key, value) {
+    setDraft((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function toggleMedia(id) {
+    setDraft((prev) => ({
+      ...prev,
+      media: prev.media.includes(id) ? prev.media.filter((item) => item !== id) : [...prev.media, id],
+    }));
+  }
+
+  function validateForPublish() {
+    const nextErrors = {};
+    if (!draft.name.trim()) nextErrors.name = 'Название обязательно.';
+    if (!draft.category) nextErrors.category = 'Выберите категорию.';
+    if (!draft.price || Number(draft.price) <= 0) nextErrors.price = 'Цена должна быть больше нуля.';
+    if (draft.stock === '') nextErrors.stock = 'Добавьте остаток.';
+    if (!draft.description.trim()) nextErrors.description = 'Описание обязательно для publish.';
+    if ((draft.media || []).length === 0) nextErrors.media = 'Минимум один media asset обязателен.';
+    if (vendorStatus !== 'approved') nextErrors.vendor = 'Publish доступен только approved vendor.';
+    if (quotaReached) nextErrors.quota = 'Нужно снять лимит плана.';
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }
+
+  return (
+    <div className="flex-1 overflow-auto">
+      <div className="p-4 sm:p-6 space-y-6 fade-up">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <button className="btn-ghost mb-4" onClick={onBack}><Ic.arrowLeft /> Назад к каталогу</button>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Create listing</p>
+            <h1 className="text-2xl font-bold text-slate-900 mt-1">{draft.id ? 'Редактирование листинга' : 'Новый листинг'}</h1>
+            <p className="text-sm text-slate-500 mt-2 max-w-2xl">В launch scope редактор намеренно компактный: базовые поля, media minimum, stock и publish checks без variants и bulk import.</p>
+          </div>
+          <div className="max-w-xl">
+            <StepTags draft={draft} vendorStatus={vendorStatus} quotaReached={quotaReached} />
+          </div>
+        </div>
+
+        {(errors.vendor || errors.quota) && (
+          <div className="banner-info bg-amber-50 text-amber-800 border-amber-200">
+            <p className="text-sm font-semibold">{errors.vendor || errors.quota}</p>
+            <p className="text-xs mt-1">В текущем состоянии можно сохранить черновик, но publish-blocker останется активным.</p>
+          </div>
+        )}
+
+        <div className="grid xl:grid-cols-[1.1fr_0.9fr] gap-6 items-start">
+          <div className="space-y-6">
+            <div className="card p-5">
+              <p className="text-sm font-semibold text-slate-800">Базовые поля</p>
+              <div className="grid sm:grid-cols-2 gap-4 mt-4">
+                <div className="sm:col-span-2">
+                  <label className="input-label">Название листинга</label>
+                  <input className={`input-field ${errors.name ? 'error' : ''}`} value={draft.name} onChange={(e) => updateField('name', e.target.value)} />
+                  {errors.name && <div className="input-error">{errors.name}</div>}
+                </div>
+                <div>
+                  <label className="input-label">Категория</label>
+                  <select className={`select-field ${errors.category ? 'error' : ''}`} value={draft.category} onChange={(e) => updateField('category', e.target.value)}>
+                    {CATEGORY_OPTIONS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                  </select>
+                  {errors.category && <div className="input-error">{errors.category}</div>}
+                </div>
+                <div>
+                  <label className="input-label">Lead time</label>
+                  <input className="input-field" value={draft.leadTime} onChange={(e) => updateField('leadTime', e.target.value)} placeholder="3–5 дней" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="input-label">Описание</label>
+                  <textarea className={`input-field ${errors.description ? 'error' : ''}`} value={draft.description} onChange={(e) => updateField('description', e.target.value)} />
+                  <div className="input-hint">Для launch хватит plain text. Rich text, SEO и variants идут позже.</div>
+                  {errors.description && <div className="input-error">{errors.description}</div>}
+                </div>
+              </div>
+            </div>
+
+            <div className="card p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Media assets</p>
+                  <p className="text-xs text-slate-500 mt-1">Выберите минимум один media asset для публикации.</p>
+                </div>
+                <span className="status-badge" style={{ background: draft.media.length > 0 ? '#f0fdf4' : '#fff7ed', color: draft.media.length > 0 ? '#166534' : '#c2410c' }}>
+                  {draft.media.length > 0 ? `${draft.media.length} selected` : 'need at least 1'}
+                </span>
+              </div>
+              <div className="mt-4">
+                <MediaSelector selected={draft.media} toggleMedia={toggleMedia} />
+                {errors.media && <div className="input-error mt-3">{errors.media}</div>}
+              </div>
+            </div>
+
+            <div className="card p-5">
+              <p className="text-sm font-semibold text-slate-800">Цена и остаток</p>
+              <div className="grid sm:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="input-label">Цена</label>
+                  <input className={`input-field ${errors.price ? 'error' : ''}`} value={draft.price} onChange={(e) => updateField('price', e.target.value.replace(/[^\d]/g, ''))} />
+                  {errors.price && <div className="input-error">{errors.price}</div>}
+                </div>
+                <div>
+                  <label className="input-label">Остаток</label>
+                  <input className={`input-field ${errors.stock ? 'error' : ''}`} value={draft.stock} onChange={(e) => updateField('stock', e.target.value.replace(/[^\d]/g, ''))} />
+                  <div className="input-hint">`0` оставляет листинг публичным, но с out-of-stock badge.</div>
+                  {errors.stock && <div className="input-error">{errors.stock}</div>}
+                </div>
+                <div>
+                  <label className="input-label">Минимальный заказ</label>
+                  <input className="input-field" value={draft.minOrder} onChange={(e) => updateField('minOrder', e.target.value.replace(/[^\d]/g, ''))} />
+                </div>
+                <div>
+                  <label className="input-label">VAT</label>
+                  <select className="select-field" value={draft.vat} onChange={(e) => updateField('vat', e.target.value)}>
+                    <option value="0">Без НДС</option>
+                    <option value="10">10%</option>
+                    <option value="20">20%</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6 slide-in">
+            <VisibilityChecklist draft={draft} vendorStatus={vendorStatus} quotaReached={quotaReached} />
+            <BuyerPreview listing={draft} vendorStatus={vendorStatus} indexState="syncing" />
+
+            <div className="card p-5">
+              <p className="text-sm font-semibold text-slate-800">Действия</p>
+              <div className="grid gap-3 mt-4">
+                <button className="btn-ghost justify-center" onClick={onSaveDraft}>Сохранить черновик</button>
+                <button
+                  className="btn-primary justify-center"
+                  onClick={() => {
+                    if (validateForPublish()) onPublish();
+                  }}>
+                  <Ic.spark />
+                  Опубликовать листинг
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PublishSuccess({ listing, vendorStatus, onBackToCatalog, onEditAgain }) {
+  const [indexState, setIndexState] = useState(vendorStatus === 'approved' ? 'syncing' : 'hidden');
+
+  useEffect(() => {
+    if (vendorStatus !== 'approved') {
+      setIndexState('hidden');
+      return;
+    }
+    const timer = setTimeout(() => setIndexState('visible'), 1200);
+    return () => clearTimeout(timer);
+  }, [vendorStatus, listing.id]);
+
+  const meta = visibilityMeta({ ...listing, status: 'published' }, vendorStatus);
+
+  return (
+    <div className="flex-1 overflow-auto">
+      <div className="p-4 sm:p-6 space-y-6 fade-up">
+        <div className="grid xl:grid-cols-[0.92fr_1.08fr] gap-6 items-start">
+          <div className="card p-6 sm:p-7 text-center">
+            <div className="w-16 h-16 rounded-full bg-green-50 text-green-600 flex items-center justify-center mx-auto mb-5">
+              <Ic.check size={28} />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-green-600">Publish result</p>
+            <h1 className="text-3xl font-bold text-slate-900 mt-2">{meta.label}</h1>
+            <p className="text-sm text-slate-500 mt-3">Листинг <span className="font-semibold text-slate-700">{listing.name}</span> прошёл через vendor-side draft/publish flow и теперь имеет понятный public visibility state.</p>
+
+            <div className="grid grid-cols-1 gap-3 mt-8 text-left">
+              <div className="soft-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Lifecycle</p>
+                <p className="text-sm font-semibold text-slate-800 mt-2">Draft saved -> Publish clicked -> Catalog indexing -> Buyer-side visibility</p>
+              </div>
+              <div className="soft-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Updated</p>
+                <p className="text-sm font-semibold text-slate-800 mt-2">{listing.updatedAt}</p>
+              </div>
+              <div className="soft-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Public rule</p>
+                <p className="text-sm font-semibold text-slate-800 mt-2">{meta.publicLabel}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-3 mt-8">
+              <button className="btn-primary" onClick={onBackToCatalog}>Назад к каталогу</button>
+              <button className="btn-ghost" onClick={onEditAgain}>Редактировать ещё</button>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="card p-5">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Catalog indexing</p>
+                  <p className="text-xs text-slate-500 mt-1">FR-CAT-006 допускает задержку индексации, но запрещает indefinite invisibility.</p>
+                </div>
+                <span className="status-badge" style={{
+                  background: indexState === 'visible' ? '#f0fdf4' : indexState === 'syncing' ? '#eff6ff' : '#fff7ed',
+                  color: indexState === 'visible' ? '#166534' : indexState === 'syncing' ? '#1d4ed8' : '#b45309',
+                }}>
+                  {indexState === 'visible' ? 'indexed' : indexState === 'syncing' ? 'syncing' : 'hidden'}
+                </span>
+              </div>
+              <div className="mt-5 space-y-4">
+                {[
+                  { title: 'Черновик сохранён', state: true, desc: 'Vendor может вернуться без потери заполненных полей.' },
+                  { title: 'Публикация подтверждена', state: true, desc: 'Листинг получил published status в vendor workspace.' },
+                  { title: 'Каталог обновлён', state: indexState !== 'hidden', desc: indexState === 'visible' ? 'Buyer-side search уже возвращает позицию.' : 'Идёт обновление каталога.' },
+                ].map((item) => (
+                  <div key={item.title} className="check-row">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${item.state ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+                      {item.state ? <Ic.check size={14} /> : <span className="w-2 h-2 rounded-full bg-current pulse-dot" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{item.title}</p>
+                      <p className="text-xs text-slate-500 mt-1">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <BuyerPreview listing={listing} vendorStatus={vendorStatus} indexState={indexState} />
+
+            <div className="card p-5">
+              <p className="text-sm font-semibold text-slate-800">Связанные buyer / vendor прототипы</p>
+              <div className="grid gap-3 mt-4">
+                <a href="Vendora Search.html" className="soft-card p-4 flex items-center justify-between gap-3 hover:bg-white">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">B-2 Search And Selection</p>
+                    <p className="text-xs text-slate-500 mt-1">Проверяет, как published listing выглядит buyer-facing side.</p>
+                  </div>
+                  <Ic.arrowRight />
+                </a>
+                <a href="Vendora Vendor Dashboard.html" className="soft-card p-4 flex items-center justify-between gap-3 hover:bg-white">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">V-3 Incoming Order Handling</p>
+                    <p className="text-xs text-slate-500 mt-1">Следующий operational flow после появления товара в каталоге.</p>
+                  </div>
+                  <Ic.arrowRight />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#2455e8",
+  "brandName": "TechPro Solutions",
+  "vendorStatus": "approved",
+  "quotaReached": false
+}/*EDITMODE-END*/;
+
+function App() {
+  const tweakApi = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : null;
+  const [tweaks, setTweak] = Array.isArray(tweakApi) ? tweakApi : [TWEAK_DEFAULTS, () => {}];
+  const TweaksPanel = window.TweaksPanel;
+  const TweakSection = window.TweakSection;
+  const TweakColor = window.TweakColor;
+  const TweakText = window.TweakText;
+  const TweakToggle = window.TweakToggle;
+  const TweakSelect = window.TweakSelect;
+
+  const [view, setView] = useState('catalog');
+  const [filter, setFilter] = useState('all');
+  const [listings, setListings] = useState(INITIAL_LISTINGS);
+  const [draft, setDraft] = useState(EMPTY_LISTING);
+  const [publishedListing, setPublishedListing] = useState(null);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', tweaks.accentColor || '#2455e8');
+  }, [tweaks.accentColor]);
+
+  function startCreate() {
+    setDraft({ ...EMPTY_LISTING, id: null });
+    setView('editor');
+  }
+
+  function editListing(id) {
+    const found = listings.find((item) => item.id === id);
+    if (!found) return;
+    setDraft({
+      ...found,
+      price: String(found.price),
+      stock: String(found.stock),
+      minOrder: String(found.minOrder),
+    });
+    setView('editor');
+  }
+
+  function duplicateListing(id) {
+    const found = listings.find((item) => item.id === id);
+    if (!found) return;
+    setDraft({
+      ...found,
+      id: null,
+      name: `${found.name} — копия`,
+      status: 'draft',
+      updatedAt: '',
+      price: String(found.price),
+      stock: String(found.stock),
+      minOrder: String(found.minOrder),
+    });
+    setView('editor');
+  }
+
+  function saveDraft() {
+    const record = {
+      ...draft,
+      id: draft.id || `lst-${Date.now()}`,
+      price: Number(draft.price || 0),
+      stock: Number(draft.stock || 0),
+      minOrder: Number(draft.minOrder || 1),
+      status: 'draft',
+      updatedAt: currentTimestamp(),
+    };
+
+    setListings((prev) => {
+      const exists = prev.some((item) => item.id === record.id);
+      return exists ? prev.map((item) => item.id === record.id ? record : item) : [record, ...prev];
+    });
+    setDraft(record);
+    setView('catalog');
+    setFilter('draft');
+  }
+
+  function publishDraft() {
+    const record = {
+      ...draft,
+      id: draft.id || `lst-${Date.now()}`,
+      price: Number(draft.price || 0),
+      stock: Number(draft.stock || 0),
+      minOrder: Number(draft.minOrder || 1),
+      status: 'published',
+      updatedAt: currentTimestamp(),
+    };
+
+    setListings((prev) => {
+      const exists = prev.some((item) => item.id === record.id);
+      return exists ? prev.map((item) => item.id === record.id ? record : item) : [record, ...prev];
+    });
+    setPublishedListing(record);
+    setDraft(record);
+    setView('success');
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden" style={{ '--brand': tweaks.accentColor || '#2455e8' }}>
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header brandName={tweaks.brandName || 'TechPro Solutions'} vendorStatus={tweaks.vendorStatus} quotaReached={!!tweaks.quotaReached} view={view} />
+
+        {view === 'catalog' && (
+          <CatalogHome
+            listings={listings}
+            filter={filter}
+            setFilter={setFilter}
+            vendorStatus={tweaks.vendorStatus}
+            quotaReached={!!tweaks.quotaReached}
+            onCreate={startCreate}
+            onEdit={editListing}
+            onDuplicate={duplicateListing}
+          />
+        )}
+
+        {view === 'editor' && (
+          <ListingEditor
+            draft={draft}
+            setDraft={setDraft}
+            vendorStatus={tweaks.vendorStatus}
+            quotaReached={!!tweaks.quotaReached}
+            onBack={() => setView('catalog')}
+            onSaveDraft={saveDraft}
+            onPublish={publishDraft}
+          />
+        )}
+
+        {view === 'success' && publishedListing && (
+          <PublishSuccess
+            listing={publishedListing}
+            vendorStatus={tweaks.vendorStatus}
+            onBackToCatalog={() => {
+              setView('catalog');
+              setFilter('all');
+            }}
+            onEditAgain={() => setView('editor')}
+          />
+        )}
+      </div>
+
+      {TweaksPanel && TweakSection && TweakColor && TweakText && TweakSelect && TweakToggle && (
+        <TweaksPanel title="V-2 Tweaks">
+          <TweakSection label="Брендинг">
+            <TweakColor label="Цвет акцента" value={tweaks.accentColor} onChange={(value) => setTweak('accentColor', value)} />
+            <TweakText label="Vendor name" value={tweaks.brandName} onChange={(value) => setTweak('brandName', value)} />
+          </TweakSection>
+          <TweakSection label="Сценарий">
+            <TweakSelect
+              label="Vendor status"
+              value={tweaks.vendorStatus}
+              options={[
+                { value: 'approved', label: 'Approved' },
+                { value: 'pending', label: 'Pending review' },
+                { value: 'blocked', label: 'Blocked' },
+              ]}
+              onChange={(value) => setTweak('vendorStatus', value)}
+            />
+            <TweakToggle label="Quota reached" value={!!tweaks.quotaReached} onChange={(value) => setTweak('quotaReached', value)} />
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

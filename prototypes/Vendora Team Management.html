@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendora — Team Management V-4</title>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: #f1f4f9; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; color: #0f172a; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.28s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes slideIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+    .slide-in { animation: slideIn 0.3s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes pop { 0% { transform: scale(.88); opacity: 0; } 70% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+    .pop { animation: pop 0.34s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+    .pulse-dot { animation: pulse 1.8s ease infinite; }
+
+    .card { background: #fff; border-radius: 14px; border: 1px solid #e4e9f2; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+    .soft-card { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 14px; border: 1px solid #e7edf7; }
+
+    .btn-primary {
+      background: var(--brand,#2455e8); color: #fff; border: none; border-radius: 9px;
+      padding: 9px 18px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 7px; transition: filter .15s, box-shadow .15s, transform .1s;
+    }
+    .btn-primary:hover { filter: brightness(.88); box-shadow: 0 4px 14px color-mix(in srgb, var(--brand,#2455e8) 30%, transparent); }
+    .btn-primary:active { transform: scale(.97); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; filter: none; box-shadow: none; }
+
+    .btn-ghost {
+      background: transparent; color: #64748b; border: 1.5px solid #e2e8f0;
+      border-radius: 9px; padding: 8px 16px; font-size: 13px; font-weight: 500; font-family: inherit;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+      transition: border-color .15s, color .15s, background .15s;
+    }
+    .btn-ghost:hover { border-color: #94a3b8; color: #1e293b; background: #f8fafc; }
+
+    .btn-danger {
+      background: #fff; color: #ef4444; border: 1.5px solid #fecaca;
+      border-radius: 9px; padding: 8px 16px; font-size: 13px; font-weight: 500; font-family: inherit;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-danger:hover { background: #fef2f2; border-color: #ef4444; }
+
+    .input-field, .select-field {
+      width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 9px;
+      font-size: 13px; font-family: inherit; background: #fff; color: #1e293b;
+      transition: border-color .15s, box-shadow .15s; outline: none;
+    }
+    .input-field:focus, .select-field:focus { border-color: var(--brand,#2455e8); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand,#2455e8) 12%, transparent); }
+    .input-field.error, .select-field.error { border-color: #ef4444; }
+
+    .input-label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+    .input-error { margin-top: 5px; font-size: 11px; color: #ef4444; }
+    .input-hint { margin-top: 5px; font-size: 11px; color: #94a3b8; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+      border-radius: 9px; font-size: 13px; font-weight: 500; color: #64748b;
+      cursor: pointer; transition: background .15s, color .15s; white-space: nowrap;
+    }
+    .nav-item:hover { background: #f1f4f9; color: #1e293b; }
+    .nav-item.active { background: color-mix(in srgb, var(--brand,#2455e8) 10%, white); color: var(--brand,#2455e8); font-weight: 600; }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: .02em;
+    }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+      border-radius: 999px; border: 1.5px solid #e2e8f0; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all .15s; background: #fff; color: #475569;
+    }
+    .chip.active { border-color: var(--brand,#2455e8); background: color-mix(in srgb, var(--brand,#2455e8) 8%, white); color: var(--brand,#2455e8); }
+
+    .member-row {
+      display: grid; grid-template-columns: minmax(0, 1.15fr) 130px 150px 150px;
+      align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #f1f4f9;
+    }
+    .member-row:last-child { border-bottom: none; }
+    .member-row:hover { background: #f8fafc; }
+
+    .permission-row {
+      display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(4, 100px);
+      gap: 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid #f1f4f9;
+    }
+    .permission-row:last-child { border-bottom: none; }
+
+    .metric-card { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border: 1px solid #e7edf7; border-radius: 14px; padding: 16px 18px; }
+
+    .banner { border-radius: 14px; padding: 14px 16px; border: 1px solid; }
+
+    .role-card {
+      border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 13px 14px;
+      cursor: pointer; transition: border-color .15s, background .15s, box-shadow .15s; background: #fff;
+    }
+    .role-card:hover { border-color: color-mix(in srgb, var(--brand,#2455e8) 45%, #e2e8f0); }
+    .role-card.selected { border-color: var(--brand,#2455e8); background: color-mix(in srgb, var(--brand,#2455e8) 5%, white); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand,#2455e8) 10%, transparent); }
+
+    .notice-row {
+      display: flex; gap: 10px; padding: 11px 0; border-bottom: 1px solid #eef2f7;
+    }
+    .notice-row:last-child { border-bottom: none; }
+
+    @media(max-width: 1100px) {
+      .sidebar { display: none; }
+      .member-row { grid-template-columns: 1fr; gap: 8px; }
+      .permission-row { grid-template-columns: 1fr; }
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const ROLE_META = {
+  owner: {
+    label: 'Owner',
+    color: '#2455e8',
+    bg: '#eef5ff',
+    desc: 'Полный контроль над workspace, payout-sensitive paths и team changes.',
+  },
+  admin: {
+    label: 'Admin',
+    color: '#7c3aed',
+    bg: '#f5f3ff',
+    desc: 'Широкое tenant управление без смены owner и payout ownership.',
+  },
+  manager: {
+    label: 'Manager',
+    color: '#0891b2',
+    bg: '#ecfeff',
+    desc: 'Работа с каталогом, заказами и dispute response без team ownership.',
+  },
+  viewer: {
+    label: 'Viewer',
+    color: '#64748b',
+    bg: '#f8fafc',
+    desc: 'Только чтение tenant state, без мутаций заказов и денег.',
+  },
+};
+
+const MEMBERS_SEED = [
+  {
+    id: 'm1',
+    name: 'Антон Орлов',
+    email: 'anton@techpro.ru',
+    role: 'owner',
+    status: 'active',
+    lastActive: 'сегодня, 11:42',
+    source: 'Self-created vendor owner',
+  },
+  {
+    id: 'm2',
+    name: 'Мария Соколова',
+    email: 'm.sokolova@techpro.ru',
+    role: 'manager',
+    status: 'active',
+    lastActive: 'сегодня, 09:18',
+    source: 'Приглашена owner',
+  },
+  {
+    id: 'm3',
+    name: 'Игорь Белкин',
+    email: 'i.belkin@techpro.ru',
+    role: 'viewer',
+    status: 'active',
+    lastActive: 'вчера, 18:07',
+    source: 'Finance observer',
+  },
+];
+
+const INVITES_SEED = [
+  {
+    id: 'i1',
+    email: 'ops@techpro.ru',
+    role: 'admin',
+    status: 'pending',
+    expiresAt: '09.05.2026 23:59',
+    sentAt: '07.05.2026 10:20',
+  },
+  {
+    id: 'i2',
+    email: 'warehouse@techpro.ru',
+    role: 'viewer',
+    status: 'expired',
+    expiresAt: '05.05.2026 23:59',
+    sentAt: '03.05.2026 14:05',
+  },
+];
+
+const PLAN_LIMITS = {
+  starter: { label: 'Starter', members: 1, note: 'Launch-friendly owner-only baseline' },
+  growth: { label: 'Growth', members: 5, note: 'Поддерживает небольшой self-serve team' },
+  scale: { label: 'Scale', members: 20, note: 'Полный team-aware workspace' },
+};
+
+const PERMISSIONS = [
+  { key: 'team', label: 'List current members', owner: 'read', admin: 'read', manager: 'no', viewer: 'no' },
+  { key: 'invite', label: 'Invite / change role / revoke', owner: 'write', admin: 'no', manager: 'no', viewer: 'no' },
+  { key: 'listings', label: 'Create/edit listings', owner: 'write', admin: 'write', manager: 'write', viewer: 'no' },
+  { key: 'publish', label: 'Publish/unpublish listing', owner: 'write', admin: 'write', manager: 'write', viewer: 'no' },
+  { key: 'orders', label: 'Confirm / ship / cancel orders', owner: 'write', admin: 'write', manager: 'write', viewer: 'no' },
+  { key: 'balance', label: 'View balance / payout status', owner: 'read', admin: 'read', manager: 'read', viewer: 'no' },
+];
+
+const Ic = {
+  plus: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  check: ({ size=14 }) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3L11.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  x: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
+  chevronRight: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  shield: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L2 4v4c0 3.5 2.5 6 6 7 3.5-1 6-3.5 6-7V4L8 1.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M5.5 8l2 2L11 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  users: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.4"/><circle cx="11.5" cy="6.5" r="1.7" stroke="currentColor" strokeWidth="1.2"/><path d="M2.5 13c.5-2 2.1-3 3.5-3s3 .9 3.5 3M9.5 12.5c.3-1.2 1.2-1.8 2.1-1.8.9 0 1.8.6 2.1 1.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  mail: () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.8" stroke="currentColor" strokeWidth="1.4"/><path d="M3 4.5l5 3.5 5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  refresh: () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 2v4H8M2 12V8h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 6A6 6 0 102 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  lock: () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="3" y="7" width="9" height="6" rx="1.8" stroke="currentColor" strokeWidth="1.4"/><path d="M5 7V5.8a2.5 2.5 0 015 0V7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  support: () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 11.5V7.5a4.5 4.5 0 119 0v4" stroke="currentColor" strokeWidth="1.4"/><rect x="1.5" y="8" width="2.5" height="3.5" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="11" y="8" width="2.5" height="3.5" rx="1" stroke="currentColor" strokeWidth="1.2"/><path d="M7.5 13.2h1.8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>,
+};
+
+function roleBadge(role) {
+  const meta = ROLE_META[role];
+  return (
+    <span className="status-badge" style={{ background: meta.bg, color: meta.color }}>
+      <span className="w-1.5 h-1.5 rounded-full" style={{ background: meta.color }} />
+      {meta.label}
+    </span>
+  );
+}
+
+function modeMeta(mode) {
+  if (mode === 'launch') return { label: 'Launch owner-only', color: '#1d4ed8', bg: '#eff6ff' };
+  if (mode === 'target') return { label: 'Target self-serve', color: '#166534', bg: '#f0fdf4' };
+  return { label: 'Plan limit reached', color: '#c2410c', bg: '#fff7ed' };
+}
+
+function Header({ vendorName, plan, mode, openInvite, teamCount }) {
+  const meta = modeMeta(mode);
+  return (
+    <header className="bg-white border-b border-slate-100 sticky top-0 z-30">
+      <div className="px-4 sm:px-5 py-3 flex items-center gap-3 flex-wrap">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold shadow-sm" style={{ background: 'var(--brand,#2455e8)' }}>V</div>
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-slate-900 text-sm">{vendorName}</span>
+            <span className="status-badge" style={{ background: '#eef2ff', color: 'var(--brand,#2455e8)' }}>V-4</span>
+            <span className="status-badge" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
+            <span className="status-badge" style={{ background: '#f8fafc', color: '#64748b' }}>{plan.label} · {teamCount}/{plan.members}</span>
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">Vendor settings → team access, roles and tenant isolation</p>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <a href="Vendora Vendor Dashboard.html" className="btn-ghost">V-3 Orders</a>
+          <button className="btn-primary" onClick={openInvite}><Ic.plus /> Пригласить</button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Sidebar() {
+  const items = [
+    { id: 'overview', label: 'Обзор', icon: '🏠' },
+    { id: 'catalog', label: 'Каталог', icon: '🛍️' },
+    { id: 'orders', label: 'Заказы', icon: '📦' },
+    { id: 'payments', label: 'Выплаты', icon: '💰' },
+    { id: 'settings', label: 'Настройки', icon: '⚙️', active: true },
+  ];
+  return (
+    <aside className="sidebar w-[250px] border-r border-slate-100 bg-white p-4 flex-shrink-0">
+      <div className="card p-4 mb-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Settings</p>
+        <p className="text-sm font-semibold text-slate-800 mt-2">Team access остаётся owner-sensitive и tenant-bound.</p>
+      </div>
+      <nav className="space-y-1">
+        {items.map((item) => (
+          <div key={item.id} className={`nav-item ${item.active ? 'active' : ''}`}>
+            <span>{item.icon}</span>
+            {item.label}
+          </div>
+        ))}
+      </nav>
+      <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Section</p>
+        <p className="text-sm font-semibold text-slate-800 mt-2">Team Management</p>
+        <p className="text-xs text-slate-500 mt-2">Target-first flow. Launch может жить без полноценного self-serve UI.</p>
+      </div>
+    </aside>
+  );
+}
+
+function ModeSwitcher({ mode, setMode }) {
+  const options = [
+    { id: 'launch', label: 'Launch now', desc: 'Owner-only + admin-assisted' },
+    { id: 'target', label: 'Target self-serve', desc: 'Invite, roles, revoke' },
+    { id: 'limit', label: 'Limit path', desc: 'Quota/upgrade prompt' },
+  ];
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((opt) => (
+        <button key={opt.id} className={`chip ${mode === opt.id ? 'active' : ''}`} onClick={() => setMode(opt.id)}>
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function LaunchBanner({ mode, plan, activeMembers, pendingCount, onRequestAdminSeat }) {
+  if (mode === 'launch') {
+    return (
+      <div className="banner bg-blue-50 text-blue-800 border-blue-200">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold">Launch model: single owner by default</p>
+            <p className="text-xs mt-1 max-w-2xl">На запуске vendor workspace может оставаться owner-only. Если нужен второй оператор до полноценного team UI, platform admin выдаёт доступ вручную, не ломая tenant boundary.</p>
+          </div>
+          <button className="btn-ghost" onClick={onRequestAdminSeat}><Ic.support /> Запросить ручной доступ</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'limit') {
+    return (
+      <div className="banner bg-amber-50 text-amber-800 border-amber-200">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold">Plan-based member limit reached</p>
+            <p className="text-xs mt-1">Текущее число seats: {activeMembers + pendingCount}/{plan.members}. Новый invite должен вести в upgrade prompt или manual commercial path.</p>
+          </div>
+          <button className="btn-ghost">Открыть upgrade path</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="banner bg-green-50 text-green-800 border-green-200">
+      <p className="text-sm font-semibold">Self-serve target preview</p>
+      <p className="text-xs mt-1">Этот экран моделирует ту часть `V-4`, которая должна появиться в `R2/R3`: invite TTL, role change, revoke и plan limits.</p>
+    </div>
+  );
+}
+
+function TeamMetrics({ plan, activeMembers, pendingCount, mode }) {
+  const seatsUsed = activeMembers + pendingCount;
+  return (
+    <div className="grid md:grid-cols-3 gap-4">
+      <div className="metric-card">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Active members</p>
+        <p className="text-3xl font-bold text-slate-900 mt-2">{activeMembers}</p>
+        <p className="text-xs text-slate-500 mt-2">Текущие участники внутри tenant</p>
+      </div>
+      <div className="metric-card">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Invites in flight</p>
+        <p className="text-3xl font-bold text-slate-900 mt-2">{pendingCount}</p>
+        <p className="text-xs text-slate-500 mt-2">Pending или expired invite links</p>
+      </div>
+      <div className="metric-card">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Seat usage</p>
+        <p className="text-3xl font-bold text-slate-900 mt-2">{seatsUsed}/{plan.members}</p>
+        <p className="text-xs text-slate-500 mt-2">{mode === 'launch' ? 'Launch baseline может вообще не показывать self-serve seats' : plan.note}</p>
+      </div>
+    </div>
+  );
+}
+
+function MembersTable({ members, mode, onChangeRole, onRemove }) {
+  return (
+    <div className="card p-0 overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Участники workspace</p>
+          <p className="text-xs text-slate-500 mt-1">`owner/admin/manager/viewer` показаны как target role model, даже если launch остаётся owner-heavy.</p>
+        </div>
+        <span className="status-badge" style={{ background: '#f8fafc', color: '#64748b' }}><Ic.users /> tenant-bound roster</span>
+      </div>
+      <div className="hidden xl:grid member-row bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <div>Member</div>
+        <div>Role</div>
+        <div>Status</div>
+        <div>Actions</div>
+      </div>
+      {members.map((member) => (
+        <div key={member.id} className="member-row">
+          <div className="min-w-0">
+            <div className="flex items-start gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-700 font-semibold shrink-0">
+                {member.name.split(' ').map((part) => part[0]).slice(0,2).join('')}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900">{member.name}</p>
+                <p className="text-xs text-slate-500 mt-1">{member.email}</p>
+                <p className="text-xs text-slate-400 mt-1">{member.source}</p>
+              </div>
+            </div>
+          </div>
+          <div>{roleBadge(member.role)}</div>
+          <div>
+            <span className="status-badge" style={{ background: '#f0fdf4', color: '#166534' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-current" />
+              active
+            </span>
+            <div className="text-xs text-slate-400 mt-2">{member.lastActive}</div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <button className="btn-ghost !px-3 !py-1.5 !text-xs" disabled={mode === 'launch' || member.role === 'owner'} onClick={() => onChangeRole(member.id)}>
+              Сменить роль
+            </button>
+            <button className="btn-danger !px-3 !py-1.5 !text-xs" disabled={mode === 'launch' || member.role === 'owner'} onClick={() => onRemove(member.id)}>
+              Удалить
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InvitesPanel({ invites, mode, onResend, onRevoke }) {
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Pending invites</p>
+          <p className="text-xs text-slate-500 mt-1">Invite TTL и revoke/resend важны для `R2`, но UI должен уже намекать на них.</p>
+        </div>
+        <span className="status-badge" style={{ background: '#eef2ff', color: 'var(--brand,#2455e8)' }}>{invites.length} invites</span>
+      </div>
+      <div className="space-y-4 mt-4">
+        {invites.map((invite) => {
+          const expired = invite.status === 'expired';
+          return (
+            <div key={invite.id} className="soft-card p-4">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-slate-800">{invite.email}</p>
+                    {roleBadge(invite.role)}
+                    <span className="status-badge" style={{ background: expired ? '#fef2f2' : '#eff6ff', color: expired ? '#ef4444' : '#1d4ed8' }}>
+                      {expired ? 'expired' : 'pending'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">Sent: {invite.sentAt} · Expires: {invite.expiresAt}</p>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <button className="btn-ghost !px-3 !py-1.5 !text-xs" disabled={mode === 'launch'} onClick={() => onResend(invite.id)}>
+                    <Ic.refresh /> Resend
+                  </button>
+                  <button className="btn-danger !px-3 !py-1.5 !text-xs" disabled={mode === 'launch'} onClick={() => onRevoke(invite.id)}>
+                    <Ic.x /> Revoke
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PermissionMatrix() {
+  const columns = ['owner', 'admin', 'manager', 'viewer'];
+  function renderCell(value) {
+    if (value === 'write') return <span className="status-badge" style={{ background: '#f0fdf4', color: '#166534' }}>write</span>;
+    if (value === 'read') return <span className="status-badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}>read</span>;
+    return <span className="status-badge" style={{ background: '#f8fafc', color: '#64748b' }}>no</span>;
+  }
+  return (
+    <div className="card p-0 overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-100">
+        <p className="text-sm font-semibold text-slate-800">Role enforcement snapshot</p>
+        <p className="text-xs text-slate-500 mt-1">Матрица отражает target role model из `access_matrix.md` и подчёркивает, что viewer не мутирует orders или money state.</p>
+      </div>
+      <div className="hidden xl:grid permission-row bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <div>Action</div>
+        {columns.map((col) => <div key={col}>{ROLE_META[col].label}</div>)}
+      </div>
+      {PERMISSIONS.map((perm) => (
+        <div key={perm.key} className="permission-row">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">{perm.label}</p>
+          </div>
+          {columns.map((col) => <div key={col}>{renderCell(perm[col])}</div>)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SecurityNotes() {
+  return (
+    <div className="card p-5">
+      <p className="text-sm font-semibold text-slate-800">Tenant and security notes</p>
+      <div className="mt-4">
+        {[
+          'Любой приглашённый участник видит только данные своего vendor tenant.',
+          'Viewer-like роль не должна менять заказы, листинги или money-sensitive state.',
+          'До полноценного self-serve flow launch может оставаться owner-only без отдельного team UI.',
+          'Platform admin может вручную выдать доступ, но не должен ломать tenant boundary.',
+        ].map((text) => (
+          <div key={text} className="notice-row">
+            <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><Ic.shield /></div>
+            <p className="text-sm text-slate-700">{text}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InviteModal({ open, onClose, onSubmit, mode, limitReached }) {
+  const [form, setForm] = useState({ email: 'ops@techpro.ru', role: 'admin' });
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (!open) {
+      setErrors({});
+      setForm({ email: 'ops@techpro.ru', role: 'admin' });
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  function submit() {
+    const nextErrors = {};
+    if (!/\S+@\S+\.\S+/.test(form.email)) nextErrors.email = 'Нужен валидный email.';
+    if (!form.role) nextErrors.role = 'Выберите роль.';
+    if (mode === 'launch') nextErrors.mode = 'В launch owner-only модели self-serve invite отключён.';
+    if (limitReached) nextErrors.limit = 'Seat limit reached. Нужен upgrade или manual path.';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length === 0) onSubmit(form);
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-sm p-4 flex items-center justify-center">
+      <div className="card w-full max-w-2xl p-6 pop">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Invite teammate</p>
+            <h2 className="text-2xl font-bold text-slate-900 mt-1">Приглашение в vendor workspace</h2>
+            <p className="text-sm text-slate-500 mt-2">Target flow: owner отправляет invite link с TTL, после чего может resend или revoke приглашение.</p>
+          </div>
+          <button className="btn-ghost !px-3 !py-1.5" onClick={onClose}><Ic.x /></button>
+        </div>
+
+        {(errors.mode || errors.limit) && (
+          <div className="banner bg-amber-50 text-amber-800 border-amber-200 mt-5">
+            <p className="text-sm font-semibold">{errors.mode || errors.limit}</p>
+            <p className="text-xs mt-1">Этот blocking state показан намеренно как часть alternative paths для `V-4`.</p>
+          </div>
+        )}
+
+        <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-6 mt-6">
+          <div className="space-y-4">
+            <div>
+              <label className="input-label">Email сотрудника</label>
+              <input className={`input-field ${errors.email ? 'error' : ''}`} value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} />
+              {errors.email && <div className="input-error">{errors.email}</div>}
+            </div>
+            <div>
+              <label className="input-label">Роль</label>
+              <div className="grid gap-3 mt-2">
+                {Object.entries(ROLE_META).map(([key, meta]) => (
+                  <button key={key} className={`role-card ${form.role === key ? 'selected' : ''}`} onClick={() => setForm((prev) => ({ ...prev, role: key }))}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-slate-800">{meta.label}</p>
+                      {roleBadge(key)}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2 text-left">{meta.desc}</p>
+                  </button>
+                ))}
+              </div>
+              {errors.role && <div className="input-error">{errors.role}</div>}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="soft-card p-4">
+              <p className="text-sm font-semibold text-slate-800">Invite behavior</p>
+              <div className="mt-4 space-y-3 text-sm text-slate-600">
+                <div className="flex items-start gap-3"><span>🔗</span><span>Link TTL: 72 часа для примера, затем invite переходит в expired state.</span></div>
+                <div className="flex items-start gap-3"><span>🏷️</span><span>Role закрепляется в invite payload и применяется после accept.</span></div>
+                <div className="flex items-start gap-3"><span>🧱</span><span>Invite всегда привязан к текущему vendor tenant и не может утечь в другой workspace.</span></div>
+              </div>
+            </div>
+            <div className="soft-card p-4">
+              <p className="text-sm font-semibold text-slate-800">Launch fallback</p>
+              <p className="text-xs text-slate-500 mt-2">Если self-serve team UI ещё не включён, owner отправляет запрос platform admin вместо прямого invite.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3 mt-7">
+          <button className="btn-primary" onClick={submit}><Ic.mail /> Отправить приглашение</button>
+          <button className="btn-ghost" onClick={onClose}>Закрыть</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SupportDrawer({ open, onClose }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-30 bg-slate-950/25 backdrop-blur-sm p-4 flex items-center justify-end">
+      <div className="card w-full max-w-md h-full max-h-[100vh] p-6 slide-in overflow-auto">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Admin-assisted path</p>
+            <h2 className="text-2xl font-bold text-slate-900 mt-1">Запросить второй доступ</h2>
+          </div>
+          <button className="btn-ghost !px-3 !py-1.5" onClick={onClose}><Ic.x /></button>
+        </div>
+        <div className="space-y-4 mt-6">
+          <div className="soft-card p-4">
+            <p className="text-sm font-semibold text-slate-800">Почему это существует</p>
+            <p className="text-xs text-slate-500 mt-2">Journey `V-4` допускает launch без dedicated team UI. Здесь owner формирует manual request platform admin.</p>
+          </div>
+          <div className="soft-card p-4">
+            <p className="text-sm font-semibold text-slate-800">Что уйдёт администратору</p>
+            <div className="mt-3 space-y-3 text-sm text-slate-600">
+              <div>Vendor: <span className="font-semibold text-slate-800">TechPro Solutions</span></div>
+              <div>Requested access: <span className="font-semibold text-slate-800">manager</span></div>
+              <div>Reason: <span className="font-semibold text-slate-800">Нужен отдельный оператор для каталога и order queue</span></div>
+            </div>
+          </div>
+          <div className="banner bg-blue-50 text-blue-800 border-blue-200">
+            <p className="text-sm font-semibold">Tenant boundary остаётся строгим</p>
+            <p className="text-xs mt-1">Даже manual-issued доступ должен быть scoped только к текущему vendor tenant.</p>
+          </div>
+          <button className="btn-primary w-full justify-center"><Ic.support /> Отправить admin request</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#2455e8",
+  "vendorName": "TechPro Solutions",
+  "workspaceMode": "launch",
+  "planTier": "growth",
+  "showExpiredInvite": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const tweakApi = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : null;
+  const [tweaks, setTweak] = Array.isArray(tweakApi) ? tweakApi : [TWEAK_DEFAULTS, () => {}];
+  const TweaksPanel = window.TweaksPanel;
+  const TweakSection = window.TweakSection;
+  const TweakColor = window.TweakColor;
+  const TweakText = window.TweakText;
+  const TweakSelect = window.TweakSelect;
+  const TweakToggle = window.TweakToggle;
+
+  const [mode, setMode] = useState(TWEAK_DEFAULTS.workspaceMode);
+  const [members, setMembers] = useState(MEMBERS_SEED);
+  const [invites, setInvites] = useState(INVITES_SEED);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', tweaks.accentColor || '#2455e8');
+  }, [tweaks.accentColor]);
+
+  useEffect(() => {
+    setMode(tweaks.workspaceMode || 'launch');
+  }, [tweaks.workspaceMode]);
+
+  const plan = PLAN_LIMITS[tweaks.planTier] || PLAN_LIMITS.growth;
+  const visibleInvites = invites.filter((invite) => tweaks.showExpiredInvite ? true : invite.status !== 'expired');
+  const pendingCount = visibleInvites.filter((invite) => invite.status === 'pending').length;
+  const activeMembers = members.length;
+  const limitReached = activeMembers + pendingCount >= plan.members;
+
+  function handleInvite(form) {
+    setInvites((prev) => [
+      {
+        id: `i${Date.now()}`,
+        email: form.email,
+        role: form.role,
+        status: 'pending',
+        expiresAt: '10.05.2026 23:59',
+        sentAt: '07.05.2026 19:15',
+      },
+      ...prev,
+    ]);
+    setInviteOpen(false);
+  }
+
+  function changeRole(id) {
+    setMembers((prev) => prev.map((member) => {
+      if (member.id !== id) return member;
+      const nextRole = member.role === 'manager' ? 'admin' : member.role === 'admin' ? 'viewer' : 'manager';
+      return { ...member, role: nextRole };
+    }));
+  }
+
+  function removeMember(id) {
+    setMembers((prev) => prev.filter((member) => member.id !== id));
+  }
+
+  function resendInvite(id) {
+    setInvites((prev) => prev.map((invite) => invite.id === id
+      ? { ...invite, status: 'pending', sentAt: '07.05.2026 19:18', expiresAt: '10.05.2026 23:59' }
+      : invite));
+  }
+
+  function revokeInvite(id) {
+    setInvites((prev) => prev.filter((invite) => invite.id !== id));
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden" style={{ '--brand': tweaks.accentColor || '#2455e8' }}>
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-50">
+        <Header
+          vendorName={tweaks.vendorName || 'TechPro Solutions'}
+          plan={plan}
+          mode={mode}
+          teamCount={activeMembers + pendingCount}
+          openInvite={() => setInviteOpen(true)}
+        />
+
+        <main className="flex-1 overflow-auto p-4 sm:p-6 space-y-6 fade-up">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Settings → Team</p>
+              <h1 className="text-2xl font-bold text-slate-900 mt-1">Управление командой продавца</h1>
+              <p className="text-sm text-slate-500 mt-2 max-w-3xl">Прототип намеренно соединяет два слоя: честный launch baseline с owner-only моделью и target self-serve surface с ролями, invite TTL, revoke/resend и plan limits.</p>
+            </div>
+            <ModeSwitcher mode={mode} setMode={(next) => { setMode(next); setTweak('workspaceMode', next); }} />
+          </div>
+
+          <LaunchBanner
+            mode={mode}
+            plan={plan}
+            activeMembers={activeMembers}
+            pendingCount={pendingCount}
+            onRequestAdminSeat={() => setSupportOpen(true)}
+          />
+
+          <TeamMetrics
+            plan={plan}
+            activeMembers={activeMembers}
+            pendingCount={pendingCount}
+            mode={mode}
+          />
+
+          <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6 items-start">
+            <div className="space-y-6">
+              <MembersTable
+                members={members}
+                mode={mode}
+                onChangeRole={changeRole}
+                onRemove={removeMember}
+              />
+              <PermissionMatrix />
+            </div>
+
+            <div className="space-y-6 slide-in">
+              <InvitesPanel
+                invites={visibleInvites}
+                mode={mode}
+                onResend={resendInvite}
+                onRevoke={revokeInvite}
+              />
+              <SecurityNotes />
+              <div className="card p-5">
+                <p className="text-sm font-semibold text-slate-800">Связанные прототипы</p>
+                <div className="grid gap-3 mt-4">
+                  <a href="Vendora Vendor Listing Creation.html" className="soft-card p-4 flex items-center justify-between gap-3 hover:bg-white">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">V-2 Listing Creation</p>
+                      <p className="text-xs text-slate-500 mt-1">Manager/Admin роли в target-модели должны уметь работать с catalog drafts.</p>
+                    </div>
+                    <Ic.chevronRight />
+                  </a>
+                  <a href="Vendora Vendor Dashboard.html" className="soft-card p-4 flex items-center justify-between gap-3 hover:bg-white">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">V-3 Order Handling</p>
+                      <p className="text-xs text-slate-500 mt-1">Viewer не мутирует заказы; manager/admin могут работать с order queue.</p>
+                    </div>
+                    <Ic.chevronRight />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <InviteModal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        onSubmit={handleInvite}
+        mode={mode}
+        limitReached={mode === 'limit' || limitReached}
+      />
+
+      <SupportDrawer
+        open={supportOpen}
+        onClose={() => setSupportOpen(false)}
+      />
+
+      {TweaksPanel && TweakSection && TweakColor && TweakText && TweakSelect && TweakToggle && (
+        <TweaksPanel title="V-4 Tweaks">
+          <TweakSection label="Брендинг">
+            <TweakColor label="Цвет акцента" value={tweaks.accentColor} onChange={(value) => setTweak('accentColor', value)} />
+            <TweakText label="Vendor name" value={tweaks.vendorName} onChange={(value) => setTweak('vendorName', value)} />
+          </TweakSection>
+          <TweakSection label="Сценарий">
+            <TweakSelect
+              label="Workspace mode"
+              value={tweaks.workspaceMode}
+              options={[
+                { value: 'launch', label: 'Launch owner-only' },
+                { value: 'target', label: 'Target self-serve' },
+                { value: 'limit', label: 'Limit reached' },
+              ]}
+              onChange={(value) => setTweak('workspaceMode', value)}
+            />
+            <TweakSelect
+              label="Plan tier"
+              value={tweaks.planTier}
+              options={[
+                { value: 'starter', label: 'Starter' },
+                { value: 'growth', label: 'Growth' },
+                { value: 'scale', label: 'Scale' },
+              ]}
+              onChange={(value) => setTweak('planTier', value)}
+            />
+            <TweakToggle label="Show expired invite" value={!!tweaks.showExpiredInvite} onChange={(value) => setTweak('showExpiredInvite', value)} />
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendora — Dispute Flow B-5</title>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin:0; background:#f1f4f9; font-family:'Inter',system-ui,sans-serif; min-height:100vh; }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .fade-up { animation: fadeUp .28s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes slideLeft { from{opacity:0;transform:translateX(18px)} to{opacity:1;transform:translateX(0)} }
+    .slide-left { animation: slideLeft .3s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes pop { 0%{transform:scale(.85);opacity:0} 70%{transform:scale(1.04)} 100%{transform:scale(1);opacity:1} }
+    .pop { animation: pop .38s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .spinner { animation: spin .7s linear infinite; }
+
+    @keyframes msgIn { from{opacity:0;transform:translateY(6px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+    .msg-in { animation: msgIn .22s ease both; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .pulse-dot { animation: pulse 1.8s ease infinite; }
+
+    .card { background:#fff; border-radius:14px; border:1px solid #e4e9f2; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+
+    .btn-primary {
+      background:var(--brand,#2455e8); color:#fff; border:none; border-radius:9px;
+      padding:10px 20px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;
+      display:inline-flex; align-items:center; gap:7px;
+      transition:filter .15s, box-shadow .15s, transform .1s;
+    }
+    .btn-primary:hover { filter:brightness(.88); box-shadow:0 4px 14px color-mix(in srgb,var(--brand,#2455e8) 30%,transparent); }
+    .btn-primary:active { transform:scale(.97); }
+    .btn-primary:disabled { opacity:.5; cursor:not-allowed; filter:none; box-shadow:none; }
+
+    .btn-ghost {
+      background:transparent; color:#64748b; border:1.5px solid #e2e8f0;
+      border-radius:9px; padding:9px 16px; font-size:13px; font-weight:500; font-family:inherit;
+      cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+      transition:border-color .15s, color .15s, background .15s;
+    }
+    .btn-ghost:hover { border-color:#94a3b8; color:#1e293b; background:#f8fafc; }
+
+    .btn-success {
+      background:#16a34a; color:#fff; border:none; border-radius:9px;
+      padding:10px 20px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;
+      display:inline-flex; align-items:center; gap:7px;
+      transition:filter .15s, transform .1s;
+    }
+    .btn-success:hover { filter:brightness(.88); }
+
+    .btn-danger {
+      background:#fff; color:#ef4444; border:1.5px solid #fecaca;
+      border-radius:9px; padding:9px 16px; font-size:13px; font-weight:500; font-family:inherit;
+      cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+      transition:background .15s, border-color .15s;
+    }
+    .btn-danger:hover { background:#fef2f2; border-color:#ef4444; }
+
+    .input-field {
+      width:100%; padding:9px 13px; border:1.5px solid #e2e8f0; border-radius:9px;
+      font-size:13px; font-family:inherit; background:#fff; color:#1e293b;
+      transition:border-color .15s, box-shadow .15s; outline:none;
+    }
+    .input-field:focus { border-color:var(--brand,#2455e8); box-shadow:0 0 0 3px color-mix(in srgb,var(--brand,#2455e8) 12%,transparent); }
+    .input-field.error { border-color:#ef4444; }
+    textarea.input-field { resize:vertical; min-height:90px; }
+
+    .chip {
+      display:inline-flex; align-items:center; gap:5px; padding:5px 12px;
+      border-radius:20px; border:1.5px solid #e2e8f0; font-size:12px; font-weight:500;
+      cursor:pointer; transition:all .15s; background:#fff; color:#475569;
+    }
+    .chip:hover { border-color:var(--brand,#2455e8); color:var(--brand,#2455e8); }
+    .chip.active { border-color:var(--brand,#2455e8); background:color-mix(in srgb,var(--brand,#2455e8) 8%,white); color:var(--brand,#2455e8); font-weight:600; }
+
+    .upload-zone {
+      border:2px dashed #e2e8f0; border-radius:12px; padding:20px;
+      text-align:center; cursor:pointer; transition:border-color .2s, background .2s; background:#fafbfc;
+    }
+    .upload-zone:hover { border-color:var(--brand,#2455e8); background:color-mix(in srgb,var(--brand,#2455e8) 4%,white); }
+
+    /* Role switcher */
+    .role-btn {
+      flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:600;
+      cursor:pointer; transition:all .15s; border:none; font-family:inherit;
+    }
+    .role-btn.active { color:#fff; }
+    .role-btn:not(.active) { background:transparent; color:#64748b; }
+
+    /* Message bubbles */
+    .bubble-buyer { background:var(--brand,#2455e8); color:#fff; border-radius:16px 16px 4px 16px; }
+    .bubble-vendor { background:#f1f4f9; color:#1e293b; border-radius:16px 16px 16px 4px; }
+    .bubble-platform { background:#fffbeb; color:#78350f; border-radius:12px; border:1px solid #fde68a; }
+    .bubble-system { background:#f8fafc; color:#64748b; border-radius:10px; border:1px solid #e8edf4; font-size:12px; }
+
+    /* Timeline */
+    .tl-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+
+    .status-pill {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+
+const DISPUTE_REASONS = [
+  { id:'not_received',   icon:'📭', label:'Товар не получен',         desc:'Прошёл срок доставки, товар не поступил' },
+  { id:'wrong_item',     icon:'🔄', label:'Пришёл не тот товар',      desc:'Товар не соответствует описанию или заказу' },
+  { id:'damaged',        icon:'💔', label:'Товар повреждён',           desc:'Товар пришёл с повреждениями или дефектами' },
+  { id:'incomplete',     icon:'📦', label:'Неполная комплектация',     desc:'Часть товара или аксессуаров отсутствует' },
+  { id:'quality',        icon:'⚠️', label:'Несоответствие качества',   desc:'Качество значительно хуже заявленного' },
+  { id:'other',          icon:'💬', label:'Другая причина',            desc:'Иная проблема с заказом' },
+];
+
+const DISPUTE_AMOUNTS = [
+  { id:'full',    label:'Полный возврат', desc:'Вся сумма заказа' },
+  { id:'partial', label:'Частичный возврат', desc:'Часть стоимости' },
+  { id:'replace', label:'Замена товара', desc:'Отправить новый' },
+];
+
+const DISPUTE_STATUSES = {
+  open:       { label:'Открыт',         color:'#f59e0b', bg:'#fffbeb' },
+  negotiating:{ label:'Переговоры',     color:'#6366f1', bg:'#eef2ff' },
+  escalated:  { label:'На платформе',   color:'#0891b2', bg:'#ecfeff' },
+  resolved:   { label:'Решён',          color:'#16a34a', bg:'#f0fdf4' },
+  rejected:   { label:'Отклонён',       color:'#ef4444', bg:'#fef2f2' },
+  closed:     { label:'Закрыт',         color:'#64748b', bg:'#f8fafc' },
+};
+
+const ORDER = {
+  id: 'VND-8821-A',
+  items: [
+    { name:'Ноутбук Dell Latitude 5540', sku:'DL-5540-I7', qty:2, price:89500, image:'💻' },
+    { name:'Мышь Logitech MX Master 3',  sku:'LG-MX3-BLK', qty:5, price:6800,  image:'🖱️' },
+  ],
+  vendor: { name:'TechPro Solutions', avatar:'T', color:'#6366f1' },
+  buyer:  { name:'ООО «ТехноСтарт»',  contact:'Алексеев Д.В.', avatar:'А', color:'#0891b2' },
+  total: 89500*2 + 6800*5,
+  date: '01.05.2026',
+};
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+const fmt = n => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
+
+function now() {
+  return new Date().toLocaleTimeString('ru', { hour:'2-digit', minute:'2-digit' });
+}
+function today() {
+  return new Date().toLocaleDateString('ru', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+// ─── ICONS ───────────────────────────────────────────────────────────────────
+
+const Ic = {
+  check: ({ size=14 }) => <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3L11.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  x: () => <svg width={14} height={14} viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
+  send: () => <svg width={16} height={16} viewBox="0 0 16 16" fill="none"><path d="M14 2L1 7l5 2m8-7l-5 12-2-5m7-7L6 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  attach: () => <svg width={16} height={16} viewBox="0 0 16 16" fill="none"><path d="M13 7l-6 6a4 4 0 01-5.7-5.6l6-6a2.5 2.5 0 013.5 3.5L5 11a1 1 0 01-1.4-1.4L9 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  scale: () => <svg width={16} height={16} viewBox="0 0 16 16" fill="none"><path d="M8 2v12M3 6l5-4 5 4M3 6L1 12h4l-2-6zM13 6l2 6h-4l2-6z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  warning: () => <svg width={16} height={16} viewBox="0 0 16 16" fill="none"><path d="M8 2L1 14h14L8 2z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 7v3M8 12v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  info: () => <svg width={14} height={14} viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/><path d="M7 6.5V10M7 5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  chevLeft: () => <svg width={16} height={16} viewBox="0 0 16 16" fill="none"><path d="M10 3L6 8l4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  image: () => <svg width={16} height={16} viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><circle cx="5.5" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M1.5 11l4-4 3 3 2-2 3.5 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  star: ({ filled }) => <svg width={14} height={14} viewBox="0 0 14 14" fill={filled ? 'currentColor':'none'}><path d="M7 1l1.7 3.6 3.9.6-2.8 2.7.7 3.9L7 10.1l-3.5 1.8.7-3.9L1.4 5.2l3.9-.6L7 1z" stroke="currentColor" strokeWidth="1.2"/></svg>,
+};
+
+// ─── STATUS BADGE ─────────────────────────────────────────────────────────────
+
+function StatusPill({ status }) {
+  const s = DISPUTE_STATUSES[status];
+  return <span className="status-pill" style={{background:s.bg, color:s.color}}>
+    <span className="w-1.5 h-1.5 rounded-full" style={{background:s.color}}/>
+    {s.label}
+  </span>;
+}
+
+// ─── ROLE SWITCHER ────────────────────────────────────────────────────────────
+
+function RoleSwitcher({ role, setRole }) {
+  const roles = [
+    { id:'buyer',    label:'👤 Покупатель', color:'#0891b2' },
+    { id:'vendor',   label:'🏪 Продавец',   color:'#6366f1' },
+    { id:'platform', label:'⚖️ Платформа',  color:'#7c3aed' },
+  ];
+  return (
+    <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+      <span className="text-xs text-slate-400 font-medium px-2 whitespace-nowrap hidden sm:block">Роль:</span>
+      {roles.map(r => (
+        <button key={r.id}
+          className={`role-btn ${role===r.id?'active':''}`}
+          style={role===r.id ? {background:r.color} : {}}
+          onClick={() => setRole(r.id)}>
+          {r.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── HEADER ───────────────────────────────────────────────────────────────────
+
+function Header({ role, setRole, screen, onBack, disputeStatus }) {
+  return (
+    <header className="bg-white border-b border-slate-100 sticky top-0 z-40">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          {onBack && <button className="btn-ghost px-2 py-1.5 text-xs" onClick={onBack}><Ic.chevLeft /> Назад</button>}
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{background:'var(--brand,#2455e8)'}}>
+            <span className="text-white font-bold text-xs">V</span>
+          </div>
+          <span className="font-bold text-slate-800 text-sm">Vendora</span>
+          <span className="text-slate-300">|</span>
+          <span className="text-slate-500 text-xs">Центр споров</span>
+          {disputeStatus && <StatusPill status={disputeStatus} />}
+        </div>
+        <div className="ml-auto">
+          <RoleSwitcher role={role} setRole={setRole} />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ─── PHOTO THUMB ─────────────────────────────────────────────────────────────
+
+const MOCK_PHOTOS = ['📸','🖼️','📷'];
+
+function PhotoGrid({ photos, onAdd, canAdd }) {
+  return (
+    <div className="flex flex-wrap gap-2 mt-2">
+      {photos.map((p,i) => (
+        <div key={i} className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-2xl relative">
+          {p}
+          <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-slate-800 text-white text-xs flex items-center justify-center font-bold leading-none" style={{fontSize:'9px'}}>✓</div>
+        </div>
+      ))}
+      {canAdd && photos.length < 5 && (
+        <button onClick={onAdd}
+          className="w-16 h-16 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors text-xs gap-1">
+          <Ic.image />
+          <span style={{fontSize:'10px'}}>Фото</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREEN 1 — INITIATION (Buyer)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function InitScreen({ onSubmit }) {
+  const [step, setStep] = useState(1); // 1=reason, 2=details, 3=confirm
+  const [reason, setReason] = useState(null);
+  const [amount, setAmount] = useState('full');
+  const [customAmount, setCustomAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [photos, setPhotos] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  const total = ORDER.total;
+  const refundAmt = amount === 'full' ? total : amount === 'partial' ? (Number(customAmount) || 0) : 0;
+
+  function validateStep1() {
+    if (!reason) { setErrors({reason:'Выберите причину'}); return false; }
+    return true;
+  }
+  function validateStep2() {
+    const e = {};
+    if (!description.trim() || description.trim().length < 20) e.description = 'Минимум 20 символов';
+    if (amount === 'partial' && (!customAmount || isNaN(Number(customAmount)) || Number(customAmount) <= 0))
+      e.amount = 'Укажите сумму возврата';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  async function handleSubmit() {
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 1200));
+    setLoading(false);
+    onSubmit({ reason, amount, customAmount, description, photos, refundAmt });
+  }
+
+  const reasonObj = DISPUTE_REASONS.find(r => r.id === reason);
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-6">
+
+      {/* Progress */}
+      <div className="flex items-center gap-2 mb-6">
+        {['Причина','Детали','Подтверждение'].map((s,i) => {
+          const done = step > i+1, active = step === i+1;
+          return (
+            <React.Fragment key={s}>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all
+                  ${done ? 'text-white' : active ? 'text-white' : 'bg-slate-100 text-slate-400'}`}
+                  style={done||active ? {background:'var(--brand,#2455e8)'} : {}}>
+                  {done ? <Ic.check size={11}/> : i+1}
+                </div>
+                <span className={`text-xs font-medium hidden sm:block ${active?'text-slate-800':done?'text-slate-500':'text-slate-400'}`}>{s}</span>
+              </div>
+              {i<2 && <div className={`flex-1 h-px ${done?'':'bg-slate-200'}`} style={done?{background:'var(--brand,#2455e8)'}:{}}/>}
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      <div className="card p-5 sm:p-6 fade-up">
+
+        {/* ── Step 1: Reason ── */}
+        {step === 1 && (
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Открыть спор по заказу</h2>
+              <p className="text-slate-500 text-sm mt-1">Заказ <span className="font-semibold text-slate-700">{ORDER.id}</span> · {ORDER.date} · {fmt(ORDER.total)}</p>
+            </div>
+
+            {/* Order mini */}
+            <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+              {ORDER.items.map((item,i) => (
+                <div key={i} className="flex items-center gap-2.5">
+                  <span className="text-xl">{item.image}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-slate-700 truncate">{item.name}</p>
+                    <p className="text-xs text-slate-400">{item.qty} шт. · {fmt(item.price * item.qty)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-slate-800 mb-3">Выберите причину спора <span className="text-red-400">*</span></p>
+              {errors.reason && <p className="text-xs text-red-500 mb-2">{errors.reason}</p>}
+              <div className="space-y-2">
+                {DISPUTE_REASONS.map(r => (
+                  <div key={r.id}
+                    className={`radio-card rounded-xl border-1.5 p-3 cursor-pointer transition-all
+                      ${reason===r.id ? 'border-2' : 'border border-slate-200'}`}
+                    style={reason===r.id ? {borderColor:'var(--brand,#2455e8)', background:'color-mix(in srgb,var(--brand,#2455e8) 4%,white)'} : {background:'#fff'}}
+                    onClick={() => { setReason(r.id); setErrors({}); }}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{r.icon}</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-slate-800">{r.label}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{r.desc}</p>
+                      </div>
+                      {reason===r.id && <div className="w-5 h-5 rounded-full flex items-center justify-center text-white flex-shrink-0" style={{background:'var(--brand,#2455e8)'}}><Ic.check size={11}/></div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-700">
+              <Ic.warning />
+              <span>Перед открытием спора мы рекомендуем связаться с продавцом напрямую. Спор можно отозвать до принятия решения платформой.</span>
+            </div>
+
+            <button className="btn-primary w-full" onClick={() => validateStep1() && setStep(2)}>
+              Далее →
+            </button>
+          </div>
+        )}
+
+        {/* ── Step 2: Details ── */}
+        {step === 2 && (
+          <div className="space-y-5 fade-up">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Детали проблемы</h2>
+              <p className="text-slate-500 text-sm mt-1">Причина: <span className="font-medium text-slate-700">{reasonObj?.icon} {reasonObj?.label}</span></p>
+            </div>
+
+            {/* Desired resolution */}
+            <div>
+              <p className="text-sm font-semibold text-slate-800 mb-2">Желаемое решение</p>
+              <div className="space-y-2">
+                {DISPUTE_AMOUNTS.map(a => (
+                  <div key={a.id}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all ${amount===a.id ? 'border-2' : 'border border-slate-200 bg-white'}`}
+                    style={amount===a.id ? {borderColor:'var(--brand,#2455e8)', background:'color-mix(in srgb,var(--brand,#2455e8) 4%,white)'} : {}}
+                    onClick={() => setAmount(a.id)}>
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${amount===a.id ? '' : 'border-slate-300'}`}
+                        style={amount===a.id ? {borderColor:'var(--brand,#2455e8)', background:'var(--brand,#2455e8)'} : {}}>
+                        {amount===a.id && <div className="w-full h-full rounded-full bg-white scale-50 block"/>}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-slate-800">{a.label}</p>
+                        <p className="text-xs text-slate-500">{a.id==='full' ? fmt(total) : a.desc}</p>
+                      </div>
+                    </div>
+                    {amount===a.id && a.id==='partial' && (
+                      <div className="mt-2.5 pl-6">
+                        <div className="relative">
+                          <input className={`input-field pr-6 text-sm ${errors.amount?'error':''}`}
+                            type="number" min="1" max={total} placeholder="Введите сумму"
+                            value={customAmount} onChange={e => setCustomAmount(e.target.value)}
+                            onClick={e => e.stopPropagation()} />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₽</span>
+                        </div>
+                        {errors.amount && <p className="text-xs text-red-500 mt-1">{errors.amount}</p>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="text-sm font-semibold text-slate-800 block mb-1.5">
+                Описание проблемы <span className="text-red-400">*</span>
+              </label>
+              <textarea className={`input-field ${errors.description?'error':''}`}
+                placeholder="Подробно опишите ситуацию: когда обнаружили проблему, в чём она выражается, что именно не так..."
+                value={description} onChange={e => setDescription(e.target.value)} />
+              <div className="flex justify-between mt-1">
+                {errors.description ? <p className="text-xs text-red-500">{errors.description}</p> : <span/>}
+                <p className="text-xs text-slate-400">{description.length} / 2000</p>
+              </div>
+            </div>
+
+            {/* Photos */}
+            <div>
+              <label className="text-sm font-semibold text-slate-800 block mb-1">Фото / видео доказательства</label>
+              <p className="text-xs text-slate-400 mb-2">До 5 файлов: JPG, PNG, MP4 · до 50 МБ каждый</p>
+              <PhotoGrid photos={photos} canAdd={true}
+                onAdd={() => setPhotos(prev => [...prev, MOCK_PHOTOS[prev.length % MOCK_PHOTOS.length]])} />
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button className="btn-ghost" onClick={() => setStep(1)}>← Назад</button>
+              <button className="btn-primary flex-1" onClick={() => validateStep2() && setStep(3)}>
+                Продолжить →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Confirm ── */}
+        {step === 3 && (
+          <div className="space-y-4 fade-up">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Подтвердите спор</h2>
+              <p className="text-slate-500 text-sm mt-1">Проверьте детали перед отправкой</p>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl divide-y divide-slate-100">
+              {[
+                ['Заказ', ORDER.id],
+                ['Причина', `${reasonObj?.icon} ${reasonObj?.label}`],
+                ['Решение', amount==='full' ? `Возврат ${fmt(total)}` : amount==='partial' ? `Частичный возврат ${fmt(Number(customAmount))}` : 'Замена товара'],
+                ['Описание', description.slice(0,80) + (description.length>80?'...':'')],
+                ['Доказательства', photos.length > 0 ? `${photos.length} файлов` : 'Не загружены'],
+              ].map(([k,v]) => (
+                <div key={k} className="flex items-start gap-3 px-3 py-2.5">
+                  <span className="text-xs text-slate-500 w-28 flex-shrink-0 pt-0.5">{k}</span>
+                  <span className="text-xs font-medium text-slate-800">{v}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 flex gap-2">
+              <Ic.info />
+              <span>После открытия спора продавцу даётся <strong>48 часов</strong> для ответа. Если ответа нет — платформа принимает решение автоматически в вашу пользу.</span>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button className="btn-ghost" onClick={() => setStep(2)}>← Назад</button>
+              <button className="btn-primary flex-1" onClick={handleSubmit} disabled={loading}>
+                {loading ? (
+                  <><svg className="spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 16 16"/><span>Открываем спор...</span></>
+                ) : '⚖️ Открыть спор'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREEN 2 — DISPUTE CHAT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const INITIAL_MESSAGES = (disputeData) => [
+  {
+    id:1, role:'system',
+    text:`Спор #DSP-2847 открыт. Причина: ${DISPUTE_REASONS.find(r=>r.id===disputeData.reason)?.label}. Продавцу отправлено уведомление — у него 48 часов для ответа.`,
+    time:'09:14', date: today(),
+  },
+  {
+    id:2, role:'buyer',
+    text: disputeData.description,
+    time:'09:14', date: today(),
+    photos: disputeData.photos,
+  },
+  {
+    id:3, role:'system',
+    text:'Продавец TechPro Solutions уведомлён. Ожидаем ответа.',
+    time:'09:14', date: today(),
+  },
+];
+
+const VENDOR_REPLIES = [
+  { id:4, role:'vendor', text:'Добрый день! Приносим извинения за ситуацию. Мы проверили ваш заказ — товар был отправлен 29 апреля трек-номером EM123456789RU через СДЭК. По данным отслеживания посылка находится в сортировочном центре с 30 апреля.', time:'10:30', date: today() },
+  { id:5, role:'vendor', text:'Предлагаем подождать ещё 2 рабочих дня — иногда бывают задержки на сортировке. Если товар не появится — готовы инициировать розыск у перевозчика и при необходимости отправить повторно.', time:'10:31', date: today() },
+];
+
+const PLATFORM_OFFER = {
+  id:99, role:'platform',
+  text:'Платформа Vendora изучила материалы спора. По результатам проверки:\n\n• Трек-номер подтверждён, статус — «В пути» более 5 дней\n• Продавец признаёт задержку\n\nПлатформа предлагает компромиссное решение: удержание оплаты в escrow ещё на 5 рабочих дней. Если товар не поступит — полный возврат автоматически.',
+  time:'14:00', date: today(), isOffer: true,
+};
+
+function ChatScreen({ disputeData, role, onResolve, onReject }) {
+  const [messages, setMessages] = useState(() => INITIAL_MESSAGES(disputeData));
+  const [input, setInput] = useState('');
+  const [photos, setPhotos] = useState([]);
+  const [disputeStatus, setDisputeStatus] = useState('open');
+  const [vendorReplied, setVendorReplied] = useState(false);
+  const [platformEngaged, setPlatformEngaged] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [escalateLoading, setEscalateLoading] = useState(false);
+  const [showOfferBanner, setShowOfferBanner] = useState(false);
+  const chatRef = useRef();
+
+  const reasonObj = DISPUTE_REASONS.find(r => r.id === disputeData.reason);
+  const refundLabel = disputeData.amount === 'full' ? fmt(ORDER.total)
+    : disputeData.amount === 'partial' ? fmt(Number(disputeData.customAmount))
+    : 'Замена товара';
+
+  const deadline = '03.05.2026 09:14'; // +48h
+
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  function send() {
+    if (!input.trim() && photos.length === 0) return;
+    const msg = {
+      id: Date.now(), role,
+      text: input.trim(),
+      time: now(), date: today(),
+      photos: [...photos],
+    };
+    setMessages(prev => [...prev, msg]);
+    setInput('');
+    setPhotos([]);
+
+    // Auto-vendor reply simulation
+    if (role === 'buyer' && !vendorReplied) {
+      setVendorReplied(true);
+      setDisputeStatus('negotiating');
+      setTimeout(() => {
+        setMessages(prev => [...prev, VENDOR_REPLIES[0]]);
+        setTimeout(() => setMessages(prev => [...prev, VENDOR_REPLIES[1]]), 1200);
+      }, 1500);
+    }
+  }
+
+  async function handleEscalate() {
+    setEscalateLoading(true);
+    await new Promise(r => setTimeout(r, 1000));
+    setEscalateLoading(false);
+    setPlatformEngaged(true);
+    setDisputeStatus('escalated');
+    setMessages(prev => [
+      ...prev,
+      { id:Date.now(), role:'system', text:'Покупатель передал спор на рассмотрение платформы. Модератор изучит материалы и вынесет решение.', time:now(), date:today() },
+    ]);
+    setTimeout(() => {
+      setMessages(prev => [...prev, PLATFORM_OFFER]);
+      setShowOfferBanner(true);
+    }, 2000);
+  }
+
+  async function handleDecision(decision) {
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 1100));
+    setLoading(false);
+    if (decision === 'resolve') onResolve(disputeData);
+    else onReject();
+  }
+
+  const showEscalate = role === 'buyer' && vendorReplied && !platformEngaged && disputeStatus === 'negotiating';
+  const showDecision = role === 'platform' && platformEngaged;
+  const isResolved = ['resolved','rejected','closed'].includes(disputeStatus);
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+      {/* LEFT: Chat */}
+      <div className="lg:col-span-2 flex flex-col" style={{height:'calc(100vh - 130px)'}}>
+
+        {/* Dispute info bar */}
+        <div className="card mb-3 p-3 flex flex-wrap items-center gap-3 fade-up">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{reasonObj?.icon}</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">{reasonObj?.label}</p>
+              <p className="text-xs text-slate-500">Спор #DSP-2847 · Заказ {ORDER.id}</p>
+            </div>
+          </div>
+          <div className="ml-auto flex items-center gap-2 flex-wrap">
+            <StatusPill status={disputeStatus} />
+            <span className="text-xs text-slate-400">Срок ответа: {deadline}</span>
+          </div>
+        </div>
+
+        {/* Escalate / offer banner */}
+        {showEscalate && (
+          <div className="card mb-3 p-3 bg-amber-50 border-amber-200 flex items-start gap-3 fade-up">
+            <span className="text-lg">⚠️</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800">Переговоры зашли в тупик?</p>
+              <p className="text-xs text-amber-700 mt-0.5">Передайте спор на рассмотрение платформы — модератор изучит доказательства и вынесет решение в течение 24ч.</p>
+            </div>
+            <button className="btn-ghost text-xs py-1.5 px-3 flex-shrink-0 border-amber-300 text-amber-700"
+              onClick={handleEscalate} disabled={escalateLoading}>
+              {escalateLoading
+                ? <><svg className="spinner w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full" viewBox="0 0 12 12"/>Передаём...</>
+                : <><Ic.scale />Передать платформе</>}
+            </button>
+          </div>
+        )}
+
+        {showOfferBanner && !isResolved && (
+          <div className="card mb-3 p-3 bg-purple-50 border-purple-200 flex items-start gap-3 fade-up">
+            <span className="text-lg">⚖️</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-purple-800">Платформа предложила решение</p>
+              <p className="text-xs text-purple-700 mt-0.5">Ознакомьтесь с предложением в чате и примите или отклоните его.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Messages */}
+        <div ref={chatRef} className="card flex-1 overflow-y-auto p-4 space-y-3 mb-3">
+          {messages.map(msg => (
+            <div key={msg.id} className={`flex msg-in ${msg.role==='buyer' ? 'justify-end' : msg.role==='vendor' ? 'justify-start' : 'justify-center'}`}>
+              {msg.role === 'system' && (
+                <div className="bubble-system px-3 py-2 max-w-sm text-center">{msg.text}<span className="text-slate-400 ml-2" style={{fontSize:'10px'}}>{msg.time}</span></div>
+              )}
+              {msg.role === 'buyer' && (
+                <div className="flex flex-col items-end gap-1 max-w-xs sm:max-w-sm">
+                  <div className="flex items-end gap-2">
+                    <span className="text-xs text-slate-400">{msg.time}</span>
+                    <div className="bubble-buyer px-3.5 py-2.5 text-sm leading-relaxed">{msg.text}</div>
+                  </div>
+                  {msg.photos && msg.photos.length > 0 && (
+                    <div className="flex gap-1.5 mt-1">
+                      {msg.photos.map((p,i) => (
+                        <div key={i} className="w-14 h-14 rounded-xl bg-blue-400 flex items-center justify-center text-2xl">{p}</div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1 text-xs text-slate-400">
+                    <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{background:'#0891b2'}}>А</span>
+                    {ORDER.buyer.contact}
+                  </div>
+                </div>
+              )}
+              {msg.role === 'vendor' && (
+                <div className="flex flex-col gap-1 max-w-xs sm:max-w-sm">
+                  <div className="flex items-end gap-2">
+                    <div className="bubble-vendor px-3.5 py-2.5 text-sm leading-relaxed">{msg.text}</div>
+                    <span className="text-xs text-slate-400 flex-shrink-0">{msg.time}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-slate-400">
+                    <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{background:'#6366f1'}}>T</span>
+                    {ORDER.vendor.name}
+                  </div>
+                </div>
+              )}
+              {msg.role === 'platform' && (
+                <div className="bubble-platform px-4 py-3 max-w-sm w-full">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Ic.scale />
+                    <span className="text-xs font-bold text-amber-800">Решение Vendora</span>
+                    <span className="text-xs text-amber-600 ml-auto">{msg.time}</span>
+                  </div>
+                  <p className="text-xs text-amber-900 leading-relaxed whitespace-pre-line">{msg.text}</p>
+                  {msg.isOffer && !isResolved && (
+                    <div className="flex gap-2 mt-3">
+                      {role === 'buyer' && (
+                        <>
+                          <button className="btn-success py-1.5 px-3 text-xs flex-1 justify-center" onClick={() => handleDecision('resolve')} disabled={loading}>
+                            {loading ? '...' : '✓ Принять'}
+                          </button>
+                          <button className="btn-danger py-1.5 px-3 text-xs flex-1 justify-center" onClick={() => handleDecision('reject')} disabled={loading}>
+                            ✕ Отклонить
+                          </button>
+                        </>
+                      )}
+                      {role === 'vendor' && (
+                        <p className="text-xs text-amber-700 italic">Ожидаем решения покупателя...</p>
+                      )}
+                      {role === 'platform' && showDecision && (
+                        <>
+                          <button className="btn-success py-1.5 px-3 text-xs flex-1 justify-center" onClick={() => handleDecision('resolve')} disabled={loading}>
+                            {loading ? '...' : '✓ Возврат'}
+                          </button>
+                          <button className="btn-danger py-1.5 px-3 text-xs flex-1 justify-center" onClick={() => handleDecision('reject')} disabled={loading}>
+                            ✕ Отклонить
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Input */}
+        {!isResolved && (
+          <div className="card p-3 fade-up">
+            {photos.length > 0 && (
+              <div className="flex gap-2 mb-2 pb-2 border-b border-slate-100">
+                {photos.map((p,i) => (
+                  <div key={i} className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-xl relative">
+                    {p}
+                    <button className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center"
+                      style={{fontSize:'9px'}} onClick={() => setPhotos(prev => prev.filter((_,j)=>j!==i))}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-end gap-2">
+              <button className="text-slate-400 hover:text-slate-600 p-1.5 flex-shrink-0 transition-colors"
+                onClick={() => setPhotos(prev => [...prev, MOCK_PHOTOS[prev.length % MOCK_PHOTOS.length]])}>
+                <Ic.attach />
+              </button>
+              <textarea
+                className="flex-1 resize-none text-sm text-slate-800 outline-none bg-transparent placeholder-slate-400 py-1"
+                placeholder={
+                  role==='buyer' ? 'Напишите продавцу или платформе...' :
+                  role==='vendor' ? 'Ответьте покупателю...' :
+                  'Комментарий модератора...'
+                }
+                rows={2} value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+              />
+              <button
+                className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-white transition-all"
+                style={{background: input.trim()||photos.length>0 ? 'var(--brand,#2455e8)' : '#e2e8f0'}}
+                onClick={send}>
+                <Ic.send />
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 mt-1.5">Enter — отправить · Shift+Enter — новая строка</p>
+          </div>
+        )}
+        {isResolved && (
+          <div className="card p-3 text-center text-sm text-slate-400">
+            Спор закрыт · Переписка завершена
+          </div>
+        )}
+      </div>
+
+      {/* RIGHT: Info panel */}
+      <div className="space-y-3">
+
+        {/* Dispute summary */}
+        <div className="card p-4 fade-up">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Детали спора</p>
+          <div className="space-y-2.5 text-xs">
+            {[
+              ['Номер', '#DSP-2847'],
+              ['Статус', <StatusPill status={disputeStatus}/>],
+              ['Причина', `${reasonObj?.icon} ${reasonObj?.label}`],
+              ['Сумма', fmt(ORDER.total)],
+              ['Запрос', refundLabel],
+              ['Открыт', `${today()} · ${messages[0]?.time}`],
+              ['Срок ответа', deadline],
+            ].map(([k,v]) => (
+              <div key={k} className="flex items-start justify-between gap-2">
+                <span className="text-slate-500 flex-shrink-0">{k}</span>
+                <span className="font-medium text-slate-800 text-right">{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Order */}
+        <div className="card p-4 fade-up">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Заказ {ORDER.id}</p>
+          <div className="space-y-2.5">
+            {ORDER.items.map((item,i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="text-lg">{item.image}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-slate-700 truncate">{item.name}</p>
+                  <p className="text-xs text-slate-400">{item.qty} шт.</p>
+                </div>
+                <p className="text-xs font-semibold text-slate-800 flex-shrink-0">{fmt(item.price*item.qty)}</p>
+              </div>
+            ))}
+            <div className="border-t border-slate-100 pt-2 flex justify-between text-xs">
+              <span className="text-slate-500">Итого</span>
+              <span className="font-bold text-slate-900">{fmt(ORDER.total)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Participants */}
+        <div className="card p-4 fade-up">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Участники</p>
+          <div className="space-y-2.5">
+            {[
+              { role:'Покупатель', name:ORDER.buyer.contact, org:ORDER.buyer.name, color:ORDER.buyer.color, avatar:'А' },
+              { role:'Продавец', name:'TechPro Solutions', org:'@techpro', color:'#6366f1', avatar:'T' },
+              ...(platformEngaged ? [{ role:'Модератор', name:'Vendora Support', org:'Команда платформы', color:'#7c3aed', avatar:'V' }] : []),
+            ].map((p,i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{background:p.color}}>
+                  {p.avatar}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-slate-800 truncate">{p.name}</p>
+                  <p className="text-xs text-slate-400 truncate">{p.org} · {p.role}</p>
+                </div>
+                {p.role === 'Модератор' && <span className="pulse-dot w-2 h-2 rounded-full bg-purple-500 flex-shrink-0"/>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Evidence */}
+        {disputeData.photos.length > 0 && (
+          <div className="card p-4 fade-up">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Доказательства</p>
+            <PhotoGrid photos={disputeData.photos} canAdd={false} onAdd={()=>{}}/>
+          </div>
+        )}
+
+        {/* Platform actions */}
+        {role === 'platform' && !isResolved && (
+          <div className="card p-4 fade-up border-purple-200" style={{background:'#faf5ff'}}>
+            <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-3">⚖️ Действия модератора</p>
+            <div className="space-y-2">
+              <button className="btn-success w-full justify-center text-xs py-2" onClick={() => handleDecision('resolve')} disabled={loading}>
+                {loading ? '...' : '✓ Вынести решение: Возврат'}
+              </button>
+              <button className="btn-danger w-full justify-center text-xs py-2" onClick={() => handleDecision('reject')} disabled={loading}>
+                ✕ Вынести решение: Отклонить
+              </button>
+              <button className="btn-ghost w-full justify-center text-xs py-2">
+                📞 Запросить доп. материалы
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREEN 3 — RESOLUTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function ResolutionScreen({ disputeData, decision, onReset }) {
+  const resolved = decision === 'resolve';
+  const reasonObj = DISPUTE_REASONS.find(r => r.id === disputeData.reason);
+  const refundAmt = disputeData.amount === 'full' ? ORDER.total
+    : disputeData.amount === 'partial' ? Number(disputeData.customAmount) : 0;
+
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8 fade-up">
+
+      {/* Hero */}
+      <div className="card p-8 text-center mb-5">
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 pop`}
+          style={{background: resolved ? '#f0fdf4' : '#fef2f2'}}>
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+            <circle cx="22" cy="22" r="22" fill={resolved ? '#16a34a' : '#ef4444'}/>
+            {resolved
+              ? <path d="M13 23l7 7L32 15" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              : <path d="M14 14l16 16M30 14L14 30" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+            }
+          </svg>
+        </div>
+
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">
+          {resolved ? 'Решение вынесено: Возврат' : 'Спор отклонён'}
+        </h2>
+        <p className="text-slate-500 mb-1">Спор #DSP-2847 · {reasonObj?.icon} {reasonObj?.label}</p>
+        <p className="text-sm text-slate-400">
+          Заказ {ORDER.id} · {ORDER.vendor.name}
+        </p>
+
+        {resolved && refundAmt > 0 && (
+          <div className="mt-6 p-4 bg-green-50 rounded-xl inline-block mx-auto">
+            <p className="text-3xl font-bold text-green-700">{fmt(refundAmt)}</p>
+            <p className="text-sm text-green-600 mt-1">Возврат инициирован</p>
+            <p className="text-xs text-green-500 mt-0.5">Поступит на счёт в течение 5–10 рабочих дней</p>
+          </div>
+        )}
+
+        {!resolved && (
+          <div className="mt-6 p-4 bg-red-50 rounded-xl">
+            <p className="text-sm font-semibold text-red-700">Причина отклонения</p>
+            <p className="text-xs text-red-600 mt-1">Предоставленных доказательств недостаточно для вынесения решения о возврате. Рекомендуем связаться с продавцом напрямую.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Timeline */}
+      <div className="card p-4 mb-4">
+        <p className="text-sm font-semibold text-slate-800 mb-4">Ход рассмотрения спора</p>
+        <div className="space-y-0">
+          {[
+            { icon:'⚖️', label:'Спор открыт', time:today()+' · 09:14', desc:'Покупатель инициировал спор', done:true },
+            { icon:'💬', label:'Ответ продавца', time:today()+' · 10:30', desc:'TechPro Solutions ответил на претензию', done:true },
+            { icon:'🔼', label:'Передано на платформу', time:today()+' · 11:00', desc:'Покупатель запросил модерацию', done:true },
+            { icon:'🔍', label:'Рассмотрение', time:today()+' · 14:00', desc:'Модератор изучил доказательства', done:true },
+            { icon: resolved?'✅':'❌', label: resolved?'Возврат одобрен':'Спор отклонён', time:today()+' · '+now(), desc: resolved?`Возврат ${fmt(refundAmt)} инициирован`:'Недостаточно доказательств', done:true, final:true },
+          ].map((item, i, arr) => (
+            <div key={i} className="flex gap-3">
+              <div className="flex flex-col items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 z-10 ${item.final ? (resolved?'bg-green-100':'bg-red-100') : 'bg-slate-50'}`}>
+                  {item.icon}
+                </div>
+                {i < arr.length-1 && <div className="w-0.5 flex-1 my-1.5" style={{background:'#e8edf4', minHeight:'16px'}}/>}
+              </div>
+              <div className="pb-4 pt-1 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-slate-800">{item.label}</p>
+                  <span className="text-xs text-slate-400">{item.time}</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Rate experience */}
+      {!submitted && (
+        <div className="card p-4 mb-4 fade-up">
+          <p className="text-sm font-semibold text-slate-800 mb-3">Оцените работу службы поддержки</p>
+          <div className="flex gap-1.5 mb-3">
+            {[1,2,3,4,5].map(i => (
+              <button key={i} className={`text-2xl transition-transform hover:scale-110 ${i<=rating?'text-amber-400':'text-slate-200'}`}
+                onClick={() => setRating(i)}>★</button>
+            ))}
+          </div>
+          {rating > 0 && (
+            <div className="fade-up space-y-2">
+              <textarea className="input-field text-sm" rows={2} placeholder="Расскажите о вашем опыте (необязательно)..."
+                value={comment} onChange={e => setComment(e.target.value)} style={{resize:'none'}}/>
+              <button className="btn-primary text-sm py-2 px-4" onClick={() => setSubmitted(true)}>
+                Отправить отзыв
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {submitted && (
+        <div className="card p-4 mb-4 bg-green-50 border-green-100 text-center fade-up">
+          <p className="text-sm font-semibold text-green-700">Спасибо за отзыв! ⭐</p>
+          <p className="text-xs text-green-600 mt-1">Ваша оценка помогает нам улучшать сервис.</p>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="grid grid-cols-2 gap-3">
+        <button className="btn-primary py-3 justify-center">📋 Мои заказы</button>
+        <button className="btn-ghost py-3 justify-center" onClick={onReset}>← Новый спор</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROOT APP
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#2455e8",
+  "defaultRole": "buyer",
+  "showEscalation": true,
+  "autoVendorReply": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const hookResult = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : {};
+  const tweaks = (hookResult && hookResult.tweaks) || TWEAK_DEFAULTS;
+  const TweaksPanel = (hookResult && hookResult.TweaksPanel) || window.TweaksPanel;
+  const TweakSection = (hookResult && hookResult.TweakSection) || window.TweakSection;
+  const TweakToggle = (hookResult && hookResult.TweakToggle) || window.TweakToggle;
+  const TweakColor = (hookResult && hookResult.TweakColor) || window.TweakColor;
+  const TweakSelect = (hookResult && hookResult.TweakSelect) || window.TweakSelect;
+
+  const [screen, setScreen] = useState('init'); // init | chat | resolved | rejected
+  const [role, setRole] = useState(tweaks.defaultRole || 'buyer');
+  const [disputeData, setDisputeData] = useState(null);
+  const [decision, setDecision] = useState(null);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', tweaks.accentColor || '#2455e8');
+  }, [tweaks.accentColor]);
+
+  function handleInit(data) {
+    setDisputeData(data);
+    setScreen('chat');
+  }
+
+  function handleResolve(data) {
+    setDecision('resolve');
+    setScreen('resolved');
+  }
+
+  function handleReject() {
+    setDecision('reject');
+    setScreen('resolved');
+  }
+
+  function handleReset() {
+    setScreen('init');
+    setDisputeData(null);
+    setDecision(null);
+  }
+
+  const disputeStatus = screen === 'resolved' ? (decision === 'resolve' ? 'resolved' : 'rejected') : null;
+
+  return (
+    <div style={{'--brand': tweaks.accentColor || '#2455e8'}}>
+      <Header
+        role={role} setRole={setRole}
+        screen={screen}
+        onBack={screen === 'chat' ? handleReset : null}
+        disputeStatus={disputeStatus}
+      />
+
+      <main className="pb-16">
+        {screen === 'init' && <InitScreen onSubmit={handleInit} />}
+        {screen === 'chat' && disputeData && (
+          <ChatScreen disputeData={disputeData} role={role}
+            onResolve={handleResolve} onReject={handleReject} />
+        )}
+        {screen === 'resolved' && disputeData && (
+          <ResolutionScreen disputeData={disputeData} decision={decision} onReset={handleReset} />
+        )}
+      </main>
+
+      {TweaksPanel && TweakSection && (
+        <TweaksPanel>
+          <TweakSection title="Брендинг">
+            {TweakColor && <TweakColor id="accentColor" label="Цвет акцента" />}
+          </TweakSection>
+          <TweakSection title="Просмотр">
+            {TweakSelect && <TweakSelect id="defaultRole" label="Роль по умолчанию" options={[
+              { value:'buyer',    label:'👤 Покупатель' },
+              { value:'vendor',   label:'🏪 Продавец' },
+              { value:'platform', label:'⚖️ Платформа' },
+            ]} />}
+          </TweakSection>
+          <TweakSection title="Поведение">
+            {TweakToggle && <TweakToggle id="showEscalation" label="Кнопка эскалации" />}
+            {TweakToggle && <TweakToggle id="autoVendorReply" label="Авто-ответ продавца" />}
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

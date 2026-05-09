@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendora — Регистрация продавца</title>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: #f5f7fb; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { animation: fadeUp 0.35s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes slideRight { from { opacity:0; transform:translateX(-16px); } to { opacity:1; transform:translateX(0); } }
+    .slide-right { animation: slideRight 0.3s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes checkPop { 0%{transform:scale(0) rotate(-20deg);opacity:0} 70%{transform:scale(1.15);opacity:1} 100%{transform:scale(1);opacity:1} }
+    .check-pop { animation: checkPop 0.55s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 0.7s linear infinite; display:inline-block; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+    .pulse { animation: pulse 1.5s ease infinite; }
+
+    .input-field {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+      color: #1e293b;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+    .input-field:focus { border-color: var(--brand, #2455e8); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand,#2455e8) 15%, transparent); }
+    .input-field.error { border-color: #ef4444; }
+    .input-field:disabled { background:#f8fafc; color:#94a3b8; cursor:not-allowed; }
+
+    .input-label { font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 5px; }
+    .input-hint { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+    .input-error { font-size: 11px; color: #ef4444; margin-top: 4px; }
+
+    .card { background: #fff; border-radius: 16px; border: 1px solid #e8edf4; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+
+    .btn-primary {
+      background: var(--brand, #2455e8);
+      color: #fff; border: none; border-radius: 10px;
+      padding: 11px 24px; font-size: 14px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: filter 0.15s, transform 0.1s, box-shadow 0.15s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary:hover { filter: brightness(0.88); box-shadow: 0 4px 16px color-mix(in srgb, var(--brand,#2455e8) 30%, transparent); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; filter: none; box-shadow: none; }
+
+    .btn-ghost {
+      background: transparent; color: #64748b; border: 1.5px solid #e2e8f0;
+      border-radius: 10px; padding: 10px 20px; font-size: 14px; font-weight: 500; font-family: inherit;
+      cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-ghost:hover { border-color: #94a3b8; color: #1e293b; background: #f8fafc; }
+
+    .upload-zone {
+      border: 2px dashed #e2e8f0; border-radius: 12px; padding: 24px;
+      text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+      background: #fafbfc;
+    }
+    .upload-zone:hover, .upload-zone.drag { border-color: var(--brand,#2455e8); background: color-mix(in srgb, var(--brand,#2455e8) 4%, white); }
+    .upload-zone.uploaded { border-color: #22c55e; background: #f0fdf4; border-style: solid; }
+
+    .strength-bar { height: 4px; border-radius: 2px; transition: width 0.4s, background 0.4s; }
+
+    .radio-card {
+      border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 14px;
+      cursor: pointer; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; background: #fff;
+    }
+    .radio-card:hover { border-color: color-mix(in srgb, var(--brand,#2455e8) 50%, #e2e8f0); background: #f8fafc; }
+    .radio-card.selected { border-color: var(--brand,#2455e8); background: color-mix(in srgb, var(--brand,#2455e8) 5%, white); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand,#2455e8) 10%, transparent); }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
+      border-radius: 20px; border: 1.5px solid #e2e8f0; font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.15s; background: #fff; color: #475569;
+    }
+    .chip:hover { border-color: var(--brand,#2455e8); color: var(--brand,#2455e8); }
+    .chip.active { border-color: var(--brand,#2455e8); background: color-mix(in srgb, var(--brand,#2455e8) 8%, white); color: var(--brand,#2455e8); font-weight: 600; }
+
+    .progress-track { height: 3px; background: #e8edf4; border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 2px; background: var(--brand,#2455e8); transition: width 0.5s cubic-bezier(.22,.84,.4,1); }
+
+    textarea.input-field { resize: vertical; min-height: 80px; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── CONSTANTS ─────────────────────────────────────────────────────────────────
+
+const CATEGORIES = [
+  { id:'electronics', label:'Электроника и IT', icon:'💻' },
+  { id:'office', label:'Офисная мебель', icon:'🪑' },
+  { id:'supplies', label:'Канцелярия и расходники', icon:'📎' },
+  { id:'cleaning', label:'Хозяйственные товары', icon:'🧹' },
+  { id:'food', label:'Продукты питания', icon:'🍱' },
+  { id:'logistics', label:'Логистика и упаковка', icon:'📦' },
+  { id:'construction', label:'Строительные материалы', icon:'🏗️' },
+  { id:'medical', label:'Медицинские товары', icon:'🏥' },
+  { id:'clothing', label:'Спецодежда и СИЗ', icon:'🦺' },
+  { id:'services', label:'Услуги и сервис', icon:'🔧' },
+];
+
+const LEGAL_FORMS = [
+  { id:'ooo', label:'ООО', desc:'Общество с ограниченной ответственностью' },
+  { id:'ao', label:'АО / ПАО', desc:'Акционерное общество' },
+  { id:'ip', label:'ИП', desc:'Индивидуальный предприниматель' },
+  { id:'foreign', label:'Иностранная организация', desc:'Зарегистрирована за рубежом' },
+];
+
+const DOC_TYPES = [
+  { id:'charter', label:'Устав организации', desc:'Актуальная редакция', required:true, accept:'.pdf,.jpg,.png', maxMb:10 },
+  { id:'egrul', label:'Выписка из ЕГРЮЛ / ЕГРИП', desc:'Не старше 30 дней', required:true, accept:'.pdf', maxMb:5 },
+  { id:'inn', label:'Свидетельство ИНН', desc:'Копия документа', required:true, accept:'.pdf,.jpg,.png', maxMb:5 },
+  { id:'passport', label:'Паспорт руководителя', desc:'Разворот с фото + прописка', required:true, accept:'.pdf,.jpg,.png', maxMb:10 },
+  { id:'bank', label:'Банковские реквизиты', desc:'Справка из банка или реквизиты на бланке', required:true, accept:'.pdf,.jpg,.png', maxMb:5 },
+  { id:'license', label:'Лицензия / сертификаты', desc:'При наличии, для лицензируемых видов деятельности', required:false, accept:'.pdf,.jpg,.png', maxMb:20 },
+];
+
+const COMMISSION_PLANS = [
+  { id:'standard', label:'Стандарт', pct:'8%', desc:'Подходит для большинства категорий', monthly:0, monthlyLabel:'Бесплатно' },
+  { id:'pro', label:'Про', pct:'5%', desc:'Меньше комиссия, приоритет в поиске', monthly:4990, monthlyLabel:'4 990 ₽/мес' },
+  { id:'enterprise', label:'Enterprise', pct:'Договорная', desc:'Индивидуальные условия, выделенный менеджер', monthly:null, monthlyLabel:'По запросу' },
+];
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────────
+
+function passwordStrength(pwd) {
+  if (!pwd) return { score: 0, label: '', color: '' };
+  let score = 0;
+  if (pwd.length >= 8) score++;
+  if (pwd.length >= 12) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  const levels = [
+    { label: 'Слабый', color: '#ef4444' },
+    { label: 'Слабый', color: '#ef4444' },
+    { label: 'Средний', color: '#f59e0b' },
+    { label: 'Хороший', color: '#3b82f6' },
+    { label: 'Сильный', color: '#22c55e' },
+    { label: 'Отличный', color: '#22c55e' },
+  ];
+  return { score, ...levels[Math.min(score, 5)] };
+}
+
+function formatInn(v) { return v.replace(/\D/g,'').slice(0,12); }
+function formatKpp(v) { return v.replace(/\D/g,'').slice(0,9); }
+function formatOgrn(v) { return v.replace(/\D/g,'').slice(0,15); }
+function formatPhone(v) {
+  const d = v.replace(/\D/g,'');
+  if (!d) return '';
+  let r = '+7';
+  if (d.length > 1) r += ' (' + d.slice(1,4);
+  if (d.length > 4) r += ') ' + d.slice(4,7);
+  if (d.length > 7) r += '-' + d.slice(7,9);
+  if (d.length > 9) r += '-' + d.slice(9,11);
+  return r;
+}
+
+// ─── ICONS ─────────────────────────────────────────────────────────────────────
+
+const IcCheck = ({ size=16, className='' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className={className}>
+    <path d="M3 8l3.5 3.5L13 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IcEye = ({ open=true }) => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none">
+    {open
+      ? <><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" strokeWidth="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.5"/></>
+      : <><path d="M1 1l14 14M6.5 6.6A2 2 0 0010.4 9.4M4 4.3C2.4 5.4 1 8 1 8s2.5 5 7 5c1.4 0 2.7-.4 3.8-1M7 3.1C7.3 3 7.7 3 8 3c4.5 0 7 5 7 5s-.5 1.1-1.5 2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>
+    }
+  </svg>
+);
+const IcUpload = () => (
+  <svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    <path d="M12 16V8M9 11l3-3 3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M20 16.5A4.5 4.5 0 0017.5 8H16A7 7 0 105 14.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+);
+const IcFile = () => (
+  <svg width={18} height={18} viewBox="0 0 18 18" fill="none">
+    <path d="M10.5 2H5a1.5 1.5 0 00-1.5 1.5v11A1.5 1.5 0 005 16h8a1.5 1.5 0 001.5-1.5V6L10.5 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M10.5 2v4H14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IcTrash = () => (
+  <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+    <path d="M1.5 3.5h11M5 3.5V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5v1M5.5 6v4M8.5 6v4M2.5 3.5l.8 8a1 1 0 001 .9h5.4a1 1 0 001-.9l.8-8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IcInfo = () => (
+  <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+    <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/>
+    <path d="M7 6.5v3.5M7 5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+  </svg>
+);
+const IcPlus = () => (
+  <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+    <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+const IcArrowRight = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none">
+    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// ─── HEADER ────────────────────────────────────────────────────────────────────
+
+function Header() {
+  return (
+    <header className="bg-white border-b border-slate-100 sticky top-0 z-40">
+      <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{background:'var(--brand,#2455e8)'}}>
+          <span className="text-white font-bold text-sm">V</span>
+        </div>
+        <span className="font-semibold text-slate-800">Vendora</span>
+        <span className="text-slate-300">|</span>
+        <span className="text-slate-500 text-sm">Регистрация продавца</span>
+      </div>
+    </header>
+  );
+}
+
+// ─── WIZARD PROGRESS ───────────────────────────────────────────────────────────
+
+const STEPS = [
+  { id:1, label:'Регистрация', icon:'👤' },
+  { id:2, label:'Компания', icon:'🏢' },
+  { id:3, label:'Документы', icon:'📋' },
+  { id:4, label:'Каталог', icon:'🛍️' },
+];
+
+function WizardProgress({ step }) {
+  const pct = ((step - 1) / (STEPS.length - 1)) * 100;
+  return (
+    <div className="max-w-3xl mx-auto px-4 pt-6 pb-2">
+      {/* Bar */}
+      <div className="progress-track mb-6">
+        <div className="progress-fill" style={{width: `${pct}%`}} />
+      </div>
+      {/* Steps */}
+      <div className="flex justify-between">
+        {STEPS.map((s) => {
+          const done = step > s.id;
+          const active = step === s.id;
+          return (
+            <div key={s.id} className="flex flex-col items-center gap-1.5" style={{flex:1}}>
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300
+                ${done ? 'text-white' : active ? 'text-white ring-4' : 'bg-white border-2 border-slate-200 text-slate-400'}`}
+                style={done ? {background:'var(--brand,#2455e8)'} : active ? {background:'var(--brand,#2455e8)', '--tw-ring-color':'color-mix(in srgb, var(--brand,#2455e8) 20%, transparent)'} : {}}
+              >
+                {done ? <IcCheck size={16}/> : <span>{s.icon}</span>}
+              </div>
+              <span className={`text-xs font-medium text-center leading-tight transition-colors hidden sm:block
+                ${active ? 'text-slate-800' : done ? 'text-slate-500' : 'text-slate-400'}`}>
+                {s.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── FIELD WRAPPER ─────────────────────────────────────────────────────────────
+
+function Field({ label, hint, error, required, children }) {
+  return (
+    <div>
+      {label && (
+        <label className="input-label">
+          {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+        </label>
+      )}
+      {children}
+      {hint && !error && <p className="input-hint">{hint}</p>}
+      {error && <p className="input-error">{error}</p>}
+    </div>
+  );
+}
+
+// ─── UPLOAD ZONE ───────────────────────────────────────────────────────────────
+
+function UploadZone({ doc, file, onFile, onRemove }) {
+  const [drag, setDrag] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef();
+
+  async function handleFile(f) {
+    if (!f) return;
+    setUploading(true);
+    await new Promise(r => setTimeout(r, 900 + Math.random()*600));
+    setUploading(false);
+    onFile(doc.id, { name: f.name, size: f.size, type: f.type });
+  }
+
+  function onDrop(e) {
+    e.preventDefault(); setDrag(false);
+    handleFile(e.dataTransfer.files[0]);
+  }
+
+  return (
+    <div className={`upload-zone ${file ? 'uploaded' : drag ? 'drag' : ''}`}
+      onDragOver={e => { e.preventDefault(); setDrag(true); }}
+      onDragLeave={() => setDrag(false)}
+      onDrop={onDrop}
+      onClick={() => !file && !uploading && inputRef.current?.click()}
+    >
+      <input ref={inputRef} type="file" accept={doc.accept} className="hidden"
+        onChange={e => handleFile(e.target.files[0])} />
+
+      {uploading ? (
+        <div className="flex flex-col items-center gap-2 py-2">
+          <svg className="spinner w-6 h-6 border-2 border-slate-300 border-t-transparent rounded-full" viewBox="0 0 24 24"/>
+          <p className="text-xs text-slate-500 pulse">Загрузка...</p>
+        </div>
+      ) : file ? (
+        <div className="flex items-center gap-3 text-left">
+          <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-600 flex-shrink-0">
+            <IcFile />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-slate-800 truncate">{file.name}</p>
+            <p className="text-xs text-green-600 mt-0.5">✓ Загружено</p>
+          </div>
+          <button
+            className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0"
+            onClick={e => { e.stopPropagation(); onRemove(doc.id); }}
+          ><IcTrash /></button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-2 py-1 text-slate-400">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+            <IcUpload />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-600">
+              <span style={{color:'var(--brand,#2455e8)'}}>Нажмите</span> или перетащите файл
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">{doc.accept.toUpperCase().replace(/\./g,' ').trim()} · до {doc.maxMb} МБ</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STEP 1 — REGISTRATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function Step1({ data, setData, onNext }) {
+  const [showPwd, setShowPwd] = useState(false);
+  const [showPwd2, setShowPwd2] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [emailChecking, setEmailChecking] = useState(false);
+  const [emailOk, setEmailOk] = useState(false);
+  const strength = passwordStrength(data.password);
+
+  async function checkEmail(email) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    setEmailChecking(true);
+    await new Promise(r => setTimeout(r, 600));
+    setEmailChecking(false);
+    setEmailOk(true);
+  }
+
+  function validate() {
+    const e = {};
+    if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) e.email = 'Введите корректный email';
+    if (!data.password || data.password.length < 8) e.password = 'Минимум 8 символов';
+    if (data.password !== data.password2) e.password2 = 'Пароли не совпадают';
+    if (!data.firstName.trim()) e.firstName = 'Укажите имя';
+    if (!data.lastName.trim()) e.lastName = 'Укажите фамилию';
+    if (!data.phone || data.phone.replace(/\D/g,'').length < 11) e.phone = 'Введите корректный телефон';
+    if (!data.agree) e.agree = 'Необходимо согласие';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  return (
+    <div className="fade-up space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Создайте аккаунт продавца</h2>
+        <p className="text-slate-500 text-sm mt-1">Уже есть аккаунт? <a href="#" style={{color:'var(--brand,#2455e8)'}} className="font-medium hover:underline">Войдите</a></p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Имя" required error={errors.firstName}>
+          <input className={`input-field ${errors.firstName?'error':''}`} placeholder="Иван"
+            value={data.firstName} onChange={e => setData({...data, firstName: e.target.value})} />
+        </Field>
+        <Field label="Фамилия" required error={errors.lastName}>
+          <input className={`input-field ${errors.lastName?'error':''}`} placeholder="Петров"
+            value={data.lastName} onChange={e => setData({...data, lastName: e.target.value})} />
+        </Field>
+      </div>
+
+      <Field label="Рабочий email" required error={errors.email}>
+        <div className="relative">
+          <input className={`input-field pr-9 ${errors.email?'error':''}`} placeholder="ivan@company.ru" type="email"
+            value={data.email}
+            onChange={e => { setData({...data, email: e.target.value}); setEmailOk(false); }}
+            onBlur={e => checkEmail(e.target.value)} />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            {emailChecking && <svg className="spinner w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full" viewBox="0 0 16 16"/>}
+            {emailOk && !emailChecking && <span className="text-green-500"><IcCheck size={14}/></span>}
+          </div>
+        </div>
+        <p className="input-hint">Будет использован для входа и уведомлений</p>
+      </Field>
+
+      <Field label="Телефон" required error={errors.phone}>
+        <input className={`input-field ${errors.phone?'error':''}`} placeholder="+7 (999) 123-45-67" type="tel"
+          value={data.phone}
+          onChange={e => setData({...data, phone: formatPhone(e.target.value)})} />
+      </Field>
+
+      <Field label="Пароль" required error={errors.password}>
+        <div className="relative">
+          <input className={`input-field pr-10 ${errors.password?'error':''}`}
+            type={showPwd ? 'text' : 'password'} placeholder="Минимум 8 символов"
+            value={data.password} onChange={e => setData({...data, password: e.target.value})} />
+          <button className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            onClick={() => setShowPwd(v => !v)} type="button"><IcEye open={showPwd}/></button>
+        </div>
+        {data.password && (
+          <div className="mt-2 space-y-1">
+            <div className="flex gap-1">
+              {[1,2,3,4,5].map(i => (
+                <div key={i} className="flex-1 h-1 rounded-full transition-all duration-300"
+                  style={{background: i <= strength.score ? strength.color : '#e2e8f0'}} />
+              ))}
+            </div>
+            <p className="text-xs" style={{color: strength.color}}>{strength.label}</p>
+          </div>
+        )}
+      </Field>
+
+      <Field label="Повторите пароль" required error={errors.password2}>
+        <div className="relative">
+          <input className={`input-field pr-10 ${errors.password2?'error':''}`}
+            type={showPwd2 ? 'text' : 'password'} placeholder="Повторите пароль"
+            value={data.password2} onChange={e => setData({...data, password2: e.target.value})} />
+          <button className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            onClick={() => setShowPwd2(v => !v)} type="button"><IcEye open={showPwd2}/></button>
+        </div>
+      </Field>
+
+      {/* Agreement */}
+      <div className={`rounded-xl p-3 border transition-colors ${errors.agree ? 'border-red-300 bg-red-50' : 'border-slate-100 bg-slate-50'}`}>
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <div className={`w-4 h-4 rounded border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-all
+            ${data.agree ? 'text-white' : 'border-slate-300'}`}
+            style={data.agree ? {background:'var(--brand,#2455e8)', borderColor:'var(--brand,#2455e8)'} : {}}
+            onClick={() => setData({...data, agree: !data.agree})}>
+            {data.agree && <IcCheck size={10}/>}
+          </div>
+          <span className="text-xs text-slate-600 leading-relaxed">
+            Я принимаю <a href="#" style={{color:'var(--brand,#2455e8)'}} className="hover:underline">условия договора-оферты продавца</a>, <a href="#" style={{color:'var(--brand,#2455e8)'}} className="hover:underline">правила маркетплейса</a> и <a href="#" style={{color:'var(--brand,#2455e8)'}} className="hover:underline">политику конфиденциальности</a>
+          </span>
+        </label>
+        {errors.agree && <p className="input-error mt-1">{errors.agree}</p>}
+      </div>
+
+      {/* Email verification notice */}
+      <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
+        <IcInfo />
+        <span>После регистрации на указанный email придёт письмо с подтверждением. Ссылка действительна 48 часов.</span>
+      </div>
+
+      <button className="btn-primary w-full" onClick={() => validate() && onNext()}>
+        Создать аккаунт <IcArrowRight />
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STEP 2 — COMPANY PROFILE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function Step2({ data, setData, onNext, onBack }) {
+  const [errors, setErrors] = useState({});
+
+  function validate() {
+    const e = {};
+    if (!data.companyName.trim()) e.companyName = 'Укажите название';
+    if (!data.legalForm) e.legalForm = 'Выберите форму';
+    if (!data.inn || data.inn.length < 10) e.inn = 'ИНН: 10 или 12 цифр';
+    if (!data.ogrn || data.ogrn.length < 13) e.ogrn = 'ОГРН: 13 или 15 цифр';
+    if (data.categories.length === 0) e.categories = 'Выберите хотя бы одну категорию';
+    if (!data.description || data.description.trim().length < 30) e.description = 'Минимум 30 символов';
+    if (!data.website.trim()) e.website = 'Укажите сайт или напишите «нет»';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function toggleCategory(id) {
+    setData(prev => ({
+      ...prev,
+      categories: prev.categories.includes(id)
+        ? prev.categories.filter(c => c !== id)
+        : [...prev.categories, id]
+    }));
+  }
+
+  return (
+    <div className="fade-up space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Профиль компании</h2>
+        <p className="text-slate-500 text-sm mt-1">Эта информация будет отображаться покупателям на вашей странице продавца</p>
+      </div>
+
+      {/* Legal form */}
+      <Field label="Организационно-правовая форма" required error={errors.legalForm}>
+        <div className="grid grid-cols-2 gap-2 mt-1">
+          {LEGAL_FORMS.map(lf => (
+            <div key={lf.id}
+              className={`radio-card ${data.legalForm === lf.id ? 'selected' : ''}`}
+              onClick={() => setData({...data, legalForm: lf.id})}>
+              <div className="flex items-start gap-2">
+                <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5 transition-all ${data.legalForm === lf.id ? '' : 'border-slate-300'}`}
+                  style={data.legalForm === lf.id ? {borderColor:'var(--brand,#2455e8)', background:'var(--brand,#2455e8)'} : {}}>
+                  {data.legalForm === lf.id && <div className="w-full h-full rounded-full bg-white scale-50 block"/>}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">{lf.label}</p>
+                  <p className="text-xs text-slate-500">{lf.desc}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Field>
+
+      <Field label="Полное название организации" required error={errors.companyName}>
+        <input className={`input-field ${errors.companyName?'error':''}`} placeholder='ООО «Название компании»'
+          value={data.companyName} onChange={e => setData({...data, companyName: e.target.value})} />
+      </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="ИНН" required error={errors.inn}>
+          <input className={`input-field font-mono ${errors.inn?'error':''}`} placeholder="7712345678"
+            value={data.inn} onChange={e => setData({...data, inn: formatInn(e.target.value)})} />
+        </Field>
+        <Field label="КПП" hint="Не обязательно для ИП">
+          <input className="input-field font-mono" placeholder="771201001"
+            value={data.kpp} onChange={e => setData({...data, kpp: formatKpp(e.target.value)})} />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="ОГРН / ОГРНИП" required error={errors.ogrn}>
+          <input className={`input-field font-mono ${errors.ogrn?'error':''}`} placeholder="1027700000000"
+            value={data.ogrn} onChange={e => setData({...data, ogrn: formatOgrn(e.target.value)})} />
+        </Field>
+        <Field label="Юридический адрес" hint="Город, улица, дом">
+          <input className="input-field" placeholder="г. Москва, ул. Ленина, 1"
+            value={data.legalAddress} onChange={e => setData({...data, legalAddress: e.target.value})} />
+        </Field>
+      </div>
+
+      <Field label="Сайт компании" required error={errors.website}>
+        <input className={`input-field ${errors.website?'error':''}`} placeholder="https://company.ru или «нет»"
+          value={data.website} onChange={e => setData({...data, website: e.target.value})} />
+      </Field>
+
+      {/* Categories */}
+      <Field label="Категории товаров / услуг" required error={errors.categories}
+        hint="Выберите все подходящие категории — от этого зависит отображение в каталоге">
+        <div className="flex flex-wrap gap-2 mt-1">
+          {CATEGORIES.map(cat => (
+            <button key={cat.id}
+              className={`chip ${data.categories.includes(cat.id) ? 'active' : ''}`}
+              onClick={() => toggleCategory(cat.id)}>
+              <span>{cat.icon}</span>{cat.label}
+              {data.categories.includes(cat.id) && <IcCheck size={11}/>}
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      {/* Description */}
+      <Field label="Описание компании" required error={errors.description}
+        hint={`${data.description.length} / 1000 символов. Расскажите о вашей компании, опыте и преимуществах.`}>
+        <textarea className={`input-field ${errors.description?'error':''}`}
+          placeholder="Опишите вашу компанию: чем занимаетесь, какой опыт, в чём ваше преимущество для B2B покупателей..."
+          maxLength={1000}
+          value={data.description}
+          onChange={e => setData({...data, description: e.target.value})} />
+      </Field>
+
+      {/* Logo upload */}
+      <Field label="Логотип компании" hint="PNG или SVG, рекомендуемый размер 400×400 px">
+        <div
+          className={`upload-zone mt-1 ${data.logo ? 'uploaded' : ''}`}
+          onClick={() => !data.logo && document.getElementById('logo-input').click()}
+        >
+          <input id="logo-input" type="file" accept=".png,.jpg,.svg,.webp" className="hidden"
+            onChange={async e => {
+              const f = e.target.files[0];
+              if (f) setData({...data, logo: { name: f.name }});
+            }} />
+          {data.logo ? (
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center text-2xl">🖼️</div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium text-slate-800">{data.logo.name}</p>
+                <p className="text-xs text-green-600 mt-0.5">✓ Логотип загружен</p>
+              </div>
+              <button className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
+                onClick={e => { e.stopPropagation(); setData({...data, logo: null}); }}><IcTrash /></button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 py-2 text-slate-400">
+              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-2xl">🖼️</div>
+              <p className="text-sm text-slate-600"><span style={{color:'var(--brand,#2455e8)'}}>Загрузить логотип</span> (необязательно)</p>
+            </div>
+          )}
+        </div>
+      </Field>
+
+      <div className="flex gap-3 pt-2">
+        <button className="btn-ghost" onClick={onBack}>← Назад</button>
+        <button className="btn-primary flex-1" onClick={() => validate() && onNext()}>
+          Продолжить <IcArrowRight />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STEP 3 — DOCUMENTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function Step3({ data, setData, onNext, onBack }) {
+  const [errors, setErrors] = useState({});
+
+  function handleFile(docId, file) {
+    setData(prev => ({ ...prev, docs: { ...prev.docs, [docId]: file } }));
+    setErrors(prev => { const e = {...prev}; delete e[docId]; return e; });
+  }
+  function handleRemove(docId) {
+    setData(prev => { const d = {...prev.docs}; delete d[docId]; return {...prev, docs: d}; });
+  }
+
+  function validate() {
+    const e = {};
+    DOC_TYPES.filter(d => d.required).forEach(d => {
+      if (!data.docs[d.id]) e[d.id] = 'Обязательный документ';
+    });
+    // Bank details
+    if (!data.bankName.trim()) e.bankName = 'Укажите банк';
+    if (!data.bankAccount || data.bankAccount.replace(/\D/g,'').length < 20) e.bankAccount = '20-значный расчётный счёт';
+    if (!data.bankBik || data.bankBik.replace(/\D/g,'').length < 9) e.bankBik = '9-значный БИК';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  const requiredCount = DOC_TYPES.filter(d => d.required).length;
+  const uploadedRequired = DOC_TYPES.filter(d => d.required && data.docs[d.id]).length;
+
+  return (
+    <div className="fade-up space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Загрузка документов</h2>
+        <p className="text-slate-500 text-sm mt-1">Для верификации аккаунта продавца (KYC). Все данные защищены и хранятся в зашифрованном виде.</p>
+      </div>
+
+      {/* Progress */}
+      <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
+        <div className="w-10 h-10 rounded-full border-4 flex items-center justify-center text-xs font-bold flex-shrink-0"
+          style={{borderColor:'var(--brand,#2455e8)', color:'var(--brand,#2455e8)'}}>
+          {uploadedRequired}/{requiredCount}
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-slate-700">Обязательные документы</p>
+          <div className="progress-track mt-1.5">
+            <div className="progress-fill" style={{width:`${(uploadedRequired/requiredCount)*100}%`}} />
+          </div>
+        </div>
+      </div>
+
+      {/* Documents */}
+      <div className="space-y-4">
+        {DOC_TYPES.map(doc => (
+          <div key={doc.id}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="input-label mb-0">{doc.label}</span>
+              {doc.required
+                ? <span className="text-xs bg-red-50 text-red-500 px-1.5 py-0.5 rounded font-medium">Обязательно</span>
+                : <span className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">Необязательно</span>}
+            </div>
+            <p className="text-xs text-slate-400 mb-2">{doc.desc}</p>
+            <UploadZone doc={doc} file={data.docs[doc.id]} onFile={handleFile} onRemove={handleRemove} />
+            {errors[doc.id] && <p className="input-error mt-1">{errors[doc.id]}</p>}
+          </div>
+        ))}
+      </div>
+
+      {/* Bank details */}
+      <div className="rounded-xl border border-slate-100 p-4 space-y-3">
+        <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">🏦 Банковские реквизиты для выплат</p>
+        <p className="text-xs text-slate-500">На эти реквизиты будут поступать выплаты от продаж за вычетом комиссии маркетплейса</p>
+
+        <Field label="Банк" required error={errors.bankName}>
+          <input className={`input-field ${errors.bankName?'error':''}`} placeholder="ПАО Сбербанк"
+            value={data.bankName} onChange={e => setData({...data, bankName: e.target.value})} />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Расчётный счёт" required error={errors.bankAccount}>
+            <input className={`input-field font-mono text-sm ${errors.bankAccount?'error':''}`}
+              placeholder="40702810000000000000" maxLength={20}
+              value={data.bankAccount}
+              onChange={e => setData({...data, bankAccount: e.target.value.replace(/\D/g,'').slice(0,20)})} />
+          </Field>
+          <Field label="БИК банка" required error={errors.bankBik}>
+            <input className={`input-field font-mono text-sm ${errors.bankBik?'error':''}`}
+              placeholder="044525225" maxLength={9}
+              value={data.bankBik}
+              onChange={e => setData({...data, bankBik: e.target.value.replace(/\D/g,'').slice(0,9)})} />
+          </Field>
+        </div>
+
+        <Field label="Корр. счёт">
+          <input className="input-field font-mono text-sm" placeholder="30101810400000000225"
+            value={data.bankCorr} onChange={e => setData({...data, bankCorr: e.target.value.replace(/\D/g,'').slice(0,20)})} />
+        </Field>
+      </div>
+
+      <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-700">
+        <IcInfo />
+        <span>Проверка документов занимает до 2 рабочих дней. Вы получите уведомление на email о результате. В случае отклонения — получите подробные комментарии.</span>
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <button className="btn-ghost" onClick={onBack}>← Назад</button>
+        <button className="btn-primary flex-1" onClick={() => validate() && onNext()}>
+          Продолжить <IcArrowRight />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STEP 4 — CATALOG SETUP
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function Step4({ data, setData, onNext, onBack, tweaks }) {
+  const [errors, setErrors] = useState({});
+  const [imageFile, setImageFile] = useState(null);
+  const [imgUploading, setImgUploading] = useState(false);
+
+  function validate() {
+    const e = {};
+    if (!data.plan) e.plan = 'Выберите тариф';
+    if (!data.listing.name.trim()) e.name = 'Укажите название товара';
+    if (!data.listing.price || isNaN(Number(data.listing.price)) || Number(data.listing.price) <= 0) e.price = 'Укажите корректную цену';
+    if (!data.listing.category) e.category = 'Выберите категорию';
+    if (!data.listing.description || data.listing.description.trim().length < 20) e.description = 'Минимум 20 символов';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function setListing(key, val) {
+    setData(prev => ({ ...prev, listing: { ...prev.listing, [key]: val } }));
+  }
+
+  async function handleImage(f) {
+    if (!f) return;
+    setImgUploading(true);
+    await new Promise(r => setTimeout(r, 700));
+    setImgUploading(false);
+    setImageFile({ name: f.name });
+    setListing('image', f.name);
+  }
+
+  return (
+    <div className="fade-up space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Настройка каталога</h2>
+        <p className="text-slate-500 text-sm mt-1">Выберите тарифный план и добавьте первый товар. Это можно изменить позже в личном кабинете.</p>
+      </div>
+
+      {/* Commission plan */}
+      <div>
+        <p className="input-label mb-2">Тарифный план <span className="text-red-400">*</span></p>
+        {errors.plan && <p className="input-error mb-2">{errors.plan}</p>}
+        <div className="space-y-2">
+          {COMMISSION_PLANS.map(plan => (
+            <div key={plan.id}
+              className={`radio-card ${data.plan === plan.id ? 'selected' : ''} relative overflow-hidden`}
+              onClick={() => setData({...data, plan: plan.id})}>
+              {plan.id === 'pro' && (
+                <div className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full font-semibold text-white"
+                  style={{background:'var(--brand,#2455e8)'}}>Популярный</div>
+              )}
+              <div className="flex items-center gap-3">
+                <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-all ${data.plan === plan.id ? '' : 'border-slate-300'}`}
+                  style={data.plan === plan.id ? {borderColor:'var(--brand,#2455e8)', background:'var(--brand,#2455e8)'} : {}}>
+                  {data.plan === plan.id && <div className="w-full h-full rounded-full bg-white scale-50 block"/>}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-slate-800">{plan.label}</p>
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">{plan.pct} комиссия</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">{plan.desc}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-bold" style={plan.monthly === 0 ? {color:'#22c55e'} : {color:'var(--brand,#2455e8)'}}>
+                    {plan.monthlyLabel}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* First listing */}
+      <div className="rounded-xl border border-slate-100 p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-800">🛍️ Первый товар в каталоге</p>
+          <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Можно добавить позже</span>
+        </div>
+
+        {/* Image */}
+        <div>
+          <p className="input-label">Фото товара</p>
+          <div
+            className={`upload-zone ${imageFile ? 'uploaded' : ''}`}
+            onClick={() => !imageFile && !imgUploading && document.getElementById('img-input').click()}
+          >
+            <input id="img-input" type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden"
+              onChange={e => handleImage(e.target.files[0])} />
+            {imgUploading ? (
+              <div className="flex items-center gap-2 justify-center py-2">
+                <svg className="spinner w-5 h-5 border-2 border-slate-300 border-t-transparent rounded-full" viewBox="0 0 20 20"/>
+                <span className="text-xs text-slate-500 pulse">Загрузка...</span>
+              </div>
+            ) : imageFile ? (
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-2xl">📷</div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium text-slate-800">{imageFile.name}</p>
+                  <p className="text-xs text-green-600">✓ Фото загружено</p>
+                </div>
+                <button className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
+                  onClick={e => { e.stopPropagation(); setImageFile(null); setListing('image', null); }}>
+                  <IcTrash />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 justify-center text-slate-400 py-1">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl">📷</div>
+                <div className="text-left">
+                  <p className="text-sm text-slate-600"><span style={{color:'var(--brand,#2455e8)'}}>Загрузить фото</span></p>
+                  <p className="text-xs text-slate-400">JPG, PNG, WebP · до 10 МБ</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <Field label="Название товара / услуги" required error={errors.name}>
+          <input className={`input-field ${errors.name?'error':''}`} placeholder="Ноутбук Dell Latitude 5540, i7, 16GB"
+            value={data.listing.name} onChange={e => setListing('name', e.target.value)} />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Цена (₽)" required error={errors.price}>
+            <div className="relative">
+              <input className={`input-field pr-6 ${errors.price?'error':''}`} placeholder="89 500"
+                type="number" min="0"
+                value={data.listing.price} onChange={e => setListing('price', e.target.value)} />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₽</span>
+            </div>
+          </Field>
+          <Field label="Артикул (SKU)">
+            <input className="input-field" placeholder="DL-5540-I7"
+              value={data.listing.sku} onChange={e => setListing('sku', e.target.value)} />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Категория" required error={errors.category}>
+            <select className={`input-field ${errors.category?'error':''}`}
+              value={data.listing.category} onChange={e => setListing('category', e.target.value)}>
+              <option value="">Выберите...</option>
+              {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+            </select>
+          </Field>
+          <Field label="Минимальный заказ">
+            <div className="relative">
+              <input className="input-field pr-12" type="number" min="1" placeholder="1"
+                value={data.listing.minOrder} onChange={e => setListing('minOrder', e.target.value)} />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">шт.</span>
+            </div>
+          </Field>
+        </div>
+
+        <Field label="Описание товара" required error={errors.description}
+          hint={`${(data.listing.description||'').length} / 2000 символов`}>
+          <textarea className={`input-field ${errors.description?'error':''}`}
+            placeholder="Подробно опишите товар: характеристики, комплектация, область применения..."
+            maxLength={2000}
+            value={data.listing.description}
+            onChange={e => setListing('description', e.target.value)} />
+        </Field>
+
+        {/* Stock */}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Остаток на складе" hint="Количество в наличии">
+            <div className="relative">
+              <input className="input-field pr-12" type="number" min="0" placeholder="100"
+                value={data.listing.stock} onChange={e => setListing('stock', e.target.value)} />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">шт.</span>
+            </div>
+          </Field>
+          <Field label="НДС">
+            <select className="input-field"
+              value={data.listing.vat} onChange={e => setListing('vat', e.target.value)}>
+              <option value="20">20%</option>
+              <option value="10">10%</option>
+              <option value="0">0% (без НДС)</option>
+            </select>
+          </Field>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
+        <IcInfo />
+        <span>После одобрения аккаунта вы сможете добавить неограниченное количество товаров через личный кабинет продавца.</span>
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <button className="btn-ghost" onClick={onBack}>← Назад</button>
+        <button className="btn-primary flex-1" onClick={() => validate() && onNext()}>
+          Отправить на модерацию <IcArrowRight />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SUCCESS SCREEN
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function SuccessScreen({ data, onReset }) {
+  const [activeTab, setActiveTab] = useState('status');
+
+  const TIMELINE = [
+    { icon:'✅', label:'Заявка подана', desc:'Ваши данные получены', done:true, time:'Сейчас' },
+    { icon:'📧', label:'Email подтверждён', desc:'Проверьте почту и подтвердите адрес', done:false, time:'~5 мин' },
+    { icon:'🔍', label:'Проверка документов', desc:'Автоматическая + ручная верификация', done:false, time:'1–2 дня' },
+    { icon:'✨', label:'Аккаунт одобрен', desc:'Доступ к личному кабинету продавца', done:false, time:'После проверки' },
+    { icon:'🚀', label:'Первые продажи', desc:'Товары видны покупателям', done:false, time:'Сразу после одобрения' },
+  ];
+
+  return (
+    <div className="fade-up">
+      {/* Hero */}
+      <div className="card p-8 text-center mb-5">
+        <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 check-pop"
+          style={{background:'color-mix(in srgb, var(--brand,#2455e8) 12%, white)'}}>
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+            <circle cx="22" cy="22" r="22" fill="var(--brand,#2455e8)"/>
+            <path d="M13 23l7 7L32 15" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Заявка отправлена!</h2>
+        <p className="text-slate-500 mb-1">Аккаунт продавца <span className="font-semibold text-slate-800">{data.company.companyName || 'Ваша компания'}</span> передан на проверку</p>
+        <p className="text-sm text-slate-400">Уведомление придёт на <span className="text-slate-600">{data.auth.email}</span></p>
+
+        <div className="grid grid-cols-3 gap-3 mt-6 pt-6 border-t border-slate-100">
+          <div>
+            <p className="text-lg font-bold text-slate-900">1–2</p>
+            <p className="text-xs text-slate-400 mt-0.5">Рабочих дня</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-slate-900">{(data.docs.docs && Object.keys(data.docs.docs).length) || 0}</p>
+            <p className="text-xs text-slate-400 mt-0.5">Документов</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-slate-900">{COMMISSION_PLANS.find(p=>p.id===data.catalog.plan)?.pct || '—'}</p>
+            <p className="text-xs text-slate-400 mt-0.5">Комиссия</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-4">
+        {[['status','Статус проверки'],['listing','Товар'],['checklist','Чек-лист']].map(([id, label]) => (
+          <button key={id}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab===id ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab(id)}>{label}</button>
+        ))}
+      </div>
+
+      {activeTab === 'status' && (
+        <div className="card p-4 fade-up">
+          <div className="space-y-0">
+            {TIMELINE.map((item, i) => (
+              <div key={i} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-base flex-shrink-0 ${item.done ? 'bg-green-100' : 'bg-slate-100'}`}>
+                    {item.icon}
+                  </div>
+                  {i < TIMELINE.length-1 && <div className="w-0.5 h-8 bg-slate-100 my-1"/>}
+                </div>
+                <div className="pb-4 pt-1.5">
+                  <div className="flex items-center gap-2">
+                    <p className={`text-sm font-semibold ${item.done ? 'text-slate-800' : 'text-slate-500'}`}>{item.label}</p>
+                    <span className="text-xs text-slate-400">{item.time}</span>
+                    {item.done && <span className="text-xs text-green-600 font-medium">✓ Готово</span>}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'listing' && (
+        <div className="card p-4 fade-up">
+          {data.catalog.listing.name ? (
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-2xl flex-shrink-0">
+                  {data.catalog.listing.image ? '📷' : '📦'}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-slate-800">{data.catalog.listing.name}</p>
+                  {data.catalog.listing.sku && <p className="text-xs text-slate-400 mt-0.5">Арт: {data.catalog.listing.sku}</p>}
+                  <p className="text-xs font-medium mt-1 px-2 py-0.5 rounded-full inline-flex" style={{background:'color-mix(in srgb,var(--brand,#2455e8) 10%,white)', color:'var(--brand,#2455e8)'}}>
+                    На модерации
+                  </p>
+                </div>
+                <p className="text-lg font-bold text-slate-900">{data.catalog.listing.price ? Number(data.catalog.listing.price).toLocaleString('ru') + ' ₽' : '—'}</p>
+              </div>
+              {data.catalog.listing.description && (
+                <p className="text-xs text-slate-500 leading-relaxed border-t border-slate-50 pt-3">{data.catalog.listing.description}</p>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-3xl mb-2">📦</p>
+              <p className="text-sm text-slate-500">Товар не был добавлен</p>
+              <p className="text-xs text-slate-400 mt-1">Вы сможете добавить товары после одобрения аккаунта</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'checklist' && (
+        <div className="card p-4 fade-up">
+          <p className="text-sm font-semibold text-slate-800 mb-3">Пока ждёте одобрения:</p>
+          <div className="space-y-3">
+            {[
+              { icon:'📧', text:'Подтвердите email — проверьте папку «Спам»', done:false },
+              { icon:'📸', text:'Подготовьте качественные фото товаров (не менее 3–5 на позицию)', done:false },
+              { icon:'📝', text:'Составьте описания товаров — минимум 100 символов каждое', done:false },
+              { icon:'💰', text:'Проверьте конкурентность ваших цен в каталоге', done:false },
+              { icon:'📦', text:'Убедитесь, что логистика настроена для B2B объёмов', done:false },
+            ].map((item, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <span className="text-base">{item.icon}</span>
+                <p className="text-sm text-slate-600">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
+        <button className="btn-primary py-3 flex items-center justify-center gap-2" style={{opacity:0.7,cursor:'default'}}>
+          📊 Личный кабинет (скоро)
+        </button>
+        <button className="btn-ghost py-3 flex items-center justify-center gap-2" onClick={onReset}>
+          ← Начать заново
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROOT APP
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#2455e8",
+  "showPasswordStrength": true,
+  "requireAllDocs": true,
+  "defaultPlan": "standard",
+  "brandName": "Vendora"
+}/*EDITMODE-END*/;
+
+const INITIAL_DATA = {
+  auth: { email:'', password:'', password2:'', firstName:'', lastName:'', phone:'', agree:false },
+  company: { companyName:'', legalForm:'', inn:'', kpp:'', ogrn:'', legalAddress:'', website:'', categories:[], description:'', logo:null },
+  docs: { docs:{}, bankName:'', bankAccount:'', bankBik:'', bankCorr:'' },
+  catalog: { plan:'', listing:{ name:'', price:'', sku:'', category:'', description:'', minOrder:1, stock:'', vat:'20', image:null } },
+};
+
+function App() {
+  const hookResult = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : {};
+  const tweaks = (hookResult && hookResult.tweaks) || TWEAK_DEFAULTS;
+  const TweaksPanel = (hookResult && hookResult.TweaksPanel) || window.TweaksPanel;
+  const TweakSection = (hookResult && hookResult.TweakSection) || window.TweakSection;
+  const TweakToggle = (hookResult && hookResult.TweakToggle) || window.TweakToggle;
+  const TweakColor = (hookResult && hookResult.TweakColor) || window.TweakColor;
+  const TweakSelect = (hookResult && hookResult.TweakSelect) || window.TweakSelect;
+
+  const [step, setStep] = useState(1);
+  const [authData, setAuthData] = useState(INITIAL_DATA.auth);
+  const [companyData, setCompanyData] = useState(INITIAL_DATA.company);
+  const [docsData, setDocsData] = useState(INITIAL_DATA.docs);
+  const [catalogData, setCatalogData] = useState({...INITIAL_DATA.catalog, plan: tweaks.defaultPlan || ''});
+  const [done, setDone] = useState(false);
+
+  // Apply accent color
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand', tweaks.accentColor || '#2455e8');
+  }, [tweaks.accentColor]);
+
+  function handleReset() {
+    setStep(1);
+    setAuthData(INITIAL_DATA.auth);
+    setCompanyData(INITIAL_DATA.company);
+    setDocsData(INITIAL_DATA.docs);
+    setCatalogData(INITIAL_DATA.catalog);
+    setDone(false);
+  }
+
+  return (
+    <>
+      <Header />
+      {!done && <WizardProgress step={step} />}
+
+      <main className="max-w-3xl mx-auto px-4 pb-20">
+        {done ? (
+          <SuccessScreen
+            data={{ auth: authData, company: companyData, docs: docsData, catalog: catalogData }}
+            onReset={handleReset}
+          />
+        ) : (
+          <div className="max-w-xl mx-auto mt-6">
+            <div className="card p-5 sm:p-7">
+              {step === 1 && (
+                <Step1 data={authData} setData={setAuthData} onNext={() => setStep(2)} />
+              )}
+              {step === 2 && (
+                <Step2 data={companyData} setData={setCompanyData}
+                  onNext={() => setStep(3)} onBack={() => setStep(1)} />
+              )}
+              {step === 3 && (
+                <Step3 data={docsData} setData={setDocsData}
+                  onNext={() => setStep(4)} onBack={() => setStep(2)} />
+              )}
+              {step === 4 && (
+                <Step4 data={catalogData} setData={setCatalogData} tweaks={tweaks}
+                  onNext={() => setDone(true)} onBack={() => setStep(3)} />
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-center gap-4 mt-6 text-xs text-slate-400">
+              <span>🔒 SSL шифрование</span>
+              <span>·</span>
+              <a href="#" className="hover:text-slate-600">Условия оферты</a>
+              <span>·</span>
+              <a href="#" className="hover:text-slate-600">Помощь</a>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Tweaks */}
+      {TweaksPanel && TweakSection && (
+        <TweaksPanel>
+          <TweakSection title="Брендинг">
+            {TweakColor && <TweakColor id="accentColor" label="Цвет акцента" />}
+          </TweakSection>
+          <TweakSection title="Онбординг">
+            {TweakToggle && <TweakToggle id="showPasswordStrength" label="Индикатор пароля" />}
+            {TweakToggle && <TweakToggle id="requireAllDocs" label="Все документы обязательны" />}
+            {TweakSelect && <TweakSelect id="defaultPlan" label="Тариф по умолчанию" options={[
+              { value:'standard', label:'Стандарт' },
+              { value:'pro', label:'Про' },
+              { value:'enterprise', label:'Enterprise' },
+            ]} />}
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

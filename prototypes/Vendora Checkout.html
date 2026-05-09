@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendora — Мультивендорный Checkout</title>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#eef5ff', 100:'#d9e8ff', 200:'#bcd4fe', 300:'#8eb8fd', 400:'#6096f8', 500:'#3b74f3', 600:'#2455e8', 700:'#1c43d5', 800:'#1d37ab', 879:'#1e3287', DEFAULT:'#2455e8' },
+            slate: { 950:'#0c1322' }
+          },
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: #f5f7fb; font-family: 'Inter', system-ui, sans-serif; }
+
+    .step-line::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 100%;
+      width: 100%; height: 2px;
+      background: currentColor;
+      transform: translateY(-50%);
+    }
+
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px);} to { opacity:1; transform:translateY(0);} }
+    .fade-in { animation: fadeIn 0.3s ease both; }
+
+    @keyframes slideUp { from { opacity:0; transform:translateY(24px);} to { opacity:1; transform:translateY(0);} }
+    .slide-up { animation: slideUp 0.4s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes checkPop { 0%{transform:scale(0) rotate(-20deg);opacity:0} 70%{transform:scale(1.15) rotate(3deg);opacity:1} 100%{transform:scale(1) rotate(0);opacity:1} }
+    .check-pop { animation: checkPop 0.6s cubic-bezier(.22,.84,.4,1) both; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 0.7s linear infinite; }
+
+    .input-field {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+      color: #1e293b;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+    .input-field:focus {
+      border-color: #2455e8;
+      box-shadow: 0 0 0 3px rgba(36,85,232,0.12);
+    }
+    .input-field.error { border-color: #ef4444; }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid #e8edf4;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .btn-primary {
+      background: #2455e8;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    }
+    .btn-primary:hover { background: #1c43d5; box-shadow: 0 4px 16px rgba(36,85,232,0.25); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { background: #93aef7; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .btn-ghost {
+      background: transparent;
+      color: #64748b;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .btn-ghost:hover { border-color: #94a3b8; color: #1e293b; background: #f8fafc; }
+
+    .radio-card {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      background: #fff;
+    }
+    .radio-card:hover { border-color: #93aef7; background: #f8fafc; }
+    .radio-card.selected { border-color: #2455e8; background: #eef5ff; box-shadow: 0 0 0 3px rgba(36,85,232,0.08); }
+
+    .tag-vendor {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── DATA ──────────────────────────────────────────────────────────────────────
+
+const VENDORS = {
+  techpro: { id:'techpro', name:'TechPro Solutions', color:'#6366f1', bg:'#eef2ff', rating:4.8, reviews:1240, verified:true },
+  officemax: { id:'officemax', name:'OfficeMax Россия', color:'#0891b2', bg:'#ecfeff', rating:4.6, reviews:889, verified:true },
+  cleanmaster: { id:'cleanmaster', name:'CleanMaster Pro', color:'#059669', bg:'#ecfdf5', rating:4.9, reviews:2107, verified:true },
+};
+
+const INITIAL_CART = [
+  { id:'p1', vendorId:'techpro', name:'Ноутбук Dell Latitude 5540', sku:'DL-5540-I7', qty:2, price:89500, image:'💻', category:'Электроника', inStock:true, minOrder:1, weight:'2.1 кг' },
+  { id:'p2', vendorId:'techpro', name:'Мышь Logitech MX Master 3', sku:'LG-MX3-BLK', qty:5, price:6800, image:'🖱️', category:'Аксессуары', inStock:true, minOrder:1, weight:'0.14 кг' },
+  { id:'p3', vendorId:'officemax', name:'Кресло руководителя Herman Miller Aeron', sku:'HM-AERON-C', qty:1, price:145000, image:'🪑', category:'Мебель', inStock:true, minOrder:1, weight:'18 кг' },
+  { id:'p4', vendorId:'officemax', name:'Стол переговорный 2400×1200 мм', sku:'TBL-2412-OAK', qty:1, price:78000, image:'🪵', category:'Мебель', inStock:false, minOrder:1, weight:'95 кг' },
+  { id:'p5', vendorId:'cleanmaster', name:'Чистящее средство Pro-Clean 5L', sku:'CM-PRO5-UN', qty:10, price:1200, image:'🧴', category:'Расходники', inStock:true, minOrder:5, weight:'5.3 кг' },
+];
+
+const DELIVERY_OPTIONS = [
+  { id:'standard', label:'Стандартная доставка', days:'3–5 рабочих дней', price:0, priceLabel:'Бесплатно', icon:'📦' },
+  { id:'express', label:'Экспресс доставка', days:'1–2 рабочих дня', price:2500, priceLabel:'2 500 ₽', icon:'⚡' },
+  { id:'pickup', label:'Самовывоз (3 пункта)', days:'Сегодня, от 16:00', price:0, priceLabel:'Бесплатно', icon:'🏪' },
+];
+
+const PAYMENT_METHODS = [
+  { id:'card', label:'Банковская карта', icon:'💳', desc:'Visa, Mastercard, МИР' },
+  { id:'invoice', label:'Счёт на оплату (B2B)', icon:'📄', desc:'Оплата по реквизитам, 3–5 дней' },
+  { id:'credit', label:'Корпоративный кредит', icon:'🏦', desc:'Кредитная линия до 2 000 000 ₽' },
+];
+
+const SAVED_ADDRESSES = [
+  { id:'a1', label:'Главный офис', address:'г. Москва, ул. Тверская, 12, офис 304', zip:'125009', contact:'Иванова А.П., +7 495 123-45-67' },
+  { id:'a2', label:'Склад', address:'г. Москва, Промышленный пр-д, 8, стр. 2', zip:'127083', contact:'Петров С.В., +7 495 987-65-43' },
+];
+
+const PROMO_CODES = { 'VENDORA10': { type:'percent', value:10, label:'-10%' }, 'FIRST500': { type:'fixed', value:500, label:'-500 ₽' } };
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────────
+
+const fmt = (n) => new Intl.NumberFormat('ru-RU', { minimumFractionDigits:0, maximumFractionDigits:0 }).format(n) + ' ₽';
+
+function groupByVendor(items) {
+  return items.reduce((acc, item) => {
+    if (!acc[item.vendorId]) acc[item.vendorId] = [];
+    acc[item.vendorId].push(item);
+    return acc;
+  }, {});
+}
+
+function calcTotals(items, delivery, promo) {
+  const subtotal = items.filter(i => i.inStock).reduce((s, i) => s + i.price * i.qty, 0);
+  const deliveryCost = delivery ? (DELIVERY_OPTIONS.find(d => d.id === delivery)?.price || 0) : 0;
+  let discount = 0;
+  if (promo) {
+    const p = PROMO_CODES[promo];
+    if (p) discount = p.type === 'percent' ? Math.round(subtotal * p.value / 100) : p.value;
+  }
+  const total = subtotal + deliveryCost - discount;
+  return { subtotal, deliveryCost, discount, total };
+}
+
+// ─── ICONS ─────────────────────────────────────────────────────────────────────
+
+const IconCheck = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className={className}>
+    <path d="M3 8l3.5 3.5L13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IconTrash = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <path d="M2 4h12M5.5 4V3a1 1 0 011-1h3a1 1 0 011 1v1M6.5 7v5M9.5 7v5M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IconChevron = ({ direction = 'right', size = 16 }) => {
+  const d = { right:'M6 3l5 5-5 5', left:'M10 3L5 8l5 5', down:'M3 6l5 5 5-5', up:'M3 10l5-5 5 5' }[direction];
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none"><path d={d} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+};
+const IconShield = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <path d="M8 1.5L2 4v4c0 3.5 2.5 6 6 7 3.5-1 6-3.5 6-7V4L8 1.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M5.5 8l2 2L11 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IconInfo = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5"/>
+    <path d="M8 7.5v4M8 5.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+const IconPlus = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+    <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+const IconMinus = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+    <path d="M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+const IconStar = ({ size = 12, filled = true }) => (
+  <svg width={size} height={size} viewBox="0 0 12 12" fill={filled ? 'currentColor' : 'none'}>
+    <path d="M6 1l1.4 3h3.1l-2.5 2 1 3L6 7.5 3 9l1-3L1.5 4H4.6L6 1z" stroke="currentColor" strokeWidth="0.8"/>
+  </svg>
+);
+const IconTag = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+    <path d="M1.5 7.5L7 2h5.5v5.5L7 13 1.5 7.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="10" cy="4" r="1" fill="currentColor"/>
+  </svg>
+);
+
+// ─── STEP INDICATOR ────────────────────────────────────────────────────────────
+
+const STEPS = [
+  { id:'cart', label:'Корзина' },
+  { id:'checkout', label:'Оформление' },
+  { id:'success', label:'Заказ создан' },
+];
+
+function StepIndicator({ current }) {
+  const idx = STEPS.findIndex(s => s.id === current);
+  return (
+    <div className="flex items-center gap-0">
+      {STEPS.map((step, i) => {
+        const done = i < idx;
+        const active = i === idx;
+        return (
+          <React.Fragment key={step.id}>
+            <div className="flex flex-col items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300
+                ${done ? 'bg-brand-600 text-white' : active ? 'bg-brand-600 text-white ring-4 ring-brand-100' : 'bg-white border-2 border-slate-200 text-slate-400'}`}>
+                {done ? <IconCheck size={14}/> : i + 1}
+              </div>
+              <span className={`text-xs mt-1 font-medium whitespace-nowrap transition-colors
+                ${active ? 'text-brand-600' : done ? 'text-slate-500' : 'text-slate-400'}`}>{step.label}</span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`flex-1 h-0.5 mx-2 mb-4 transition-all duration-500 ${done ? 'bg-brand-500' : 'bg-slate-200'}`} style={{minWidth: 32}}/>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── HEADER ────────────────────────────────────────────────────────────────────
+
+function Header({ screen }) {
+  return (
+    <header className="bg-white border-b border-slate-100 sticky top-0 z-40">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
+            <span className="text-white font-bold text-sm">V</span>
+          </div>
+          <span className="font-semibold text-slate-800 text-base">Vendora</span>
+          <span className="text-slate-300 text-sm">|</span>
+          <span className="text-slate-500 text-sm hidden sm:block">Marketplace B2B</span>
+        </div>
+        <StepIndicator current={screen} />
+        <div className="flex items-center gap-2 text-slate-500 text-xs hidden sm:flex">
+          <IconShield size={14} className="text-green-500"/>
+          <span>Защищённый сайт</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ─── VENDOR BADGE ──────────────────────────────────────────────────────────────
+
+function VendorBadge({ vendor, size = 'sm' }) {
+  return (
+    <span className="tag-vendor" style={{ background: vendor.bg, color: vendor.color }}>
+      <span className={`w-1.5 h-1.5 rounded-full`} style={{ background: vendor.color }}></span>
+      {vendor.name}
+      {vendor.verified && <span title="Верифицированный продавец">✓</span>}
+    </span>
+  );
+}
+
+// ─── QTY CONTROL ───────────────────────────────────────────────────────────────
+
+function QtyControl({ value, onChange, min = 1, max = 999 }) {
+  return (
+    <div className="flex items-center gap-1 bg-slate-50 rounded-lg p-0.5">
+      <button
+        className="w-7 h-7 flex items-center justify-center rounded-md text-slate-500 hover:bg-white hover:text-slate-800 hover:shadow-sm transition-all disabled:opacity-30"
+        onClick={() => onChange(Math.max(min, value - 1))}
+        disabled={value <= min}
+      ><IconMinus /></button>
+      <span className="w-8 text-center text-sm font-semibold text-slate-700">{value}</span>
+      <button
+        className="w-7 h-7 flex items-center justify-center rounded-md text-slate-500 hover:bg-white hover:text-slate-800 hover:shadow-sm transition-all disabled:opacity-30"
+        onClick={() => onChange(Math.min(max, value + 1))}
+        disabled={value >= max}
+      ><IconPlus /></button>
+    </div>
+  );
+}
+
+// ─── CART ITEM ROW ─────────────────────────────────────────────────────────────
+
+function CartItem({ item, onQtyChange, onRemove, tweaks }) {
+  const vendor = VENDORS[item.vendorId];
+  return (
+    <div className={`flex gap-3 sm:gap-4 py-4 ${!item.inStock ? 'opacity-60' : ''}`}>
+      <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 bg-slate-50 rounded-12 rounded-xl flex items-center justify-center text-2xl border border-slate-100">
+        {item.image}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-800 leading-snug">{item.name}</p>
+            <p className="text-xs text-slate-400 mt-0.5">Арт: {item.sku}</p>
+            <div className="mt-1.5">
+              <VendorBadge vendor={vendor} />
+            </div>
+          </div>
+          <button
+            className="flex-shrink-0 p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-all"
+            onClick={() => onRemove(item.id)}
+            title="Удалить"
+          ><IconTrash size={15}/></button>
+        </div>
+        <div className="flex items-center justify-between mt-3 gap-2">
+          {item.inStock ? (
+            <QtyControl value={item.qty} onChange={(v) => onQtyChange(item.id, v)} min={item.minOrder} />
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-500 bg-red-50 px-2.5 py-1 rounded-lg">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+              Нет в наличии
+            </span>
+          )}
+          <div className="text-right">
+            <p className="text-sm font-bold text-slate-900">{fmt(item.price * item.qty)}</p>
+            {item.qty > 1 && <p className="text-xs text-slate-400">{fmt(item.price)} / шт.</p>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── VENDOR GROUP ──────────────────────────────────────────────────────────────
+
+function VendorGroup({ vendorId, items, onQtyChange, onRemove, tweaks }) {
+  const vendor = VENDORS[vendorId];
+  const groupTotal = items.filter(i => i.inStock).reduce((s,i) => s + i.price*i.qty, 0);
+  return (
+    <div className="card mb-4 overflow-hidden fade-in">
+      <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-slate-50" style={{background: vendor.bg}}>
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold" style={{background: vendor.color, color:'#fff'}}>
+            {vendor.name[0]}
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold" style={{color: vendor.color}}>{vendor.name}</span>
+              {vendor.verified && (
+                <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{background: vendor.color, color:'#fff', opacity:0.9}}>✓</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1 mt-0.5">
+              <IconStar size={11} filled={true} />
+              <span className="text-xs text-slate-500">{vendor.rating} · {vendor.reviews.toLocaleString('ru')} отзывов</span>
+            </div>
+          </div>
+        </div>
+        <span className="text-sm font-semibold text-slate-700">{fmt(groupTotal)}</span>
+      </div>
+      <div className="px-4 sm:px-5 divide-y divide-slate-50">
+        {items.map(item => (
+          <CartItem key={item.id} item={item} onQtyChange={onQtyChange} onRemove={onRemove} tweaks={tweaks} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── ORDER SUMMARY ─────────────────────────────────────────────────────────────
+
+function OrderSummary({ items, delivery, promo, onPromoChange, onContinue, btnLabel = 'Перейти к оформлению', loading = false, showPromo = true }) {
+  const [promoInput, setPromoInput] = useState(promo || '');
+  const [promoStatus, setPromoStatus] = useState(promo ? 'applied' : null);
+  const { subtotal, deliveryCost, discount, total } = calcTotals(items, delivery, promo);
+  const unavailable = items.filter(i => !i.inStock).length;
+  const vendorCount = new Set(items.filter(i => i.inStock).map(i => i.vendorId)).size;
+
+  function applyPromo() {
+    const code = promoInput.trim().toUpperCase();
+    if (PROMO_CODES[code]) {
+      onPromoChange(code);
+      setPromoStatus('applied');
+    } else {
+      setPromoStatus('invalid');
+    }
+  }
+  function removePromo() {
+    onPromoChange(null);
+    setPromoInput('');
+    setPromoStatus(null);
+  }
+
+  return (
+    <div className="card p-4 sm:p-5 sticky top-20">
+      <h3 className="text-base font-semibold text-slate-800 mb-4">Итог заказа</h3>
+
+      <div className="space-y-2.5 text-sm mb-4">
+        <div className="flex justify-between text-slate-600">
+          <span>Товары ({items.filter(i=>i.inStock).length} позиций)</span>
+          <span className="font-medium text-slate-800">{fmt(subtotal)}</span>
+        </div>
+        {vendorCount > 1 && (
+          <div className="flex justify-between text-slate-500">
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-brand-300 inline-block"></span>{vendorCount} продавца</span>
+            <span className="text-xs bg-slate-50 px-2 py-0.5 rounded-full text-slate-500">мультизаказ</span>
+          </div>
+        )}
+        <div className="flex justify-between text-slate-600">
+          <span>Доставка</span>
+          <span className={deliveryCost === 0 ? 'text-green-600 font-medium' : 'font-medium text-slate-800'}>
+            {delivery ? (deliveryCost === 0 ? 'Бесплатно' : fmt(deliveryCost)) : '—'}
+          </span>
+        </div>
+        {discount > 0 && (
+          <div className="flex justify-between text-green-600">
+            <span className="flex items-center gap-1"><IconTag size={12} />Промокод {promo}</span>
+            <span className="font-medium">−{fmt(discount)}</span>
+          </div>
+        )}
+      </div>
+
+      {showPromo && (
+        <div className="mb-4">
+          {promoStatus === 'applied' ? (
+            <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-10 rounded-xl px-3 py-2.5">
+              <div className="flex items-center gap-2 text-green-700 text-sm font-medium">
+                <IconTag size={14}/>
+                <span>{promoInput} — {PROMO_CODES[promoInput.toUpperCase()]?.label}</span>
+              </div>
+              <button className="text-green-400 hover:text-green-700 text-xs" onClick={removePromo}>✕</button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                className={`input-field flex-1 text-sm ${promoStatus === 'invalid' ? 'error' : ''}`}
+                placeholder="Промокод"
+                value={promoInput}
+                onChange={e => { setPromoInput(e.target.value); setPromoStatus(null); }}
+                onKeyDown={e => e.key === 'Enter' && applyPromo()}
+              />
+              <button
+                className="btn-ghost text-sm px-3 py-2 flex-shrink-0"
+                onClick={applyPromo}
+              >Применить</button>
+            </div>
+          )}
+          {promoStatus === 'invalid' && <p className="text-xs text-red-500 mt-1">Промокод не найден или истёк</p>}
+        </div>
+      )}
+
+      <div className="border-t border-slate-100 pt-3 mb-4">
+        <div className="flex justify-between items-center">
+          <span className="text-base font-semibold text-slate-800">Итого</span>
+          <div className="text-right">
+            <span className="text-xl font-bold text-slate-900">{fmt(total)}</span>
+            {discount > 0 && <p className="text-xs text-slate-400 line-through text-right">{fmt(total + discount)}</p>}
+          </div>
+        </div>
+        <p className="text-xs text-slate-400 mt-1">Включая НДС 20%</p>
+      </div>
+
+      {unavailable > 0 && (
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 text-xs text-amber-700">
+          <IconInfo size={14}/>
+          <span>{unavailable} позиция недоступна и не включена в заказ</span>
+        </div>
+      )}
+
+      <button
+        className="btn-primary w-full flex items-center justify-center gap-2"
+        onClick={onContinue}
+        disabled={loading || items.filter(i=>i.inStock).length === 0}
+      >
+        {loading ? (
+          <><svg className="spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 16 16"/><span>Обработка...</span></>
+        ) : btnLabel}
+      </button>
+
+      <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-slate-400">
+        <IconShield size={13}/>
+        <span>Безопасная оплата · SSL шифрование</span>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREEN 1 — CART
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function CartScreen({ cart, setCart, promo, setPromo, onNext, tweaks }) {
+  const grouped = groupByVendor(cart);
+
+  function handleQtyChange(id, qty) {
+    setCart(prev => prev.map(i => i.id === id ? {...i, qty} : i));
+  }
+  function handleRemove(id) {
+    setCart(prev => prev.filter(i => i.id !== id));
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-slate-900">Корзина <span className="text-slate-400 font-normal text-lg">({cart.length})</span></h2>
+          <span className="text-xs text-slate-400 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+            Цены актуальны
+          </span>
+        </div>
+
+        {cart.length === 0 ? (
+          <div className="card p-12 text-center fade-in">
+            <div className="text-5xl mb-4">🛒</div>
+            <p className="text-slate-700 font-semibold text-lg">Корзина пуста</p>
+            <p className="text-slate-400 text-sm mt-2">Добавьте товары из каталога</p>
+            <button className="btn-primary mt-6 px-8">Перейти в каталог</button>
+          </div>
+        ) : (
+          Object.entries(grouped).map(([vendorId, items]) => (
+            <VendorGroup
+              key={vendorId}
+              vendorId={vendorId}
+              items={items}
+              onQtyChange={handleQtyChange}
+              onRemove={handleRemove}
+              tweaks={tweaks}
+            />
+          ))
+        )}
+
+        <div className="card p-4 mt-4 flex items-start gap-3 fade-in">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <IconInfo size={16} />
+          </div>
+          <div className="text-xs text-slate-500 leading-relaxed">
+            <span className="font-semibold text-slate-700">Мультивендорный заказ:</span> товары от разных продавцов будут объединены в один заказ с единой оплатой. Каждый продавец выполнит свою часть заказа самостоятельно.
+          </div>
+        </div>
+      </div>
+
+      <div className="lg:col-span-1">
+        <OrderSummary
+          items={cart}
+          delivery={null}
+          promo={promo}
+          onPromoChange={setPromo}
+          onContinue={onNext}
+          btnLabel="Перейти к оформлению →"
+          showPromo={true}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREEN 2 — CHECKOUT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function CheckoutScreen({ cart, promo, setPromo, onSuccess, tweaks }) {
+  const [addressTab, setAddressTab] = useState('saved'); // saved | new
+  const [selectedAddress, setSelectedAddress] = useState('a1');
+  const [newAddr, setNewAddr] = useState({ company:'', street:'', city:'Москва', zip:'', contact:'', phone:'' });
+  const [delivery, setDelivery] = useState('standard');
+  const [payment, setPayment] = useState('invoice');
+  const [cardNum, setCardNum] = useState('');
+  const [cardExp, setCardExp] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [agree, setAgree] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [step, setStep] = useState(1); // 1=address, 2=delivery, 3=payment
+
+  const { subtotal, deliveryCost, discount, total } = calcTotals(cart, delivery, promo);
+
+  function validateAndNext() {
+    const errs = {};
+    if (addressTab === 'new') {
+      if (!newAddr.street) errs.street = true;
+      if (!newAddr.zip || newAddr.zip.length < 6) errs.zip = true;
+      if (!newAddr.contact) errs.contact = true;
+      if (!newAddr.phone) errs.phone = true;
+    }
+    setErrors(errs);
+    if (Object.keys(errs).length === 0) setStep(s => Math.min(s + 1, 3));
+  }
+
+  async function handlePay() {
+    if (!agree) { setErrors({ agree: true }); return; }
+    if (payment === 'card') {
+      const errs = {};
+      if (cardNum.replace(/\s/g,'').length < 16) errs.cardNum = true;
+      if (!cardExp.match(/^\d{2}\/\d{2}$/)) errs.cardExp = true;
+      if (cardCvv.length < 3) errs.cardCvv = true;
+      if (!cardName.trim()) errs.cardName = true;
+      setErrors(errs);
+      if (Object.keys(errs).length > 0) return;
+    }
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 1800));
+    setLoading(false);
+    onSuccess({ total, payment, vendorCount: new Set(cart.filter(i=>i.inStock).map(i=>i.vendorId)).size });
+  }
+
+  const steps = ['Адрес', 'Доставка', 'Оплата'];
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-4">
+
+        {/* Mini stepper */}
+        <div className="flex items-center gap-2 mb-2">
+          {steps.map((s, i) => {
+            const done = step > i + 1;
+            const active = step === i + 1;
+            return (
+              <React.Fragment key={s}>
+                <button
+                  className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${active ? 'text-brand-600' : done ? 'text-slate-500 hover:text-brand-500 cursor-pointer' : 'text-slate-300 cursor-default'}`}
+                  onClick={() => done && setStep(i + 1)}
+                >
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold
+                    ${done ? 'bg-brand-600 text-white' : active ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                    {done ? <IconCheck size={11}/> : i+1}
+                  </span>
+                  {s}
+                </button>
+                {i < steps.length - 1 && <div className={`flex-1 h-px ${done ? 'bg-brand-300' : 'bg-slate-200'}`}/>}
+              </React.Fragment>
+            );
+          })}
+        </div>
+
+        {/* Step 1: Address */}
+        {step === 1 && (
+          <div className="card p-4 sm:p-5 fade-in">
+            <h3 className="text-base font-semibold text-slate-800 mb-4">Адрес доставки</h3>
+
+            <div className="flex gap-2 mb-4 bg-slate-50 p-1 rounded-xl">
+              {[['saved','Сохранённые'],['new','Новый адрес']].map(([val, lbl]) => (
+                <button
+                  key={val}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${addressTab === val ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+                  onClick={() => setAddressTab(val)}
+                >{lbl}</button>
+              ))}
+            </div>
+
+            {addressTab === 'saved' ? (
+              <div className="space-y-3">
+                {SAVED_ADDRESSES.map(addr => (
+                  <div
+                    key={addr.id}
+                    className={`radio-card cursor-pointer ${selectedAddress === addr.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedAddress(addr.id)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5 transition-all ${selectedAddress === addr.id ? 'border-brand-600 bg-brand-600' : 'border-slate-300'}`}>
+                        {selectedAddress === addr.id && <div className="w-full h-full rounded-full bg-white scale-50 block"/>}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-800">{addr.label}</span>
+                          <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{addr.zip}</span>
+                        </div>
+                        <p className="text-sm text-slate-600 mt-0.5">{addr.address}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{addr.contact}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-medium text-slate-600 block mb-1">Компания</label>
+                  <input className="input-field" placeholder="ООО «Название компании»" value={newAddr.company} onChange={e => setNewAddr({...newAddr, company: e.target.value})}/>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-medium text-slate-600 block mb-1">Улица, дом, офис *</label>
+                  <input className={`input-field ${errors.street ? 'error' : ''}`} placeholder="ул. Тверская, 12, офис 304" value={newAddr.street} onChange={e => setNewAddr({...newAddr, street: e.target.value})}/>
+                  {errors.street && <p className="text-xs text-red-500 mt-1">Укажите улицу</p>}
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-600 block mb-1">Город *</label>
+                  <input className="input-field" placeholder="Москва" value={newAddr.city} onChange={e => setNewAddr({...newAddr, city: e.target.value})}/>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-600 block mb-1">Индекс *</label>
+                  <input className={`input-field ${errors.zip ? 'error' : ''}`} placeholder="125009" maxLength={6} value={newAddr.zip} onChange={e => setNewAddr({...newAddr, zip: e.target.value.replace(/\D/g,'')})}/>
+                  {errors.zip && <p className="text-xs text-red-500 mt-1">Укажите 6-значный индекс</p>}
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-600 block mb-1">Контактное лицо *</label>
+                  <input className={`input-field ${errors.contact ? 'error' : ''}`} placeholder="Иванова А.П." value={newAddr.contact} onChange={e => setNewAddr({...newAddr, contact: e.target.value})}/>
+                  {errors.contact && <p className="text-xs text-red-500 mt-1">Укажите имя</p>}
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-600 block mb-1">Телефон *</label>
+                  <input className={`input-field ${errors.phone ? 'error' : ''}`} placeholder="+7 495 123-45-67" value={newAddr.phone} onChange={e => setNewAddr({...newAddr, phone: e.target.value})}/>
+                  {errors.phone && <p className="text-xs text-red-500 mt-1">Укажите телефон</p>}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end mt-5">
+              <button className="btn-primary" onClick={validateAndNext}>Далее: Способ доставки →</button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Delivery */}
+        {step === 2 && (
+          <div className="card p-4 sm:p-5 fade-in">
+            <h3 className="text-base font-semibold text-slate-800 mb-4">Способ доставки</h3>
+            <div className="space-y-3">
+              {DELIVERY_OPTIONS.map(opt => (
+                <div
+                  key={opt.id}
+                  className={`radio-card ${delivery === opt.id ? 'selected' : ''}`}
+                  onClick={() => setDelivery(opt.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-all ${delivery === opt.id ? 'border-brand-600' : 'border-slate-300'}`}>
+                      <div className={`w-2 h-2 rounded-full bg-brand-600 m-px transition-all ${delivery === opt.id ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`}/>
+                    </div>
+                    <span className="text-lg">{opt.icon}</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-slate-800">{opt.label}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{opt.days}</p>
+                    </div>
+                    <span className={`text-sm font-bold ${opt.price === 0 ? 'text-green-600' : 'text-slate-800'}`}>{opt.priceLabel}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 p-3 bg-blue-50 rounded-xl flex items-start gap-2 text-xs text-blue-700">
+              <IconInfo size={14}/>
+              <span>Товары от разных продавцов могут прибыть в разное время. Вы получите трек-номер для каждой части заказа.</span>
+            </div>
+
+            <div className="flex justify-between mt-5 gap-3">
+              <button className="btn-ghost" onClick={() => setStep(1)}>← Назад</button>
+              <button className="btn-primary" onClick={() => setStep(3)}>Далее: Оплата →</button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Payment */}
+        {step === 3 && (
+          <div className="card p-4 sm:p-5 fade-in">
+            <h3 className="text-base font-semibold text-slate-800 mb-4">Способ оплаты</h3>
+            <div className="space-y-3 mb-5">
+              {PAYMENT_METHODS.map(pm => (
+                <div
+                  key={pm.id}
+                  className={`radio-card ${payment === pm.id ? 'selected' : ''}`}
+                  onClick={() => setPayment(pm.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-all ${payment === pm.id ? 'border-brand-600' : 'border-slate-300'}`}>
+                      <div className={`w-2 h-2 rounded-full bg-brand-600 m-px transition-all ${payment === pm.id ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`}/>
+                    </div>
+                    <span className="text-xl">{pm.icon}</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-slate-800">{pm.label}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{pm.desc}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Card form */}
+            {payment === 'card' && (
+              <div className="bg-slate-50 rounded-xl p-4 space-y-3 mb-4 fade-in">
+                <p className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1.5"><span>🔒</span> Данные карты защищены</p>
+                <div>
+                  <label className="text-xs font-medium text-slate-600 block mb-1">Номер карты</label>
+                  <input
+                    className={`input-field font-mono tracking-widest ${errors.cardNum ? 'error' : ''}`}
+                    placeholder="0000 0000 0000 0000"
+                    maxLength={19}
+                    value={cardNum}
+                    onChange={e => {
+                      const v = e.target.value.replace(/\D/g,'').slice(0,16);
+                      setCardNum(v.replace(/(.{4})/g,'$1 ').trim());
+                    }}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-slate-600 block mb-1">Имя на карте</label>
+                    <input className={`input-field ${errors.cardName ? 'error' : ''}`} placeholder="IVAN IVANOV" value={cardName} onChange={e => setCardName(e.target.value.toUpperCase())}/>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 block mb-1">MM/ГГ</label>
+                    <input
+                      className={`input-field ${errors.cardExp ? 'error' : ''}`}
+                      placeholder="12/27"
+                      maxLength={5}
+                      value={cardExp}
+                      onChange={e => {
+                        let v = e.target.value.replace(/\D/g,'');
+                        if (v.length >= 2) v = v.slice(0,2) + '/' + v.slice(2,4);
+                        setCardExp(v);
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="w-1/3">
+                  <label className="text-xs font-medium text-slate-600 block mb-1">CVV</label>
+                  <input className={`input-field ${errors.cardCvv ? 'error' : ''}`} placeholder="•••" maxLength={3} type="password" value={cardCvv} onChange={e => setCardCvv(e.target.value.replace(/\D/g,''))}/>
+                </div>
+              </div>
+            )}
+
+            {/* Invoice */}
+            {payment === 'invoice' && (
+              <div className="bg-slate-50 rounded-xl p-4 mb-4 fade-in">
+                <p className="text-sm font-semibold text-slate-700 mb-2">Реквизиты для выставления счёта</p>
+                <div className="space-y-2.5">
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 block mb-1">Название организации</label>
+                    <input className="input-field" placeholder="ООО «Название компании»" defaultValue="ООО «Глобал Трейд»"/>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-medium text-slate-600 block mb-1">ИНН</label>
+                      <input className="input-field" placeholder="7700000000" defaultValue="7712345678"/>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-600 block mb-1">КПП</label>
+                      <input className="input-field" placeholder="770100000" defaultValue="771201001"/>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400 mt-3">Счёт будет отправлен на email в течение 1 рабочего дня</p>
+              </div>
+            )}
+
+            {/* Credit */}
+            {payment === 'credit' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 fade-in text-sm">
+                <p className="font-semibold text-blue-800 mb-1">Корпоративная кредитная линия</p>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-blue-700 text-xs">Доступный лимит</span>
+                  <span className="text-blue-900 font-bold">1 840 000 ₽</span>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-1.5 mb-1">
+                  <div className="bg-blue-500 h-1.5 rounded-full" style={{width:'8%'}}/>
+                </div>
+                <p className="text-xs text-blue-600">Использовано: 160 000 ₽ из 2 000 000 ₽</p>
+                <p className="text-xs text-blue-500 mt-2">Погашение в течение 30 дней после получения товара</p>
+              </div>
+            )}
+
+            {/* Agreement */}
+            <label className={`flex items-start gap-2.5 cursor-pointer group ${errors.agree ? 'text-red-600' : 'text-slate-600'}`}>
+              <div
+                className={`w-4 h-4 rounded flex-shrink-0 mt-0.5 border-2 flex items-center justify-center transition-all
+                  ${agree ? 'bg-brand-600 border-brand-600' : errors.agree ? 'border-red-400' : 'border-slate-300 group-hover:border-brand-400'}`}
+                onClick={() => { setAgree(!agree); setErrors({}); }}
+              >
+                {agree && <IconCheck size={10} className="text-white"/>}
+              </div>
+              <span className="text-xs leading-relaxed">
+                Я согласен с <a href="#" className="text-brand-600 hover:underline">условиями оферты</a> и <a href="#" className="text-brand-600 hover:underline">политикой конфиденциальности</a>. Подтверждаю корректность реквизитов.
+              </span>
+            </label>
+            {errors.agree && <p className="text-xs text-red-500 mt-1">Необходимо согласие для продолжения</p>}
+
+            <div className="flex justify-between mt-5 gap-3">
+              <button className="btn-ghost" onClick={() => setStep(2)}>← Назад</button>
+              <button
+                className="btn-primary flex items-center gap-2 flex-1 sm:flex-none sm:px-8 justify-center"
+                onClick={handlePay}
+                disabled={loading}
+              >
+                {loading ? (
+                  <><svg className="spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 16 16"/><span>Обработка...</span></>
+                ) : `Оплатить ${fmt(total)}`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Order items preview */}
+        <div className="card p-4 sm:p-5 fade-in">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">Состав заказа</h3>
+          <div className="space-y-2">
+            {cart.filter(i=>i.inStock).map(item => {
+              const vendor = VENDORS[item.vendorId];
+              return (
+                <div key={item.id} className="flex items-center gap-3 py-1.5">
+                  <span className="text-base">{item.image}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-slate-700 truncate">{item.name}</p>
+                    <VendorBadge vendor={vendor}/>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xs font-semibold text-slate-800">{fmt(item.price * item.qty)}</p>
+                    <p className="text-xs text-slate-400">× {item.qty}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="lg:col-span-1">
+        <OrderSummary
+          items={cart}
+          delivery={delivery}
+          promo={promo}
+          onPromoChange={setPromo}
+          onContinue={handlePay}
+          btnLabel={loading ? 'Обработка...' : `Оплатить ${fmt(calcTotals(cart, delivery, promo).total)}`}
+          loading={loading}
+          showPromo={true}
+        />
+
+        {/* Delivery estimate */}
+        {delivery && (
+          <div className="card p-4 mt-4 fade-in">
+            <p className="text-xs font-semibold text-slate-700 mb-3">Ожидаемая доставка</p>
+            {Object.entries(groupByVendor(cart.filter(i=>i.inStock))).map(([vid, items]) => {
+              const v = VENDORS[vid];
+              const opt = DELIVERY_OPTIONS.find(d => d.id === delivery);
+              return (
+                <div key={vid} className="flex items-center gap-2 mb-2 last:mb-0">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{background: v.color}}></div>
+                  <span className="text-xs text-slate-600 flex-1 truncate">{v.name}</span>
+                  <span className="text-xs font-medium text-slate-700">{opt?.days}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREEN 3 — SUCCESS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function SuccessScreen({ orderInfo, onReset, tweaks }) {
+  const orderId = '#VND-' + Math.floor(100000 + Math.random()*900000);
+  const [expanded, setExpanded] = useState(null);
+
+  const subOrders = [
+    { vendor: VENDORS.techpro, id: '#VND-001-A', status: 'Принят в обработку', eta: '3–5 рабочих дней', items: ['Ноутбук Dell Latitude 5540 × 2', 'Мышь Logitech MX Master 3 × 5'] },
+    { vendor: VENDORS.officemax, id: '#VND-001-B', status: 'Принят в обработку', eta: '3–5 рабочих дней', items: ['Кресло Herman Miller Aeron × 1'] },
+    { vendor: VENDORS.cleanmaster, id: '#VND-001-C', status: 'Принят в обработку', eta: '2–3 рабочих дня', items: ['Pro-Clean 5L × 10'] },
+  ];
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8 slide-up">
+      {/* Hero */}
+      <div className="card p-8 text-center mb-6">
+        <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4 check-pop">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="20" fill="#22c55e"/>
+            <path d="M11 21l6 6L30 13" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Заказ оформлен!</h2>
+        <p className="text-slate-500 mb-1">Номер заказа: <span className="font-bold text-slate-800">{orderId}</span></p>
+        <p className="text-sm text-slate-400">Подтверждение отправлено на <span className="text-slate-600">ivan.petrov@company.ru</span></p>
+
+        <div className="grid grid-cols-3 gap-3 mt-6 pt-6 border-t border-slate-100">
+          <div>
+            <p className="text-2xl font-bold text-slate-900">{fmt(orderInfo.total)}</p>
+            <p className="text-xs text-slate-400 mt-0.5">Сумма заказа</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-slate-900">{subOrders.length}</p>
+            <p className="text-xs text-slate-400 mt-0.5">Продавца</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-slate-900">3–5 дн.</p>
+            <p className="text-xs text-slate-400 mt-0.5">Доставка</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment method note */}
+      {orderInfo.payment === 'invoice' && (
+        <div className="card p-4 mb-4 flex items-start gap-3 bg-amber-50 border-amber-200 fade-in">
+          <span className="text-xl">📄</span>
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Счёт на оплату</p>
+            <p className="text-xs text-amber-700 mt-0.5">Счёт будет отправлен на ваш email в течение 1 рабочего дня. Заказ поступит в обработку после подтверждения оплаты.</p>
+          </div>
+        </div>
+      )}
+      {orderInfo.payment === 'credit' && (
+        <div className="card p-4 mb-4 flex items-start gap-3 bg-blue-50 border-blue-200 fade-in">
+          <span className="text-xl">🏦</span>
+          <div>
+            <p className="text-sm font-semibold text-blue-800">Корпоративный кредит активирован</p>
+            <p className="text-xs text-blue-700 mt-0.5">Погашение в течение 30 дней. Доступный лимит уменьшен на {fmt(orderInfo.total)}.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Sub-orders */}
+      <div className="card overflow-hidden mb-4 fade-in">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100">
+          <p className="text-sm font-semibold text-slate-800">Субзаказы по продавцам</p>
+          <p className="text-xs text-slate-400 mt-0.5">Каждый продавец выполняет свою часть независимо</p>
+        </div>
+        <div className="divide-y divide-slate-50">
+          {subOrders.map((so, i) => (
+            <div key={so.id}>
+              <button
+                className="w-full px-4 sm:px-5 py-4 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left"
+                onClick={() => setExpanded(expanded === i ? null : i)}
+              >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0" style={{background: so.vendor.bg, color: so.vendor.color}}>
+                  {so.vendor.name[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-slate-800">{so.vendor.name}</p>
+                    <span className="text-xs text-slate-400">{so.id}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                    <span className="text-xs text-slate-500">{so.status}</span>
+                    <span className="text-slate-300">·</span>
+                    <span className="text-xs text-slate-500">{so.eta}</span>
+                  </div>
+                </div>
+                <IconChevron direction={expanded === i ? 'up' : 'down'} size={14}/>
+              </button>
+              {expanded === i && (
+                <div className="px-4 sm:px-5 pb-4 fade-in">
+                  <div className="ml-11 space-y-1.5">
+                    {so.items.map((item, j) => (
+                      <p key={j} className="text-xs text-slate-500 flex items-center gap-2">
+                        <span className="w-1 h-1 rounded-full bg-slate-300 flex-shrink-0"></span>
+                        {item}
+                      </p>
+                    ))}
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                      <button className="text-xs text-brand-600 hover:underline font-medium">Отслеживать заказ</button>
+                      <span className="text-slate-200">·</span>
+                      <button className="text-xs text-slate-500 hover:text-slate-700">Написать продавцу</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        <button className="btn-primary py-3 flex items-center justify-center gap-2">
+          📦 Мои заказы
+        </button>
+        <button className="btn-ghost py-3 flex items-center justify-center gap-2" onClick={onReset}>
+          🛒 Продолжить покупки
+        </button>
+      </div>
+
+      {/* What's next */}
+      <div className="card p-4 sm:p-5 fade-in">
+        <p className="text-sm font-semibold text-slate-800 mb-3">Что дальше?</p>
+        <div className="space-y-3">
+          {[
+            { icon:'📧', text:'Email с подтверждением и деталями заказа уже отправлен' },
+            { icon:'📦', text:'Продавцы подтвердят и соберут ваши заказы' },
+            { icon:'🚚', text:'Вы получите трек-номера когда заказы будут отправлены' },
+            { icon:'⭐', text:'После получения вас попросят оставить отзыв о продавцах' },
+          ].map(({icon, text}, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <span className="text-base flex-shrink-0 mt-0.5">{icon}</span>
+              <p className="text-sm text-slate-600">{text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROOT APP
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#2455e8",
+  "showVendorRatings": true,
+  "showPromoCode": true,
+  "defaultPayment": "invoice",
+  "companyName": "ООО «Глобал Трейд»",
+  "density": "normal"
+}/*EDITMODE-END*/;
+
+function App() {
+  const hookResult = window.useTweaks
+    ? window.useTweaks(TWEAK_DEFAULTS)
+    : {};
+  const tweaks = (hookResult && hookResult.tweaks) || TWEAK_DEFAULTS;
+  const TweaksPanel = (hookResult && hookResult.TweaksPanel) || window.TweaksPanel;
+  const TweakSection = (hookResult && hookResult.TweakSection) || window.TweakSection;
+  const TweakToggle = (hookResult && hookResult.TweakToggle) || window.TweakToggle;
+  const TweakColor = (hookResult && hookResult.TweakColor) || window.TweakColor;
+  const TweakSelect = (hookResult && hookResult.TweakSelect) || window.TweakSelect;
+  const TweakText = (hookResult && hookResult.TweakText) || window.TweakText;
+
+  const [screen, setScreen] = useState('cart');
+  const [cart, setCart] = useState(INITIAL_CART);
+  const [promo, setPromo] = useState(null);
+  const [orderInfo, setOrderInfo] = useState(null);
+
+  function handleSuccess(info) {
+    setOrderInfo(info);
+    setScreen('success');
+  }
+
+  function handleReset() {
+    setCart(INITIAL_CART);
+    setPromo(null);
+    setOrderInfo(null);
+    setScreen('cart');
+  }
+
+  // Apply accent color from tweaks
+  useEffect(() => {
+    if (tweaks.accentColor) {
+      document.documentElement.style.setProperty('--brand', tweaks.accentColor);
+    }
+  }, [tweaks.accentColor]);
+
+  return (
+    <div style={{ '--brand': tweaks.accentColor || '#2455e8' }}>
+      <style>{`
+        .bg-brand-600 { background-color: var(--brand) !important; }
+        .text-brand-600 { color: var(--brand) !important; }
+        .border-brand-600 { border-color: var(--brand) !important; }
+        .ring-brand-100 { --tw-ring-color: color-mix(in srgb, var(--brand) 20%, white) !important; }
+        .btn-primary { background: var(--brand) !important; }
+        .btn-primary:hover { background: color-mix(in srgb, var(--brand) 80%, black) !important; }
+      `}</style>
+
+      <Header screen={screen} />
+
+      <main className="pb-16">
+        {screen === 'cart' && (
+          <CartScreen
+            cart={cart}
+            setCart={setCart}
+            promo={promo}
+            setPromo={setPromo}
+            onNext={() => setScreen('checkout')}
+            tweaks={tweaks}
+          />
+        )}
+        {screen === 'checkout' && (
+          <CheckoutScreen
+            cart={cart}
+            promo={promo}
+            setPromo={setPromo}
+            onSuccess={handleSuccess}
+            tweaks={tweaks}
+          />
+        )}
+        {screen === 'success' && orderInfo && (
+          <SuccessScreen
+            orderInfo={orderInfo}
+            onReset={handleReset}
+            tweaks={tweaks}
+          />
+        )}
+      </main>
+
+      {/* Tweaks Panel */}
+      {TweaksPanel && TweakSection && (
+        <TweaksPanel>
+          <TweakSection title="Брендинг">
+            {TweakColor && <TweakColor id="accentColor" label="Цвет акцента" />}
+          </TweakSection>
+          <TweakSection title="Интерфейс">
+            {TweakToggle && <TweakToggle id="showVendorRatings" label="Рейтинги продавцов" />}
+            {TweakToggle && <TweakToggle id="showPromoCode" label="Поле промокода" />}
+            {TweakSelect && <TweakSelect id="defaultPayment" label="Метод оплаты по умолчанию" options={[
+              { value:'invoice', label:'Счёт (B2B)' },
+              { value:'card', label:'Банковская карта' },
+              { value:'credit', label:'Корпоративный кредит' },
+            ]} />}
+          </TweakSection>
+          <TweakSection title="Компания">
+            {TweakText && <TweakText id="companyName" label="Название компании" />}
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
