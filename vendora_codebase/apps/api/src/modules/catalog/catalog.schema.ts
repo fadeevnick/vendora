@@ -86,3 +86,15 @@ export const unpublishListingSchema = {
     additionalProperties: false,
   },
 }
+
+export const moderateListingSchema = {
+  body: {
+    type: 'object',
+    required: ['action'],
+    properties: {
+      action: { type: 'string', enum: ['APPROVE', 'SUSPEND'] },
+      reason: { type: 'string', maxLength: 500 },
+    },
+    additionalProperties: false,
+  },
+}

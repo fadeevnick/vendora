@@ -42,6 +42,7 @@ High-level groups:
   - buyer/vendor order timeline and dispute detail/response surfaces
 - catalog/search:
   - `ProductMedia` migration and local inline media metadata/UI proof
+  - `ProductModerationStatus` migration and local admin suspend/approve lifecycle
   - local Meilisearch adapter
   - full-replace `catalog:reindex-search`
   - admin-triggered catalog search reindex

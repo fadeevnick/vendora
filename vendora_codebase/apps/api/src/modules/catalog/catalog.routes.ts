@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import {
   authenticate,
+  requirePlatformAdmin,
   requireVendorContext,
   requireVendorOwner,
   requireVerifiedEmail,
@@ -10,9 +11,11 @@ import {
   createProduct,
   getCatalogProductById,
   getCatalogProducts,
+  listAdminCatalogListings,
   getPublishedProducts,
   getVendorListings,
   getVendorProducts,
+  moderateCatalogListing,
   publishListing,
   publishProduct,
   unpublishListing,
@@ -21,6 +24,7 @@ import {
 import {
   createListingSchema,
   createProductSchema,
+  moderateListingSchema,
   unpublishListingSchema,
   updateListingSchema,
 } from './catalog.schema.js'
@@ -76,6 +80,32 @@ export async function catalogRoutes(app: FastifyInstance) {
       return reply.send({ data: product })
     } catch (err: unknown) {
       return sendCatalogError(reply, err, 'Failed to load catalog product')
+    }
+  })
+
+  app.get('/admin/catalog/listings', { preHandler: [authenticate, requireVerifiedEmail, requirePlatformAdmin] }, async (_request, reply) => {
+    try {
+      const listings = await listAdminCatalogListings()
+      return reply.send({ data: listings })
+    } catch (err: unknown) {
+      return sendCatalogError(reply, err, 'Failed to load admin catalog listings')
+    }
+  })
+
+  app.post('/admin/catalog/listings/:id/moderate', { preHandler: [authenticate, requireVerifiedEmail, requirePlatformAdmin], schema: moderateListingSchema }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = request.body as { action: 'APPROVE' | 'SUSPEND'; reason?: string }
+
+    try {
+      const listing = await moderateCatalogListing({
+        productId: id,
+        adminUserId: request.user.sub,
+        action: body.action,
+        reason: body.reason,
+      })
+      return reply.send({ data: listing })
+    } catch (err: unknown) {
+      return sendCatalogError(reply, err, 'Failed to moderate catalog listing')
     }
   })
 

@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client'
 import { prisma } from '../../shared/db.js'
 import {
   removeProductFromCatalogSearch,
@@ -67,7 +68,8 @@ function decimalToMinor(price: unknown) {
   return Math.round(Number(price) * 100)
 }
 
-function listingStatus(product: { published: boolean }) {
+function listingStatus(product: { published: boolean; moderationStatus?: string }) {
+  if (product.moderationStatus === 'SUSPENDED') return 'SUSPENDED'
   return product.published ? 'PUBLISHED' : 'DRAFT'
 }
 
@@ -119,6 +121,10 @@ function toListingView(product: {
   published: boolean
   publishedAt: Date | null
   unpublishedReason: string | null
+  moderationStatus?: string
+  moderationReason?: string | null
+  moderatedAt?: Date | null
+  moderatedByUserId?: string | null
   createdAt: Date
   updatedAt: Date
   media?: Array<{
@@ -150,6 +156,10 @@ function toListingView(product: {
     published: product.published,
     publishedAt: product.publishedAt,
     unpublishedReason: product.unpublishedReason,
+    moderationStatus: product.moderationStatus ?? 'APPROVED',
+    moderationReason: product.moderationReason ?? null,
+    moderatedAt: product.moderatedAt ?? null,
+    moderatedByUserId: product.moderatedByUserId ?? null,
     media: product.media ?? [],
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
@@ -257,8 +267,9 @@ export async function getPublishedProducts(query: CatalogQuery = {}) {
     }
   }
 
-  const where = {
+  const where: Prisma.ProductWhereInput = {
     published: true,
+    moderationStatus: 'APPROVED',
     ...(searchIds ? { id: { in: searchIds } } : {}),
     vendor: {
       status: 'APPROVED' as const,
@@ -304,6 +315,7 @@ export async function getCatalogProductById(productId: string) {
     where: {
       id: productId,
       published: true,
+      moderationStatus: 'APPROVED',
       vendor: {
         status: 'APPROVED',
       },
@@ -344,6 +356,76 @@ export async function updateListing(input: UpdateListingInput) {
   })
 
   return toListingView(withMedia)
+}
+
+export async function listAdminCatalogListings() {
+  const products = await prisma.product.findMany({
+    include: {
+      vendor: { select: { id: true, name: true, status: true } },
+      media: { orderBy: { sortOrder: 'asc' } },
+    },
+    orderBy: [{ updatedAt: 'desc' }],
+    take: 100,
+  })
+
+  return products.map((product) => ({
+    ...toPublicProductView(product),
+    vendor: product.vendor,
+  }))
+}
+
+export async function moderateCatalogListing(input: {
+  productId: string
+  adminUserId: string
+  action: 'APPROVE' | 'SUSPEND'
+  reason?: string
+}) {
+  const product = await prisma.product.findUnique({
+    where: { id: input.productId },
+    include: { vendor: { select: { id: true, name: true, status: true } } },
+  })
+  if (!product) throw new Error('RESOURCE_NOT_FOUND: Product not found')
+
+  const moderationStatus = input.action === 'APPROVE' ? 'APPROVED' : 'SUSPENDED'
+  const reason = input.reason?.trim() || (input.action === 'APPROVE' ? null : 'admin_suspended')
+  const updated = await prisma.$transaction(async (tx) => {
+    const next = await tx.product.update({
+      where: { id: product.id },
+      data: {
+        moderationStatus,
+        moderationReason: reason,
+        moderatedAt: new Date(),
+        moderatedByUserId: input.adminUserId,
+      },
+      include: {
+        vendor: { select: { id: true, name: true, status: true } },
+        media: { orderBy: { sortOrder: 'asc' } },
+      },
+    })
+
+    await tx.auditEvent.create({
+      data: {
+        actorUserId: input.adminUserId,
+        action: input.action === 'APPROVE' ? 'CATALOG_LISTING_APPROVED' : 'CATALOG_LISTING_SUSPENDED',
+        resourceType: 'product',
+        resourceId: product.id,
+        metadata: {
+          vendorId: product.vendorId,
+          from: product.moderationStatus,
+          to: moderationStatus,
+          reason,
+        },
+      },
+    })
+
+    return next
+  })
+
+  await syncProductToCatalogSearch(product.id).catch(() => null)
+  return {
+    ...toPublicProductView(updated),
+    vendor: updated.vendor,
+  }
 }
 
 export async function publishProduct(productId: string, vendorId: string) {

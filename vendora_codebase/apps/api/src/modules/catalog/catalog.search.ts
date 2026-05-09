@@ -13,6 +13,7 @@ interface SearchableProduct {
   stock: number
   published: boolean
   publishedAt: Date | null
+  moderationStatus: string
   vendorId: string
   vendor: {
     id: string
@@ -112,6 +113,7 @@ export async function reindexCatalogSearch() {
   const products = await prisma.product.findMany({
     where: {
       published: true,
+      moderationStatus: 'APPROVED',
       vendor: { status: 'APPROVED' },
     },
     include: { vendor: { select: { id: true, name: true, status: true } } },
@@ -143,24 +145,26 @@ export async function syncProductToCatalogSearch(productId: string) {
     include: { vendor: { select: { id: true, name: true, status: true } } },
   })
 
-  if (!product || !product.published || product.vendor.status !== 'APPROVED') {
+  if (!product || !product.published || product.moderationStatus !== 'APPROVED' || product.vendor.status !== 'APPROVED') {
     await removeProductFromCatalogSearch(productId)
     return { indexed: false }
   }
 
   await configureCatalogSearchIndex()
-  await meiliRequest(`/indexes/${MEILI_INDEX}/documents`, {
+  const addTask = await meiliRequest<MeiliTaskResponse>(`/indexes/${MEILI_INDEX}/documents`, {
     method: 'POST',
     body: JSON.stringify([toSearchDocument(product)]),
   })
+  await waitForMeiliTask(addTask.taskUid ?? addTask.uid)
 
   return { indexed: true }
 }
 
 export async function removeProductFromCatalogSearch(productId: string) {
-  await meiliRequest(`/indexes/${MEILI_INDEX}/documents/${encodeURIComponent(productId)}`, {
+  const deleteTask = await meiliRequest<MeiliTaskResponse>(`/indexes/${MEILI_INDEX}/documents/${encodeURIComponent(productId)}`, {
     method: 'DELETE',
   })
+  await waitForMeiliTask(deleteTask.taskUid ?? deleteTask.uid)
   return { indexed: false }
 }
 
