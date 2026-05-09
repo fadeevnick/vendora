@@ -1,4 +1,9 @@
 import { prisma } from '../../shared/db.js'
+import {
+  removeProductFromCatalogSearch,
+  searchCatalogProductIds,
+  syncProductToCatalogSearch,
+} from './catalog.search.js'
 
 interface CreateProductInput {
   name: string
@@ -8,6 +13,7 @@ interface CreateProductInput {
   currency?: string
   stock?: number
   vendorId: string
+  media?: ProductMediaInput[]
 }
 
 interface CreateListingInput {
@@ -18,6 +24,7 @@ interface CreateListingInput {
   currency: string
   stockQty: number
   vendorId: string
+  media?: ProductMediaInput[]
 }
 
 interface UpdateListingInput {
@@ -40,6 +47,18 @@ interface CatalogQuery {
   pageSize?: number
 }
 
+interface ProductMediaInput {
+  fileName: string
+  contentType: string
+  sizeBytes: number
+  contentBase64: string
+  altText?: string
+}
+
+const PRODUCT_MEDIA_MAX_ITEMS = 5
+const PRODUCT_MEDIA_MAX_SIZE_BYTES = 512 * 1024
+const PRODUCT_MEDIA_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+
 function priceMinorToDecimal(priceMinor: number) {
   return priceMinor / 100
 }
@@ -50,6 +69,42 @@ function decimalToMinor(price: unknown) {
 
 function listingStatus(product: { published: boolean }) {
   return product.published ? 'PUBLISHED' : 'DRAFT'
+}
+
+function normalizeMedia(media: ProductMediaInput[] | undefined) {
+  if (!media || media.length === 0) return []
+  if (media.length > PRODUCT_MEDIA_MAX_ITEMS) {
+    throw new Error(`VALIDATION_ERROR: at most ${PRODUCT_MEDIA_MAX_ITEMS} media items are allowed`)
+  }
+
+  return media.map((item, index) => {
+    const fileName = item.fileName.trim()
+    const contentType = item.contentType.trim()
+    const altText = item.altText?.trim()
+    if (!fileName) throw new Error('VALIDATION_ERROR: media fileName is required')
+    if (!PRODUCT_MEDIA_CONTENT_TYPES.has(contentType)) throw new Error('VALIDATION_ERROR: unsupported product media content type')
+    if (!Number.isInteger(item.sizeBytes) || item.sizeBytes <= 0 || item.sizeBytes > PRODUCT_MEDIA_MAX_SIZE_BYTES) {
+      throw new Error('VALIDATION_ERROR: product media size is invalid')
+    }
+
+    let decodedSize = 0
+    try {
+      decodedSize = Buffer.from(item.contentBase64, 'base64').byteLength
+    } catch {
+      throw new Error('VALIDATION_ERROR: product media contentBase64 is invalid')
+    }
+    if (decodedSize !== item.sizeBytes) throw new Error('VALIDATION_ERROR: product media size does not match content')
+
+    return {
+      fileName,
+      contentType,
+      sizeBytes: item.sizeBytes,
+      assetUrl: `data:${contentType};base64,${item.contentBase64}`,
+      storageProvider: 'local_inline',
+      altText: altText || null,
+      sortOrder: index,
+    }
+  })
 }
 
 function toListingView(product: {
@@ -66,6 +121,17 @@ function toListingView(product: {
   unpublishedReason: string | null
   createdAt: Date
   updatedAt: Date
+  media?: Array<{
+    id: string
+    fileName: string
+    contentType: string
+    sizeBytes: number
+    assetUrl: string
+    storageProvider: string
+    altText: string | null
+    sortOrder: number
+    createdAt: Date
+  }>
 }) {
   return {
     id: product.id,
@@ -84,6 +150,7 @@ function toListingView(product: {
     published: product.published,
     publishedAt: product.publishedAt,
     unpublishedReason: product.unpublishedReason,
+    media: product.media ?? [],
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   }
@@ -114,6 +181,7 @@ async function requireApprovedVendor(vendorId: string) {
 
 export async function createProduct(input: CreateProductInput) {
   await requireApprovedVendor(input.vendorId)
+  const media = normalizeMedia(input.media)
 
   return prisma.product.create({
     data: {
@@ -124,12 +192,15 @@ export async function createProduct(input: CreateProductInput) {
       currency: input.currency ?? 'RUB',
       stock: input.stock ?? 0,
       vendorId: input.vendorId,
+      media: media.length > 0 ? { create: media } : undefined,
     },
+    include: { media: { orderBy: { sortOrder: 'asc' } } },
   })
 }
 
 export async function createListing(input: CreateListingInput) {
   await requireApprovedVendor(input.vendorId)
+  const media = normalizeMedia(input.media)
 
   const product = await prisma.product.create({
     data: {
@@ -141,7 +212,9 @@ export async function createListing(input: CreateListingInput) {
       stock: input.stockQty,
       vendorId: input.vendorId,
       published: false,
+      media: media.length > 0 ? { create: media } : undefined,
     },
+    include: { media: { orderBy: { sortOrder: 'asc' } } },
   })
 
   return toListingView(product)
@@ -150,6 +223,7 @@ export async function createListing(input: CreateListingInput) {
 export async function getVendorProducts(vendorId: string) {
   return prisma.product.findMany({
     where: { vendorId },
+    include: { media: { orderBy: { sortOrder: 'asc' } } },
     orderBy: { createdAt: 'desc' },
   })
 }
@@ -157,6 +231,7 @@ export async function getVendorProducts(vendorId: string) {
 export async function getVendorListings(vendorId: string) {
   const products = await prisma.product.findMany({
     where: { vendorId },
+    include: { media: { orderBy: { sortOrder: 'asc' } } },
     orderBy: { createdAt: 'desc' },
   })
   return products.map(toListingView)
@@ -165,8 +240,26 @@ export async function getVendorListings(vendorId: string) {
 export async function getPublishedProducts(query: CatalogQuery = {}) {
   const page = Math.max(query.page ?? 1, 1)
   const pageSize = Math.min(Math.max(query.pageSize ?? 50, 1), 100)
+  let searchIds: string[] | undefined
+
+  if (query.q?.trim()) {
+    try {
+      searchIds = await searchCatalogProductIds({
+        q: query.q.trim(),
+        category: query.category,
+        vendorId: query.vendorId,
+        inStock: query.inStock,
+        limit: 1000,
+      })
+      if (searchIds.length === 0) return []
+    } catch {
+      searchIds = undefined
+    }
+  }
+
   const where = {
     published: true,
+    ...(searchIds ? { id: { in: searchIds } } : {}),
     vendor: {
       status: 'APPROVED' as const,
       ...(query.vendorId ? { id: query.vendorId } : {}),
@@ -185,10 +278,19 @@ export async function getPublishedProducts(query: CatalogQuery = {}) {
 
   return prisma.product.findMany({
     where,
-    include: { vendor: { select: { id: true, name: true } } },
-    orderBy: { publishedAt: 'desc' },
+    include: {
+      vendor: { select: { id: true, name: true } },
+      media: { orderBy: { sortOrder: 'asc' } },
+    },
+    orderBy: searchIds ? undefined : { publishedAt: 'desc' },
     skip: (page - 1) * pageSize,
-    take: pageSize,
+    take: searchIds ? undefined : pageSize,
+  }).then((products) => {
+    if (!searchIds) return products
+    const order = new Map(searchIds.map((id, index) => [id, index]))
+    return products
+      .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+      .slice((page - 1) * pageSize, page * pageSize)
   })
 }
 
@@ -206,7 +308,10 @@ export async function getCatalogProductById(productId: string) {
         status: 'APPROVED',
       },
     },
-    include: { vendor: { select: { id: true, name: true } } },
+    include: {
+      vendor: { select: { id: true, name: true } },
+      media: { orderBy: { sortOrder: 'asc' } },
+    },
   })
 
   if (!product) throw new Error('RESOURCE_NOT_FOUND: Product not found')
@@ -233,7 +338,12 @@ export async function updateListing(input: UpdateListingInput) {
     },
   })
 
-  return toListingView(updated)
+  const withMedia = await prisma.product.findUniqueOrThrow({
+    where: { id: updated.id },
+    include: { media: { orderBy: { sortOrder: 'asc' } } },
+  })
+
+  return toListingView(withMedia)
 }
 
 export async function publishProduct(productId: string, vendorId: string) {
@@ -254,8 +364,12 @@ export async function publishProduct(productId: string, vendorId: string) {
       unpublishedReason: null,
     },
   })
+  await syncProductToCatalogSearch(productId).catch(() => null)
 
-  return updated
+  return prisma.product.findUniqueOrThrow({
+    where: { id: updated.id },
+    include: { media: { orderBy: { sortOrder: 'asc' } } },
+  })
 }
 
 export async function publishListing(productId: string, vendorId: string) {
@@ -277,6 +391,12 @@ export async function unpublishListing(productId: string, vendorId: string, reas
       unpublishedReason: reason ?? 'vendor_unpublished',
     },
   })
+  await removeProductFromCatalogSearch(product.id).catch(() => null)
 
-  return toListingView(updated)
+  const withMedia = await prisma.product.findUniqueOrThrow({
+    where: { id: updated.id },
+    include: { media: { orderBy: { sortOrder: 'asc' } } },
+  })
+
+  return toListingView(withMedia)
 }

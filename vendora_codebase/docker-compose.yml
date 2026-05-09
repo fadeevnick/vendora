@@ -78,5 +78,57 @@ services:
       - --interval-ms=${ORDER_MAINTENANCE_WORKER_INTERVAL_MS:-60000}
     restart: unless-stopped
 
+  dispute-sla-worker:
+    image: node:22-bookworm-slim
+    profiles:
+      - workers
+    working_dir: /workspace
+    depends_on:
+      - postgres
+    volumes:
+      - .:/workspace
+    environment:
+      DATABASE_URL: ${WORKER_DATABASE_URL:-postgresql://vendora:vendora@postgres:5432/vendora}
+      JWT_SECRET: ${JWT_SECRET:-change-me-local-dev}
+      NPM_CONFIG_UPDATE_NOTIFIER: "false"
+    command:
+      - npm
+      - run
+      - disputes:sla-worker
+      - --workspace
+      - apps/api
+      - --
+      - --limit=${DISPUTE_SLA_WORKER_LIMIT:-50}
+      - --older-than-hours=${DISPUTE_VENDOR_RESPONSE_SLA_HOURS:-48}
+      - --interval-ms=${DISPUTE_SLA_WORKER_INTERVAL_MS:-60000}
+    restart: unless-stopped
+
+  catalog-search-worker:
+    image: node:22-bookworm-slim
+    profiles:
+      - workers
+    working_dir: /workspace
+    depends_on:
+      - postgres
+      - meilisearch
+    volumes:
+      - .:/workspace
+    environment:
+      DATABASE_URL: ${WORKER_DATABASE_URL:-postgresql://vendora:vendora@postgres:5432/vendora}
+      JWT_SECRET: ${JWT_SECRET:-change-me-local-dev}
+      MEILI_URL: ${WORKER_MEILI_URL:-http://meilisearch:7700}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterkey}
+      MEILI_CATALOG_INDEX: ${MEILI_CATALOG_INDEX:-vendora_products}
+      NPM_CONFIG_UPDATE_NOTIFIER: "false"
+    command:
+      - npm
+      - run
+      - catalog:search-worker
+      - --workspace
+      - apps/api
+      - --
+      - --interval-ms=${CATALOG_SEARCH_WORKER_INTERVAL_MS:-3600000}
+    restart: unless-stopped
+
 volumes:
   postgres_data:

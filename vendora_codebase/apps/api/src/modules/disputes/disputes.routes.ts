@@ -9,6 +9,7 @@ import {
 } from '../../plugins/authenticate.js'
 import {
   createDispute,
+  type DisputeEvidenceInput,
   getAdminDispute,
   getDisputeByOrder,
   getVendorBalance,
@@ -16,6 +17,7 @@ import {
   listAdminDisputes,
   markPayoutFailureReviewed,
   markRefundFailureReviewed,
+  readDisputeEvidenceContentForAdmin,
   resolveDispute,
   resolveDisputeById,
   retryPayoutFailure,
@@ -52,10 +54,10 @@ export async function disputeRoutes(app: FastifyInstance) {
     }
 
     const { orderId } = request.params as { orderId: string }
-    const { reason } = request.body as { reason: string }
+    const { reason, evidence } = request.body as { reason: string; evidence?: DisputeEvidenceInput[] }
 
     try {
-      const dispute = await createDispute(orderId, request.user.sub, reason)
+      const dispute = await createDispute(orderId, request.user.sub, reason, evidence)
       return reply.code(201).send({ data: dispute })
     } catch (err: unknown) {
       return sendDisputeError(reply, err, 'Failed to create dispute')
@@ -75,10 +77,10 @@ export async function disputeRoutes(app: FastifyInstance) {
     if (!vendorId) return reply.code(403).send({ error: { code: 'TENANT_SCOPE_REQUIRED', message: 'Vendor workspace access is required' } })
 
     const { disputeId } = request.params as { disputeId: string }
-    const { message } = request.body as { message: string }
+    const { message, evidence } = request.body as { message: string; evidence?: DisputeEvidenceInput[] }
 
     try {
-      const dispute = await respondToDispute(disputeId, vendorId, request.user.sub, message)
+      const dispute = await respondToDispute(disputeId, vendorId, request.user.sub, message, evidence)
       return reply.send({ data: dispute })
     } catch (err: unknown) {
       return sendDisputeError(reply, err, 'Failed to respond to dispute')
@@ -181,6 +183,17 @@ export async function disputeRoutes(app: FastifyInstance) {
     }
   })
 
+  app.get('/admin/disputes/evidence/:evidenceId/content', { preHandler: [authenticate, requireVerifiedEmail, requirePlatformAdmin] }, async (request, reply) => {
+    const { evidenceId } = request.params as { evidenceId: string }
+
+    try {
+      const content = await readDisputeEvidenceContentForAdmin(evidenceId, request.user.sub)
+      return reply.send({ data: content })
+    } catch (err: unknown) {
+      return sendDisputeError(reply, err, 'Failed to read dispute evidence content')
+    }
+  })
+
   app.post('/admin/disputes/:disputeId/resolve', {
     preHandler: [authenticate, requireVerifiedEmail, requirePlatformAdmin],
     schema: resolveDisputeSchema,
@@ -207,10 +220,10 @@ export async function disputeRoutes(app: FastifyInstance) {
 
     const buyerId = (request.user as { sub: string }).sub
     const { orderId } = request.params as { orderId: string }
-    const { reason } = request.body as { reason: string }
+    const { reason, evidence } = request.body as { reason: string; evidence?: DisputeEvidenceInput[] }
 
     try {
-      const dispute = await createDispute(orderId, buyerId, reason)
+      const dispute = await createDispute(orderId, buyerId, reason, evidence)
       return reply.code(201).send(dispute)
     } catch (err: unknown) {
       return sendDisputeError(reply, err, 'Failed to create dispute')

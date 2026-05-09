@@ -6,6 +6,8 @@ import type {
   Prisma,
 } from '@prisma/client'
 import { prisma } from '../../shared/db.js'
+import { reindexCatalogSearch } from '../catalog/catalog.search.js'
+import { autoEscalateVendorResponseDisputes } from '../disputes/disputes.service.js'
 import { runOrderMaintenanceJobs } from '../orders/maintenance.service.js'
 
 const DEFAULT_NOTIFICATION_LIMIT = 25
@@ -15,6 +17,8 @@ const MAX_MAINTENANCE_LIMIT = 100
 const NOTIFICATION_WORKER_DEFAULT_INTERVAL_MS = 30_000
 const NOTIFICATION_WORKER_DEFAULT_MAX_ATTEMPTS = 3
 const ORDER_MAINTENANCE_WORKER_DEFAULT_INTERVAL_MS = 60_000
+const DISPUTE_SLA_WORKER_DEFAULT_INTERVAL_MS = 60_000
+const CATALOG_SEARCH_WORKER_DEFAULT_INTERVAL_MS = 3_600_000
 type ReturnInspectionOutcome = 'RESTOCK' | 'DO_NOT_RESTOCK'
 type MoneyFailureType = 'ALL' | 'REFUND' | 'PAYOUT'
 type ReviewedFilter = 'ALL' | 'REVIEWED' | 'UNREVIEWED'
@@ -161,6 +165,22 @@ async function orderMaintenanceBacklog(now: Date, input: {
   }
 }
 
+async function disputeSlaBacklog(now: Date, olderThanHours = 48) {
+  const cutoff = dateHoursAgo(now, olderThanHours)
+  const due = await prisma.dispute.count({
+    where: {
+      status: 'VENDOR_RESPONSE',
+      createdAt: { lte: cutoff },
+    },
+  })
+
+  return {
+    vendorResponseDue: due,
+    totalDue: due,
+    olderThanHours,
+  }
+}
+
 async function returnInspectionQueueSummary(limit = 1000) {
   const disputes = await prisma.dispute.findMany({
     where: {
@@ -224,6 +244,10 @@ async function latestWorkerActivity() {
           'ADMIN_ORDER_MAINTENANCE_RUN',
           'ORDER_AUTO_CANCELLED_CONFIRMATION_TIMEOUT',
           'ORDER_AUTO_COMPLETED_DELIVERY_TIMEOUT',
+          'DISPUTE_VENDOR_RESPONSE_SLA_ESCALATED',
+          'ADMIN_DISPUTE_SLA_RUN',
+          'ADMIN_CATALOG_SEARCH_REINDEX',
+          'CATALOG_SEARCH_REINDEX_WORKER_RUN',
           'NOTIFICATION_OUTBOX_RETRY_REQUESTED',
           'RETURN_INSPECTION_COMPLETED',
         ],
@@ -281,12 +305,26 @@ async function workerHeartbeatSummary(workerName: string, now: Date, staleAfterM
 }
 
 export async function getAdminWorkerOps(now = new Date()) {
-  const [notifications, maintenanceBacklog, activity, notificationHeartbeat, orderMaintenanceHeartbeat] = await Promise.all([
+  const [
+    notifications,
+    maintenanceBacklog,
+    disputeSla,
+    activity,
+    notificationHeartbeat,
+    orderMaintenanceHeartbeat,
+    disputeSlaHeartbeat,
+    catalogSearch,
+    catalogSearchHeartbeat,
+  ] = await Promise.all([
     notificationQueueSummary(),
     orderMaintenanceBacklog(now),
+    disputeSlaBacklog(now),
     latestWorkerActivity(),
     workerHeartbeatSummary('notification_outbox', now, NOTIFICATION_WORKER_DEFAULT_INTERVAL_MS * 3),
     workerHeartbeatSummary('order_maintenance', now, ORDER_MAINTENANCE_WORKER_DEFAULT_INTERVAL_MS * 3),
+    workerHeartbeatSummary('dispute_sla', now, DISPUTE_SLA_WORKER_DEFAULT_INTERVAL_MS * 3),
+    catalogSearchReindexBacklog(),
+    workerHeartbeatSummary('catalog_search', now, CATALOG_SEARCH_WORKER_DEFAULT_INTERVAL_MS * 3),
   ])
 
   return {
@@ -314,14 +352,34 @@ export async function getAdminWorkerOps(now = new Date()) {
         defaultIntervalMs: ORDER_MAINTENANCE_WORKER_DEFAULT_INTERVAL_MS,
       },
     },
+    disputeSlaWorker: {
+      status: disputeSlaHeartbeat.status,
+      heartbeat: disputeSlaHeartbeat,
+      backlog: disputeSla,
+      config: {
+        defaultLimit: DEFAULT_MAINTENANCE_LIMIT,
+        defaultOlderThanHours: 48,
+        defaultIntervalMs: DISPUTE_SLA_WORKER_DEFAULT_INTERVAL_MS,
+      },
+    },
+    catalogSearchWorker: {
+      status: catalogSearchHeartbeat.status,
+      heartbeat: catalogSearchHeartbeat,
+      backlog: catalogSearch,
+      config: {
+        defaultIntervalMs: CATALOG_SEARCH_WORKER_DEFAULT_INTERVAL_MS,
+        index: process.env['MEILI_CATALOG_INDEX'] ?? 'vendora_products',
+      },
+    },
     latestActivity: activity,
   }
 }
 
 export async function getAdminQueueOps(now = new Date()) {
-  const [notifications, maintenanceBacklog, returnInspections, moneyFailures] = await Promise.all([
+  const [notifications, maintenanceBacklog, disputeSla, returnInspections, moneyFailures] = await Promise.all([
     notificationQueueSummary(),
     orderMaintenanceBacklog(now),
+    disputeSlaBacklog(now),
     returnInspectionQueueSummary(),
     moneyFailureQueueSummary(),
   ])
@@ -330,12 +388,14 @@ export async function getAdminQueueOps(now = new Date()) {
     generatedAt: now,
     notifications,
     orderMaintenance: maintenanceBacklog,
+    disputeSla,
     returnInspections,
     moneyFailures,
     totals: {
       actionable: notifications.pending
         + notifications.failed
         + maintenanceBacklog.totalDue
+        + disputeSla.totalDue
         + returnInspections.pending
         + moneyFailures.totalUnreviewed,
     },
@@ -404,6 +464,118 @@ export async function runOrderMaintenanceFromOps(actorUserId: string, input: {
     limit,
     confirmationOlderThanHours,
     deliveryOlderThanHours,
+    backlogBefore: backlog,
+    result,
+    auditEventId: audit.id,
+  }
+}
+
+export async function runDisputeSlaFromOps(actorUserId: string, input: {
+  dryRun?: boolean
+  limit?: string | number
+  now?: string
+  olderThanHours?: string | number
+}) {
+  const dryRun = input.dryRun !== false
+  const limit = clampMaintenanceLimit(input.limit)
+  const now = parseOpsNow(input.now)
+  const olderThanHours = parsePositiveNumber(input.olderThanHours, 48, 'olderThanHours')
+  const backlog = await disputeSlaBacklog(now, olderThanHours)
+
+  if (dryRun) {
+    return {
+      mode: 'DRY_RUN',
+      executed: false,
+      generatedAt: now,
+      limit,
+      olderThanHours,
+      backlog,
+    }
+  }
+
+  const result = await autoEscalateVendorResponseDisputes({
+    limit,
+    now,
+    olderThanHours,
+  })
+
+  const audit = await prisma.auditEvent.create({
+    data: {
+      actorUserId,
+      action: 'ADMIN_DISPUTE_SLA_RUN',
+      resourceType: 'dispute_sla',
+      resourceId: `dispute-sla:${now.toISOString()}`,
+      metadata: {
+        dryRun: false,
+        limit,
+        now: now.toISOString(),
+        olderThanHours,
+        backlogBefore: backlog,
+        result,
+      } as Prisma.InputJsonValue,
+    },
+  })
+
+  return {
+    mode: 'EXECUTE',
+    executed: true,
+    generatedAt: now,
+    limit,
+    olderThanHours,
+    backlogBefore: backlog,
+    result,
+    auditEventId: audit.id,
+  }
+}
+
+async function catalogSearchReindexBacklog() {
+  const documents = await prisma.product.count({
+    where: {
+      published: true,
+      vendor: { status: 'APPROVED' },
+    },
+  })
+
+  return {
+    documents,
+  }
+}
+
+export async function runCatalogSearchReindexFromOps(actorUserId: string, input: {
+  dryRun?: boolean
+}) {
+  const dryRun = input.dryRun !== false
+  const now = new Date()
+  const backlog = await catalogSearchReindexBacklog()
+
+  if (dryRun) {
+    return {
+      mode: 'DRY_RUN',
+      executed: false,
+      generatedAt: now,
+      backlog,
+    }
+  }
+
+  const result = await reindexCatalogSearch()
+  const audit = await prisma.auditEvent.create({
+    data: {
+      actorUserId,
+      action: 'ADMIN_CATALOG_SEARCH_REINDEX',
+      resourceType: 'catalog_search',
+      resourceId: `catalog-search:${now.toISOString()}`,
+      metadata: {
+        dryRun: false,
+        backlogBefore: backlog,
+        result,
+      } as Prisma.InputJsonValue,
+    },
+  })
+
+  return {
+    mode: 'EXECUTE',
+    executed: true,
+    generatedAt: now,
     backlogBefore: backlog,
     result,
     auditEventId: audit.id,

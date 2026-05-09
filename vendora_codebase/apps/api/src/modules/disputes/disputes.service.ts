@@ -5,10 +5,23 @@ import {
   enqueueForVendorOwners,
   enqueueNotification,
 } from '../notifications/notifications.service.js'
+import { getPrivateObject, privateStorageProvider, putPrivateObject } from '../vendor/private-storage.service.js'
 import { createPayoutProvider } from './payout-providers.js'
 import { createRefundProvider, type RefundProviderResult } from './refund-providers.js'
 
 type DisputeResolutionType = 'BUYER_FAVOR_FULL_REFUND' | 'BUYER_FAVOR_PARTIAL_REFUND' | 'VENDOR_FAVOR_RELEASE'
+type DisputeActorType = 'BUYER' | 'VENDOR' | 'PLATFORM_ADMIN' | 'SYSTEM'
+
+export interface DisputeEvidenceInput {
+  fileName: string
+  contentType: string
+  sizeBytes: number
+  contentBase64?: string
+  description?: string
+}
+
+const MAX_DISPUTE_EVIDENCE_ITEMS = 5
+const MAX_DISPUTE_EVIDENCE_SIZE_BYTES = 10 * 1024 * 1024
 
 function disputeInclude() {
   return {
@@ -18,6 +31,14 @@ function disputeInclude() {
         buyer: { select: { id: true, email: true } },
         funds: true,
       },
+    },
+    messages: {
+      orderBy: { createdAt: 'asc' },
+      include: { actor: { select: { id: true, email: true } } },
+    },
+    evidence: {
+      orderBy: { createdAt: 'asc' },
+      include: { submittedBy: { select: { id: true, email: true } } },
     },
   } as const
 }
@@ -38,6 +59,274 @@ async function createLedgerEntry(input: {
 
 function errorMessage(err: unknown) {
   return err instanceof Error ? err.message : String(err)
+}
+
+function normalizeEvidence(evidence: DisputeEvidenceInput[] | undefined) {
+  if (!evidence || evidence.length === 0) return []
+  if (evidence.length > MAX_DISPUTE_EVIDENCE_ITEMS) {
+    throw new Error(`VALIDATION_ERROR: at most ${MAX_DISPUTE_EVIDENCE_ITEMS} evidence items are allowed`)
+  }
+
+  return evidence.map((item) => {
+    const fileName = item.fileName.trim()
+    const contentType = item.contentType.trim()
+    const description = item.description?.trim()
+    if (!fileName) throw new Error('VALIDATION_ERROR: evidence fileName is required')
+    if (!contentType) throw new Error('VALIDATION_ERROR: evidence contentType is required')
+    if (!Number.isInteger(item.sizeBytes) || item.sizeBytes <= 0 || item.sizeBytes > MAX_DISPUTE_EVIDENCE_SIZE_BYTES) {
+      throw new Error('VALIDATION_ERROR: evidence sizeBytes is invalid')
+    }
+
+    let content: Buffer | null = null
+    if (item.contentBase64) {
+      try {
+        content = Buffer.from(item.contentBase64, 'base64')
+      } catch {
+        throw new Error('VALIDATION_ERROR: evidence contentBase64 is invalid')
+      }
+      if (content.byteLength !== item.sizeBytes) {
+        throw new Error('VALIDATION_ERROR: evidence size does not match content')
+      }
+    }
+
+    return {
+      fileName,
+      contentType,
+      sizeBytes: item.sizeBytes,
+      description: description || null,
+      content,
+    }
+  })
+}
+
+async function appendDisputeMessage(input: {
+  tx: Prisma.TransactionClient
+  disputeId: string
+  actorUserId: string | null
+  actorType: DisputeActorType
+  message: string
+}) {
+  const message = input.message.trim()
+  if (!message) throw new Error('VALIDATION_ERROR: dispute message is required')
+
+  await input.tx.disputeMessage.create({
+    data: {
+      disputeId: input.disputeId,
+      actorUserId: input.actorUserId,
+      actorType: input.actorType,
+      message,
+    },
+  })
+}
+
+async function appendDisputeEvidence(input: {
+  tx: Prisma.TransactionClient
+  disputeId: string
+  actorUserId: string
+  actorType: DisputeActorType
+  evidence?: DisputeEvidenceInput[]
+}) {
+  const normalized = normalizeEvidence(input.evidence)
+  if (normalized.length === 0) return
+
+  for (const [index, item] of normalized.entries()) {
+    const safeFileName = item.fileName.replace(/[^A-Za-z0-9._-]/g, '_')
+    const storageKey = item.content ? `disputes/${input.disputeId}/${Date.now()}-${index}-${safeFileName}` : null
+    const stored = item.content ? await putPrivateObject(storageKey!, item.content) : null
+
+    await input.tx.disputeEvidence.create({
+      data: {
+        disputeId: input.disputeId,
+        submittedByUserId: input.actorUserId,
+        submittedByActorType: input.actorType,
+        fileName: item.fileName,
+        contentType: item.contentType,
+        sizeBytes: item.sizeBytes,
+        storageKey,
+        storageProvider: stored?.provider ?? (item.content ? privateStorageProvider() : null),
+        storedSizeBytes: stored?.sizeBytes ?? null,
+        contentSha256: stored?.sha256 ?? null,
+        storageConfirmedAt: stored ? new Date() : null,
+        description: item.description,
+      },
+    })
+  }
+}
+
+export async function readDisputeEvidenceContentForAdmin(evidenceId: string, adminUserId: string) {
+  const evidence = await prisma.disputeEvidence.findUnique({
+    where: { id: evidenceId },
+    include: {
+      dispute: {
+        include: {
+          order: {
+            include: {
+              vendor: { select: { id: true, name: true } },
+              buyer: { select: { id: true, email: true } },
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (!evidence) throw new Error('RESOURCE_NOT_FOUND: dispute evidence not found')
+  if (!evidence.storageKey || !evidence.storageConfirmedAt || !evidence.contentSha256) {
+    throw new Error('DISPUTE_INVALID_STATE: dispute evidence content is not available')
+  }
+
+  const object = await getPrivateObject(evidence.storageKey)
+  if (object.sha256 !== evidence.contentSha256 || object.sizeBytes !== evidence.storedSizeBytes) {
+    throw new Error('VALIDATION_ERROR: stored dispute evidence integrity check failed')
+  }
+
+  await prisma.auditEvent.create({
+    data: {
+      actorUserId: adminUserId,
+      action: 'DISPUTE_EVIDENCE_OBJECT_READ',
+      resourceType: 'dispute_evidence',
+      resourceId: evidence.id,
+      metadata: {
+        disputeId: evidence.disputeId,
+        orderId: evidence.dispute.orderId,
+        vendorId: evidence.dispute.order.vendorId,
+        storageProvider: object.provider,
+        sizeBytes: object.sizeBytes,
+        contentSha256: object.sha256,
+      },
+    },
+  })
+
+  return {
+    evidenceId: evidence.id,
+    disputeId: evidence.disputeId,
+    orderId: evidence.dispute.orderId,
+    vendor: evidence.dispute.order.vendor,
+    buyer: evidence.dispute.order.buyer,
+    fileName: evidence.fileName,
+    contentType: evidence.contentType,
+    sizeBytes: object.sizeBytes,
+    contentSha256: object.sha256,
+    storageProvider: object.provider,
+    contentBase64: object.content.toString('base64'),
+  }
+}
+
+export async function autoEscalateVendorResponseDisputes(input: {
+  limit?: number
+  olderThanHours?: number
+  now?: Date
+} = {}) {
+  const limit = input.limit ?? 50
+  const olderThanHours = input.olderThanHours ?? 48
+  const now = input.now ?? new Date()
+  const cutoff = new Date(now.getTime() - olderThanHours * 60 * 60 * 1000)
+
+  const disputes = await prisma.dispute.findMany({
+    where: {
+      status: 'VENDOR_RESPONSE',
+      createdAt: { lte: cutoff },
+    },
+    include: disputeInclude(),
+    orderBy: { createdAt: 'asc' },
+    take: limit,
+  })
+
+  const escalated: string[] = []
+
+  for (const dispute of disputes) {
+    await prisma.$transaction(async (tx) => {
+      const next = await tx.dispute.updateMany({
+        where: {
+          id: dispute.id,
+          status: 'VENDOR_RESPONSE',
+        },
+        data: {
+          status: 'PLATFORM_REVIEW',
+        },
+      })
+
+      if (next.count === 0) return
+
+      await appendDisputeMessage({
+        tx,
+        disputeId: dispute.id,
+        actorUserId: null,
+        actorType: 'SYSTEM',
+        message: `Vendor response SLA expired after ${olderThanHours} hours; dispute escalated to platform review.`,
+      })
+      await tx.auditEvent.create({
+        data: {
+          actorUserId: null,
+          action: 'DISPUTE_VENDOR_RESPONSE_SLA_ESCALATED',
+          resourceType: 'dispute',
+          resourceId: dispute.id,
+          metadata: {
+            orderId: dispute.orderId,
+            vendorId: dispute.order.vendorId,
+            from: 'VENDOR_RESPONSE',
+            to: 'PLATFORM_REVIEW',
+            olderThanHours,
+            cutoff: cutoff.toISOString(),
+          },
+        },
+      })
+      await enqueueNotification({
+        eventType: 'DISPUTE_VENDOR_RESPONSE_SLA_ESCALATED_BUYER',
+        recipientUserId: dispute.order.buyer.id,
+        recipientEmail: dispute.order.buyer.email,
+        subject: 'Vendora dispute escalated to platform review',
+        templateKey: 'dispute.vendor_response_sla_escalated.buyer',
+        payload: {
+          disputeId: dispute.id,
+          orderId: dispute.orderId,
+          vendorId: dispute.order.vendorId,
+          status: 'PLATFORM_REVIEW',
+          olderThanHours,
+        },
+        referenceType: 'dispute',
+        referenceId: dispute.id,
+      }, tx)
+      await enqueueForVendorOwners({
+        vendorId: dispute.order.vendorId,
+        eventType: 'DISPUTE_VENDOR_RESPONSE_SLA_ESCALATED_VENDOR',
+        subject: 'Vendora dispute escalated to platform review',
+        templateKey: 'dispute.vendor_response_sla_escalated.vendor',
+        payload: {
+          disputeId: dispute.id,
+          orderId: dispute.orderId,
+          status: 'PLATFORM_REVIEW',
+          olderThanHours,
+        },
+        referenceType: 'dispute',
+        referenceId: dispute.id,
+      }, tx)
+      await enqueueForPlatformAdmins({
+        eventType: 'DISPUTE_VENDOR_RESPONSE_SLA_ESCALATED_ADMIN',
+        subject: 'Vendora dispute needs platform review',
+        templateKey: 'dispute.vendor_response_sla_escalated.admin',
+        payload: {
+          disputeId: dispute.id,
+          orderId: dispute.orderId,
+          vendorId: dispute.order.vendorId,
+          buyerEmail: dispute.order.buyer.email,
+          status: 'PLATFORM_REVIEW',
+          olderThanHours,
+        },
+        referenceType: 'dispute',
+        referenceId: dispute.id,
+      }, tx)
+    })
+
+    escalated.push(dispute.id)
+  }
+
+  return {
+    cutoff,
+    selected: disputes.length,
+    escalated: escalated.length,
+    disputeIds: escalated,
+  }
 }
 
 async function executeRefundProvider(input: {
@@ -102,7 +391,8 @@ async function executeRefundProvider(input: {
   }
 }
 
-export async function createDispute(orderId: string, buyerId: string, reason: string) {
+export async function createDispute(orderId: string, buyerId: string, reason: string, evidence?: DisputeEvidenceInput[]) {
+  const normalizedReason = reason.trim()
   const order = await prisma.order.findFirst({
     where: { id: orderId, buyerId },
     include: {
@@ -111,6 +401,7 @@ export async function createDispute(orderId: string, buyerId: string, reason: st
     },
   })
   if (!order) throw new Error('RESOURCE_NOT_FOUND: order not found')
+  if (normalizedReason.length < 10) throw new Error('VALIDATION_ERROR: dispute reason must be at least 10 characters')
   if (order.status === 'DISPUTED') throw new Error('DISPUTE_INVALID_STATE: dispute already exists for this order')
   if (order.status !== 'SHIPPED' && order.status !== 'DELIVERED' && order.status !== 'COMPLETED') {
     throw new Error(`ORDER_INVALID_STATE: expected SHIPPED, DELIVERED or COMPLETED, got ${order.status}`)
@@ -121,7 +412,21 @@ export async function createDispute(orderId: string, buyerId: string, reason: st
   // 02_user_journeys.md:254 — спор создан → статус VENDOR_RESPONSE; escrow заморожен
   const dispute = await prisma.$transaction(async (tx) => {
     const created = await tx.dispute.create({
-      data: { orderId, reason },
+      data: { orderId, reason: normalizedReason },
+    })
+    await appendDisputeMessage({
+      tx,
+      disputeId: created.id,
+      actorUserId: buyerId,
+      actorType: 'BUYER',
+      message: normalizedReason,
+    })
+    await appendDisputeEvidence({
+      tx,
+      disputeId: created.id,
+      actorUserId: buyerId,
+      actorType: 'BUYER',
+      evidence,
     })
     await tx.order.update({
       where: { id: orderId },
@@ -152,6 +457,7 @@ export async function createDispute(orderId: string, buyerId: string, reason: st
           from: order.status,
           to: 'DISPUTED',
           fundStatus: 'FROZEN_DISPUTE',
+          evidenceCount: evidence?.length ?? 0,
         },
       },
     })
@@ -165,7 +471,7 @@ export async function createDispute(orderId: string, buyerId: string, reason: st
         disputeId: created.id,
         orderId,
         vendorId: order.vendorId,
-        reason,
+        reason: normalizedReason,
         fundStatus: 'FROZEN_DISPUTE',
       },
       referenceType: 'dispute',
@@ -180,7 +486,7 @@ export async function createDispute(orderId: string, buyerId: string, reason: st
         disputeId: created.id,
         orderId,
         buyerEmail: order.buyer.email,
-        reason,
+        reason: normalizedReason,
         fundStatus: 'FROZEN_DISPUTE',
       },
       referenceType: 'dispute',
@@ -202,7 +508,7 @@ export async function createDispute(orderId: string, buyerId: string, reason: st
     return created
   })
 
-  return dispute
+  return prisma.dispute.findUniqueOrThrow({ where: { id: dispute.id }, include: disputeInclude() })
 }
 
 export async function getDisputeByOrder(orderId: string) {
@@ -228,12 +534,14 @@ export async function getAdminDispute(disputeId: string) {
   return dispute
 }
 
-export async function respondToDispute(disputeId: string, vendorId: string, actorUserId: string, message: string) {
+export async function respondToDispute(disputeId: string, vendorId: string, actorUserId: string, message: string, evidence?: DisputeEvidenceInput[]) {
+  const normalizedMessage = message.trim()
   const dispute = await prisma.dispute.findUnique({
     where: { id: disputeId },
     include: disputeInclude(),
   })
   if (!dispute) throw new Error('RESOURCE_NOT_FOUND: dispute not found')
+  if (normalizedMessage.length < 10) throw new Error('VALIDATION_ERROR: vendor response must be at least 10 characters')
   if (dispute.order.vendorId !== vendorId) throw new Error('RESOURCE_NOT_FOUND: dispute not found')
   if (dispute.status !== 'VENDOR_RESPONSE') {
     throw new Error(`DISPUTE_INVALID_STATE: expected VENDOR_RESPONSE, got ${dispute.status}`)
@@ -244,11 +552,25 @@ export async function respondToDispute(disputeId: string, vendorId: string, acto
       where: { id: dispute.id },
       data: {
         status: 'PLATFORM_REVIEW',
-        vendorResponse: message,
+        vendorResponse: normalizedMessage,
         vendorRespondedByUserId: actorUserId,
         vendorRespondedAt: new Date(),
       },
       include: disputeInclude(),
+    })
+    await appendDisputeMessage({
+      tx,
+      disputeId: dispute.id,
+      actorUserId,
+      actorType: 'VENDOR',
+      message: normalizedMessage,
+    })
+    await appendDisputeEvidence({
+      tx,
+      disputeId: dispute.id,
+      actorUserId,
+      actorType: 'VENDOR',
+      evidence,
     })
     await tx.auditEvent.create({
       data: {
@@ -261,6 +583,7 @@ export async function respondToDispute(disputeId: string, vendorId: string, acto
           vendorId,
           from: 'VENDOR_RESPONSE',
           to: 'PLATFORM_REVIEW',
+          evidenceCount: evidence?.length ?? 0,
         },
       },
     })
@@ -295,7 +618,7 @@ export async function respondToDispute(disputeId: string, vendorId: string, acto
     return next
   })
 
-  return updated
+  return prisma.dispute.findUniqueOrThrow({ where: { id: updated.id }, include: disputeInclude() })
 }
 
 export async function resolveDisputeById(disputeId: string, actorUserId: string, resolutionType: DisputeResolutionType, options: { refundAmountMinor?: number } = {}) {
@@ -401,6 +724,13 @@ export async function resolveDisputeById(disputeId: string, actorUserId: string,
         },
       })
     }
+    await appendDisputeMessage({
+      tx,
+      disputeId: dispute.id,
+      actorUserId,
+      actorType: 'PLATFORM_ADMIN',
+      message: `Resolution: ${resolutionType}`,
+    })
     await tx.auditEvent.create({
       data: {
         actorUserId,

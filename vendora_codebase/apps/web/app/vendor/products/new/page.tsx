@@ -11,12 +11,25 @@ interface Product {
   status: string
 }
 
+function fileToBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Не удалось прочитать файл'))
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      resolve(result.includes(',') ? result.split(',')[1] ?? '' : result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function NewProductPage() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
   const [stock, setStock] = useState('')
+  const [mediaFile, setMediaFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -27,11 +40,19 @@ export default function NewProductPage() {
     setLoading(true)
     setError('')
     try {
+      const media = mediaFile ? [{
+        fileName: mediaFile.name,
+        contentType: mediaFile.type,
+        sizeBytes: mediaFile.size,
+        contentBase64: await fileToBase64(mediaFile),
+        altText: name,
+      }] : undefined
       const product = await api.post<Product>('/products', {
         name,
         description: description || undefined,
         price: Number(price),
         stock: stock ? Number(stock) : undefined,
+        media,
       }, token)
 
       if (andPublish) {
@@ -115,6 +136,19 @@ export default function NewProductPage() {
               className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-1.5">Изображение</label>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => setMediaFile(e.target.files?.[0] ?? null)}
+            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700"
+          />
+          {mediaFile && (
+            <p className="mt-1 text-xs text-slate-400">{mediaFile.name} · {Math.ceil(mediaFile.size / 1024)} KB</p>
+          )}
         </div>
 
         {error && (

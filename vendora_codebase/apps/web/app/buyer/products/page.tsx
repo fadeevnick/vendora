@@ -10,6 +10,7 @@ interface Product {
   description: string | null
   price: string
   stock: number
+  media?: { id: string; assetUrl: string; altText: string | null }[]
   vendor: { id: string; name: string }
 }
 

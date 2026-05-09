@@ -9,6 +9,9 @@ interface LoginResponse {
   data: {
     token: string
     session: {
+      user: {
+        accountType: 'BUYER' | 'VENDOR_OWNER'
+      }
       vendorMembership: {
         vendorId: string
       } | null
@@ -21,6 +24,7 @@ interface LoginResponse {
 
 export default function LoginPage() {
   const router = useRouter()
+  const [loginScope, setLoginScope] = useState<'workspace' | 'admin'>('workspace')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -32,16 +36,22 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const response = await api.post<LoginResponse>('/auth/login', { email, password })
+      const loginPath = loginScope === 'admin' ? '/admin/auth/login' : '/auth/login'
+      const response = await api.post<LoginResponse>(loginPath, { email, password })
       localStorage.setItem('token', response.data.token)
+
+      if (response.data.session.capabilities.platformAdmin) {
+        router.push('/admin/ops')
+        return
+      }
 
       if (response.data.session.vendorMembership) {
         router.push('/vendor/products')
         return
       }
 
-      if (response.data.session.capabilities.platformAdmin) {
-        router.push('/buyer/products')
+      if (response.data.session.user.accountType === 'VENDOR_OWNER') {
+        router.push('/vendor/application')
         return
       }
 
@@ -70,6 +80,18 @@ export default function LoginPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-slate-600 block mb-1">Режим входа</label>
+              <select
+                value={loginScope}
+                onChange={(e) => setLoginScope(e.target.value as 'workspace' | 'admin')}
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
+              >
+                <option value="workspace">Buyer / Vendor</option>
+                <option value="admin">Platform Admin</option>
+              </select>
+            </div>
+
             <div>
               <label className="text-sm font-medium text-slate-600 block mb-1">Email</label>
               <input

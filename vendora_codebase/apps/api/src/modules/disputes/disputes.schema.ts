@@ -4,7 +4,24 @@ export const createDisputeSchema = {
     required: ['reason'],
     properties: {
       reason: { type: 'string', minLength: 10 },
+      evidence: {
+        type: 'array',
+        maxItems: 5,
+        items: {
+          type: 'object',
+          required: ['fileName', 'contentType', 'sizeBytes'],
+          properties: {
+            fileName: { type: 'string', minLength: 1 },
+            contentType: { type: 'string', minLength: 1 },
+            sizeBytes: { type: 'integer', minimum: 1, maximum: 10485760 },
+            contentBase64: { type: 'string', minLength: 1 },
+            description: { type: 'string', maxLength: 500 },
+          },
+          additionalProperties: false,
+        },
+      },
     },
+    additionalProperties: false,
   },
 }
 
@@ -21,6 +38,22 @@ export const vendorDisputeResponseSchema = {
     required: ['message'],
     properties: {
       message: { type: 'string', minLength: 10 },
+      evidence: {
+        type: 'array',
+        maxItems: 5,
+        items: {
+          type: 'object',
+          required: ['fileName', 'contentType', 'sizeBytes'],
+          properties: {
+            fileName: { type: 'string', minLength: 1 },
+            contentType: { type: 'string', minLength: 1 },
+            sizeBytes: { type: 'integer', minimum: 1, maximum: 10485760 },
+            contentBase64: { type: 'string', minLength: 1 },
+            description: { type: 'string', maxLength: 500 },
+          },
+          additionalProperties: false,
+        },
+      },
     },
     additionalProperties: false,
   },

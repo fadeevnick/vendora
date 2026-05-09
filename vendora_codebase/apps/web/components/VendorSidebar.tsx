@@ -6,6 +6,8 @@ import { usePathname, useRouter } from 'next/navigation'
 const NAV = [
   { href: '/vendor/products', label: 'Каталог', icon: '🛍️' },
   { href: '/vendor/orders', label: 'Заказы', icon: '📋' },
+  { href: '/vendor/balance', label: 'Баланс', icon: '₽' },
+  { href: '/vendor/application', label: 'KYC', icon: '✓' },
 ]
 
 export function VendorSidebar() {

@@ -15,6 +15,8 @@ import {
 
 async function main() {
   const suffix = runtimeSuffix()
+  const mediaBytes = Buffer.from(`phase03-media-${suffix}`)
+  const mediaBase64 = mediaBytes.toString('base64')
   const vendorUser = await upsertVerifiedUser(`phase03-vendor-${suffix}@vendora.local`, 'VENDOR_OWNER')
   const vendor = await ensureVendorFixture({
     user: vendorUser,
@@ -33,8 +35,16 @@ async function main() {
       priceMinor: 123400,
       currency: 'RUB',
       stockQty: 7,
+      media: [{
+        fileName: `phase03-media-${suffix}.png`,
+        contentType: 'image/png',
+        sizeBytes: mediaBytes.byteLength,
+        contentBase64: mediaBase64,
+        altText: `Phase 03 Runtime Draft ${suffix}`,
+      }],
     }),
   })
+  assert(draft.data.media.length === 1, 'draft listing should return product media metadata')
   const vendorListings = await request('/vendor/listings', { headers: { Authorization: `Bearer ${vendorToken}` } })
   assert(vendorListings.data.some((listing) => listing.id === draft.data.id), 'draft listing should appear in vendor listing list')
   const publicDraft = await request('/catalog/products?q=Phase%2003%20Runtime%20Draft')
@@ -60,7 +70,10 @@ async function main() {
   assert(publicSearch.data.some((listing) => listing.id === draft.data.id), 'published listing should be discoverable by public filters')
   const publicDetail = await request(`/catalog/products/${draft.data.id}`)
   assert(publicDetail.data.availability.inStock === true, 'public detail should expose in-stock availability')
+  assert(publicDetail.data.media.length === 1, 'public detail should expose product media')
+  assert(publicDetail.data.media[0].assetUrl === `data:image/png;base64,${mediaBase64}`, 'public detail should expose local inline media URL')
   record('R1-CAT-03', 'published listing is discoverable through public query/category/in-stock filters')
+  record('R1-CAT-08', 'listing media metadata is stored and exposed on vendor/public catalog views')
 
   const outOfStock = await request('/vendor/listings', {
     method: 'POST',

@@ -28,6 +28,8 @@ model User {
   reviewedApplications  VendorApplication[]         @relation("ReviewedApplications")
   uploadedKycDocuments  VendorApplicationDocument[]
   auditEvents           AuditEvent[]
+  disputeMessages       DisputeMessage[]
+  disputeEvidence       DisputeEvidence[]
 }
 
 model Vendor {
@@ -215,6 +217,7 @@ model Product {
   updatedAt         DateTime  @updatedAt
 
   vendor            Vendor             @relation(fields: [vendorId], references: [id])
+  media             ProductMedia[]
   orderItems        OrderItem[]
   cartItems         CartItem[]
   stockReservations StockReservation[]
@@ -222,6 +225,23 @@ model Product {
   @@index([published])
   @@index([category])
   @@index([vendorId])
+}
+
+model ProductMedia {
+  id              String   @id @default(uuid())
+  productId       String
+  fileName        String
+  contentType     String
+  sizeBytes       Int
+  assetUrl        String
+  storageProvider String   @default("local_inline")
+  altText         String?
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId, sortOrder])
 }
 
 model Cart {
@@ -443,6 +463,8 @@ model Dispute {
 
   order           Order                    @relation(fields: [orderId], references: [id])
   refundExecution RefundProviderExecution?
+  messages        DisputeMessage[]
+  evidence        DisputeEvidence[]
 }
 
 enum DisputeStatus {
@@ -451,10 +473,55 @@ enum DisputeStatus {
   RESOLVED
 }
 
+enum DisputeActorType {
+  BUYER
+  VENDOR
+  PLATFORM_ADMIN
+  SYSTEM
+}
+
 enum DisputeResolutionType {
   BUYER_FAVOR_FULL_REFUND
   BUYER_FAVOR_PARTIAL_REFUND
   VENDOR_FAVOR_RELEASE
+}
+
+model DisputeMessage {
+  id          String           @id @default(uuid())
+  disputeId   String
+  actorUserId String?
+  actorType   DisputeActorType
+  message     String
+  createdAt   DateTime         @default(now())
+
+  dispute Dispute @relation(fields: [disputeId], references: [id])
+  actor   User?   @relation(fields: [actorUserId], references: [id])
+
+  @@index([disputeId, createdAt])
+  @@index([actorUserId])
+}
+
+model DisputeEvidence {
+  id                   String           @id @default(uuid())
+  disputeId            String
+  submittedByUserId    String?
+  submittedByActorType DisputeActorType
+  fileName             String
+  contentType          String
+  sizeBytes            Int
+  storageKey           String?
+  storageProvider      String?
+  storedSizeBytes      Int?
+  contentSha256        String?
+  description          String?
+  createdAt            DateTime         @default(now())
+  storageConfirmedAt   DateTime?
+
+  dispute     Dispute @relation(fields: [disputeId], references: [id])
+  submittedBy User?   @relation(fields: [submittedByUserId], references: [id])
+
+  @@index([disputeId, createdAt])
+  @@index([submittedByUserId])
 }
 
 model RefundProviderExecution {

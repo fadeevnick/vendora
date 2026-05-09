@@ -10,6 +10,8 @@ import {
   listMoneyReconciliationOps,
   listReturnInspections,
   retryNotification,
+  runCatalogSearchReindexFromOps,
+  runDisputeSlaFromOps,
   runOrderMaintenanceFromOps,
 } from './ops.service.js'
 
@@ -103,6 +105,35 @@ export async function adminOpsRoutes(app: FastifyInstance) {
       return reply.send({ data: result })
     } catch (err: unknown) {
       return sendOpsError(reply, err, 'Failed to run order maintenance')
+    }
+  })
+
+  app.post('/admin/ops/dispute-sla/run', { preHandler: [authenticate, requireVerifiedEmail, requirePlatformAdmin] }, async (request, reply) => {
+    const body = request.body as {
+      dryRun?: boolean
+      limit?: string | number
+      now?: string
+      olderThanHours?: string | number
+    }
+
+    try {
+      const result = await runDisputeSlaFromOps(request.user.sub, body ?? {})
+      return reply.send({ data: result })
+    } catch (err: unknown) {
+      return sendOpsError(reply, err, 'Failed to run dispute SLA')
+    }
+  })
+
+  app.post('/admin/ops/catalog-search/reindex', { preHandler: [authenticate, requireVerifiedEmail, requirePlatformAdmin] }, async (request, reply) => {
+    const body = request.body as {
+      dryRun?: boolean
+    }
+
+    try {
+      const result = await runCatalogSearchReindexFromOps(request.user.sub, body ?? {})
+      return reply.send({ data: result })
+    } catch (err: unknown) {
+      return sendOpsError(reply, err, 'Failed to reindex catalog search')
     }
   })
 

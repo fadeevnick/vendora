@@ -8,15 +8,28 @@ interface Product {
   description: string | null
   price: string
   stock: number
+  media?: ProductMedia[]
   vendor: { id: string; name: string }
+}
+
+interface ProductMedia {
+  id: string
+  assetUrl: string
+  altText: string | null
 }
 
 export function ProductCard({ product }: { product: Product }) {
   const { add, items } = useCart()
   const inCart = items.some((i) => i.productId === product.id)
+  const primaryMedia = product.media?.[0]
 
   return (
     <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm flex flex-col">
+      <div
+        className="mb-3 aspect-[4/3] rounded-lg bg-slate-100 bg-cover bg-center"
+        style={primaryMedia ? { backgroundImage: `url(${primaryMedia.assetUrl})` } : undefined}
+        aria-label={primaryMedia?.altText ?? product.name}
+      />
       <p className="text-xs text-slate-400 mb-1">{product.vendor.name}</p>
       <h2 className="text-base font-semibold text-slate-800 mb-1">{product.name}</h2>
       {product.description && (

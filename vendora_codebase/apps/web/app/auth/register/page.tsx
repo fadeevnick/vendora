@@ -23,6 +23,9 @@ interface VerifyEmailResponse {
     verified: boolean
     token: string
     session: {
+      user: {
+        accountType: AccountType
+      }
       vendorMembership: {
         vendorId: string
       } | null
@@ -72,6 +75,11 @@ export default function RegisterPage() {
 
       if (response.data.session.vendorMembership) {
         router.push('/vendor/products')
+        return
+      }
+
+      if (response.data.session.user.accountType === 'VENDOR_OWNER') {
+        router.push('/vendor/application')
         return
       }
 

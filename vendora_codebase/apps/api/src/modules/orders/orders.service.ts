@@ -993,7 +993,12 @@ export async function getBuyerOrderDetail(orderId: string, buyerId: string) {
       items: { include: { product: { select: { id: true, name: true } } } },
       vendor: { select: { id: true, name: true } },
       funds: true,
-      dispute: true,
+      dispute: {
+        include: {
+          messages: { orderBy: { createdAt: 'asc' } },
+          evidence: { orderBy: { createdAt: 'asc' } },
+        },
+      },
     },
   })
 
@@ -1021,7 +1026,12 @@ export async function getVendorOrderDetail(orderId: string, vendorId: string) {
       items: { include: { product: { select: { id: true, name: true } } } },
       buyer: { select: { id: true, email: true } },
       funds: true,
-      dispute: true,
+      dispute: {
+        include: {
+          messages: { orderBy: { createdAt: 'asc' } },
+          evidence: { orderBy: { createdAt: 'asc' } },
+        },
+      },
     },
   })
 
@@ -1066,7 +1076,12 @@ async function applyVendorOrderAction(
         items: { include: { product: { select: { id: true, name: true } } } },
         buyer: { select: { id: true, email: true } },
         funds: true,
-        dispute: true,
+        dispute: {
+          include: {
+            messages: { orderBy: { createdAt: 'asc' } },
+            evidence: { orderBy: { createdAt: 'asc' } },
+          },
+        },
       },
     })
 

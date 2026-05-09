@@ -84,17 +84,22 @@ export async function catalogRoutes(app: FastifyInstance) {
     const { vendorId } = request.user
     if (!vendorId) return reply.code(403).send({ error: 'Vendor workspace access is required' })
 
-    const { name, description, price, stock } = request.body as {
-      name: string
-      description?: string
-      category?: string
-      price: number
-      currency?: string
-      stock?: number
-    }
-
     try {
-      const product = await createProduct({ ...(request.body as { name: string; description?: string; category?: string; price: number; currency?: string; stock?: number }), vendorId })
+      const product = await createProduct({ ...(request.body as {
+        name: string
+        description?: string
+        category?: string
+        price: number
+        currency?: string
+        stock?: number
+        media?: Array<{
+          fileName: string
+          contentType: string
+          sizeBytes: number
+          contentBase64: string
+          altText?: string
+        }>
+      }), vendorId })
       return reply.code(201).send(product)
     } catch (err: unknown) {
       return sendCatalogError(reply, err, 'Failed to create product')
@@ -117,6 +122,13 @@ export async function catalogRoutes(app: FastifyInstance) {
             priceMinor: number
             currency: string
             stockQty: number
+            media?: Array<{
+              fileName: string
+              contentType: string
+              sizeBytes: number
+              contentBase64: string
+              altText?: string
+            }>
           }),
           vendorId,
         })

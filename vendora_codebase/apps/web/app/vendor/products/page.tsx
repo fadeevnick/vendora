@@ -12,6 +12,7 @@ interface Product {
   price: string
   stock: number
   published: boolean
+  media?: { id: string; assetUrl: string; altText: string | null }[]
 }
 
 export default function VendorProductsPage() {
@@ -84,14 +85,20 @@ export default function VendorProductsPage() {
           <div className="divide-y divide-slate-50">
             {products.map((product) => (
               <div key={product.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-4 py-3.5">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-800 truncate">{product.name}</p>
-                  {product.description && (
-                    <p className="text-xs text-slate-400 mt-0.5 truncate">{product.description}</p>
-                  )}
-                  <span className={`inline-flex mt-1.5 text-xs font-semibold px-2 py-0.5 rounded-full ${product.published ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                    {product.published ? 'Опубликован' : 'Черновик'}
-                  </span>
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className="h-12 w-12 shrink-0 rounded-lg bg-slate-100 bg-cover bg-center"
+                    style={product.media?.[0] ? { backgroundImage: `url(${product.media[0].assetUrl})` } : undefined}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{product.name}</p>
+                    {product.description && (
+                      <p className="text-xs text-slate-400 mt-0.5 truncate">{product.description}</p>
+                    )}
+                    <span className={`inline-flex mt-1.5 text-xs font-semibold px-2 py-0.5 rounded-full ${product.published ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {product.published ? 'Опубликован' : 'Черновик'}
+                    </span>
+                  </div>
                 </div>
 
                 <span className="text-sm font-semibold text-slate-900 text-right">

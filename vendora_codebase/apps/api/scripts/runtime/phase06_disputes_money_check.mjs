@@ -294,7 +294,16 @@ async function main() {
   const vendorFavorDispute = await request(`/buyer/orders/${vendorFavorOrderId}/disputes`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${buyerToken}` },
-    body: JSON.stringify({ reason: 'Runtime dispute for vendor release path' }),
+    body: JSON.stringify({
+      reason: 'Runtime dispute for vendor release path',
+      evidence: [{
+        fileName: 'buyer-runtime-photo.png',
+        contentType: 'image/png',
+        sizeBytes: Buffer.byteLength('buyer-runtime-evidence'),
+        contentBase64: Buffer.from('buyer-runtime-evidence').toString('base64'),
+        description: 'Buyer runtime evidence metadata',
+      }],
+    }),
   })
   const frozenFund = await prisma.orderFund.findUnique({ where: { orderId: vendorFavorOrderId } })
   const frozenLedger = await prisma.vendorBalanceLedger.findFirst({
@@ -311,7 +320,16 @@ async function main() {
   const vendorResponse = await request(`/vendor/disputes/${vendorFavorDispute.data.id}/respond`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${vendor1Token}` },
-    body: JSON.stringify({ message: 'Vendor response for platform review' }),
+    body: JSON.stringify({
+      message: 'Vendor response for platform review',
+      evidence: [{
+        fileName: 'vendor-runtime-proof.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: Buffer.byteLength('vendor-runtime-evidence'),
+        contentBase64: Buffer.from('vendor-runtime-evidence').toString('base64'),
+        description: 'Vendor runtime evidence metadata',
+      }],
+    }),
   })
   assert(vendorResponse.data.status === 'PLATFORM_REVIEW', 'vendor response should move dispute to platform review')
   record('R1-DISP-02', 'vendor response is tenant-scoped and moves dispute to PLATFORM_REVIEW')
@@ -321,7 +339,17 @@ async function main() {
   assert(adminQueue.data.some((dispute) => dispute.id === vendorFavorDispute.data.id), 'admin queue did not include dispute')
   const adminDetail = await request(`/admin/disputes/${vendorFavorDispute.data.id}`, { headers: { Authorization: `Bearer ${adminToken}` } })
   assert(adminDetail.data.order.id === vendorFavorOrderId, 'admin detail returned wrong order')
+  assert(adminDetail.data.messages.length === 2, `expected 2 dispute messages, got ${adminDetail.data.messages.length}`)
+  assert(adminDetail.data.evidence.length === 2, `expected 2 dispute evidence items, got ${adminDetail.data.evidence.length}`)
+  assert(adminDetail.data.evidence.some((item) => item.fileName === 'buyer-runtime-photo.png' && item.submittedByActorType === 'BUYER'), 'buyer evidence metadata missing')
+  assert(adminDetail.data.evidence.some((item) => item.fileName === 'vendor-runtime-proof.pdf' && item.submittedByActorType === 'VENDOR'), 'vendor evidence metadata missing')
+  const buyerEvidence = adminDetail.data.evidence.find((item) => item.fileName === 'buyer-runtime-photo.png')
+  assert(buyerEvidence?.contentSha256 && buyerEvidence.storageConfirmedAt, 'buyer evidence storage metadata missing')
+  const evidenceContent = await request(`/admin/disputes/evidence/${buyerEvidence.id}/content`, { headers: { Authorization: `Bearer ${adminToken}` } })
+  assert(evidenceContent.data.contentBase64 === Buffer.from('buyer-runtime-evidence').toString('base64'), 'stored buyer evidence content mismatch')
   record('R1-DISP-03', 'admin-only dispute queue/detail boundary is verified')
+  record('R1-DISP-04', 'dispute messages and evidence metadata are persisted and visible to admin')
+  record('R1-DISP-05', 'dispute raw evidence content is stored privately and readable by admin with integrity metadata')
 
   await expectHttpError(`/admin/disputes/${vendorFavorDispute.data.id}/resolve`, buyerToken, 403, 'FORBIDDEN', {
     method: 'POST',
