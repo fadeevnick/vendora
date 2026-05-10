@@ -39,6 +39,7 @@ Important:
 - Phase 05/06 maintained runtime-check bodies now live under `vendora_codebase/apps/api/scripts/runtime/`; `tmp_phase05_check.mjs` and `tmp_phase06_check.mjs` remain historical/compatibility copies only.
 - `npm run runtime:r1 --workspace apps/api` is now the stable command for the maintained Phase 01-06 local replay harness when the API is running.
 - `npm run runtime:r1-partial --workspace apps/api` remains available for the Phase 05/06 replay subset.
+- `npm run db:migrate:status:compose` now provides the stable Docker-network Prisma migration-status check when host-side access to the published Postgres port is unreliable.
 - API build succeeded after the replay-harness additions.
 - Non-clean live smoke on the current DB succeeded for `runtime:phase01` through `runtime:phase04`.
 - Clean-data replay succeeded on `2026-05-08 12:09 MSK +0300` after `npx prisma migrate reset --force`, `npx prisma generate`, `npm run seed`, API build, web lint and web build.

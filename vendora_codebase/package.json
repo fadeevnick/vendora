@@ -7,6 +7,7 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "db:migrate:status:compose": "docker compose run --rm -w /workspace/apps/api -e DATABASE_URL=postgresql://vendora:vendora@postgres:5432/vendora notification-worker npx prisma migrate status"
   }
 }

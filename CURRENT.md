@@ -79,8 +79,15 @@ Post-commit audit on `2026-05-10` passed after commits `efbff92`, `643e6b2` and 
 - `npm run runtime:h2-admin-worker-queue-ops --workspace apps/api`
 - `docker compose --profile workers config`
 - `npx prisma migrate status`
+- `npm run db:migrate:status:compose`
 
-Local DB status at checkpoint: `npx prisma migrate status` reports 21 migrations and schema up to date.
+Local DB status at checkpoint: `npx prisma migrate status` originally reported 21 migrations and schema
+up to date. After the H3 moderation migration, Compose-network migration status on `2026-05-10` reports
+22 migrations and schema up to date via `npm run db:migrate:status:compose`.
+
+Replay discipline note: host-side Prisma/Node access to `127.0.0.1:55432` can fail in this environment
+even when the Docker Postgres service is healthy. The stable local verification path is the Compose-network
+Prisma status command above, which connects to `postgres:5432`.
 
 Process hygiene: Vendora web dev servers on ports `3004`, `3005` and `3006` must be kept stopped. A non-Vendora `next dev` on port `4000` from `/home/nickf/Documents/ai_limits/app` may exist and should not be touched.
 
