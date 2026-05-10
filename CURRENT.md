@@ -61,11 +61,15 @@ High-level groups:
 
 Important latest verification:
 
+Post-commit audit on `2026-05-10` passed after commits `efbff92`, `643e6b2` and `140c96b`:
+
 - `npm run build --workspace apps/api`
 - `npm run lint --workspace apps/web`
 - `npm run build --workspace apps/web`
+- `npm run runtime:r1 --workspace apps/api`
 - `npm run runtime:phase03 --workspace apps/api`
 - `npm run runtime:phase06 --workspace apps/api`
+- `npm run runtime:h3-catalog-moderation --workspace apps/api`
 - `npm run runtime:h3-catalog-search --workspace apps/api`
 - `npm run runtime:h3-catalog-search-ops --workspace apps/api`
 - `npm run runtime:h3-catalog-search-worker --workspace apps/api`

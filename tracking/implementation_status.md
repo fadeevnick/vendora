@@ -317,6 +317,16 @@ Important:
   - runtime command `npm run runtime:h3-catalog-moderation --workspace apps/api` passed with `H3-CATALOG-MOD-01` through `H3-CATALOG-MOD-05` on `2026-05-10`;
   - post-change `npm run runtime:phase03 --workspace apps/api` and `npm run runtime:h3-catalog-search --workspace apps/api` regressions passed on `2026-05-10`;
   - `npx prisma migrate deploy`, `npx prisma generate`, `npm run build --workspace apps/api`, `npm run lint --workspace apps/web` and `npm run build --workspace apps/web` passed on `2026-05-10`.
+- Post-commit audit passed on `2026-05-10` after commits `efbff92`, `643e6b2` and `140c96b`:
+  - `npm run runtime:r1 --workspace apps/api`;
+  - `npm run runtime:h3-catalog-moderation --workspace apps/api`;
+  - `npm run runtime:h3-catalog-search --workspace apps/api`;
+  - `npm run runtime:h3-catalog-search-ops --workspace apps/api`;
+  - `npm run runtime:h3-catalog-search-worker --workspace apps/api`;
+  - `npm run runtime:h3-dispute-sla --workspace apps/api`;
+  - `npm run runtime:h3-dispute-sla-worker --workspace apps/api`;
+  - `npm run runtime:h3-dispute-sla-ops --workspace apps/api`;
+  - `npm run build --workspace apps/api`, `npm run lint --workspace apps/web`, `npm run build --workspace apps/web` and `npx prisma migrate status`.
 - H3 raw dispute evidence storage local proof now exists:
   - migration `20260510120000_h3_dispute_evidence_storage` added storage key/provider/size/checksum/confirmation metadata to `DisputeEvidence`;
   - buyer dispute creation and vendor dispute response can now store raw evidence bytes through the same local private storage driver used for KYC protected documents;
