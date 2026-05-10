@@ -37,6 +37,7 @@
     "runtime:h1-email-provider": "node scripts/runtime/h1_email_provider_check.mjs",
     "runtime:h1-email-live-provider": "node scripts/runtime/h1_email_live_provider_check.mjs",
     "runtime:h1-payment-provider": "node scripts/runtime/h1_payment_provider_check.mjs",
+    "runtime:h1-stripe-payment-provider": "tsx scripts/runtime/h1_stripe_payment_provider_check.ts",
     "runtime:h1-refund-provider": "node scripts/runtime/h1_refund_provider_check.mjs",
     "runtime:h1-payout-provider": "node scripts/runtime/h1_payout_provider_check.mjs",
     "runtime:h1-money-reconciliation": "node scripts/runtime/h1_money_reconciliation_check.mjs",

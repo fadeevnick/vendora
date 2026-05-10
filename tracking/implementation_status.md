@@ -39,7 +39,7 @@ Important:
 - Phase 05/06 maintained runtime-check bodies now live under `vendora_codebase/apps/api/scripts/runtime/`; `tmp_phase05_check.mjs` and `tmp_phase06_check.mjs` remain historical/compatibility copies only.
 - `npm run runtime:r1 --workspace apps/api` is now the stable command for the maintained Phase 01-06 local replay harness when the API is running.
 - `npm run runtime:r1-partial --workspace apps/api` remains available for the Phase 05/06 replay subset.
-- `npm run db:migrate:status:compose` now provides the stable Docker-network Prisma migration-status check when host-side access to the published Postgres port is unreliable.
+- `npm run db:migrate:deploy:compose` and `npm run db:migrate:status:compose` now provide stable Docker-network Prisma migration deploy/status checks when host-side access to the published Postgres port is unreliable.
 - API build succeeded after the replay-harness additions.
 - Non-clean live smoke on the current DB succeeded for `runtime:phase01` through `runtime:phase04`.
 - Clean-data replay succeeded on `2026-05-08 12:09 MSK +0300` after `npx prisma migrate reset --force`, `npx prisma generate`, `npm run seed`, API build, web lint and web build.
@@ -61,7 +61,12 @@ Important:
   - payment webhook signature parsing uses the payment provider adapter instead of route-local hard-coding;
   - runtime command `npm run runtime:h1-payment-provider --workspace apps/api` passed with `H1-PAYMENT-PROVIDER-01` through `H1-PAYMENT-PROVIDER-04`;
   - post-change `runtime:phase04` and full `runtime:r1` both passed on `2026-05-08 13:26 MSK +0300`.
-- This closes only the local payment adapter-code/mock-contract part of the payment gap; live Stripe/YooKassa/hosted provider charge/session dashboard/API evidence remains open.
+- H1 Stripe payment provider adapter-code proof now exists:
+  - `PAYMENT_PROVIDER=stripe` creates Stripe Checkout Session requests with amount, currency and checkout metadata;
+  - the payment webhook path preserves raw JSON request body for provider signature verification;
+  - Stripe webhook parsing verifies `Stripe-Signature` with HMAC over the raw body and maps `checkout.session.completed` to `PAYMENT_SUCCEEDED`;
+  - runtime command `npm run runtime:h1-stripe-payment-provider --workspace apps/api` passed with `H1-STRIPE-PAYMENT-PROVIDER-01` through `H1-STRIPE-PAYMENT-PROVIDER-03` on `2026-05-10`.
+- This closes local Stripe adapter-code/signature-contract proof only; live Stripe hosted checkout/session and dashboard/API evidence remains open.
 - H1 refund provider execution-code proof now exists:
   - migration `20260508133000_h1_refund_provider_execution` added `RefundProviderExecution`;
   - buyer-favor dispute resolution creates `REFUND_PROVIDER=dev_mock` execution evidence aligned with `RETURNED_TO_BUYER` fund state and `REFUNDED` ledger state;

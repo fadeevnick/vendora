@@ -136,7 +136,7 @@ export async function orderRoutes(app: FastifyInstance) {
       })
     }
 
-    const { cartVersion, shippingAddress } = request.body as {
+    const { cartVersion, shippingAddress, returnUrl, cancelUrl } = request.body as {
       cartVersion: number
       shippingAddress: {
         fullName: string
@@ -145,6 +145,8 @@ export async function orderRoutes(app: FastifyInstance) {
         postalCode: string
         country: string
       }
+      returnUrl?: string
+      cancelUrl?: string
     }
 
     try {
@@ -153,6 +155,8 @@ export async function orderRoutes(app: FastifyInstance) {
         cartVersion,
         shippingAddress,
         idempotencyKey,
+        successUrl: returnUrl,
+        cancelUrl,
       })
       return reply.code(201).send({ data: session })
     } catch (err: unknown) {
@@ -174,7 +178,7 @@ export async function orderRoutes(app: FastifyInstance) {
 
   app.post('/payments/provider/webhook', { schema: paymentWebhookSchema }, async (request, reply) => {
     try {
-      const providerEvent = await parsePaymentWebhook(request.headers, request.body)
+      const providerEvent = await parsePaymentWebhook(request.headers, request.body, request.rawBody)
       const result = await processPaymentWebhook(providerEvent)
       return reply.send({ data: result })
     } catch (err: unknown) {

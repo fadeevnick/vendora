@@ -22,6 +22,8 @@ interface CreateCheckoutSessionInput {
   cartVersion: number
   shippingAddress: ShippingAddress
   idempotencyKey: string
+  successUrl?: string
+  cancelUrl?: string
 }
 
 interface PaymentWebhookInput {
@@ -400,7 +402,7 @@ async function getCheckoutSessionView(sessionId: string, buyerId: string) {
   return {
     checkoutSessionId: session.id,
     paymentProvider: session.providerName,
-    providerSessionSecret: session.providerSessionId,
+    providerSessionSecret: session.providerSessionSecret ?? session.providerSessionId,
     status: session.status,
     totalMinor: session.totalMinor,
     currency: session.currency,
@@ -595,6 +597,8 @@ export async function createCheckoutSession(input: CreateCheckoutSessionInput) {
     buyerUserId: input.buyerId,
     amountMinor: totalMinor,
     currency,
+    successUrl: input.successUrl,
+    cancelUrl: input.cancelUrl,
   })
 
   const session = await prisma.$transaction(async (tx) => {
@@ -609,6 +613,7 @@ export async function createCheckoutSession(input: CreateCheckoutSessionInput) {
         currency,
         providerName: paymentSession.providerName,
         providerSessionId: paymentSession.providerSessionId,
+        providerSessionSecret: paymentSession.providerSessionSecret,
         expiresAt: checkoutExpiresAt,
       },
     })
@@ -637,8 +642,8 @@ export async function getBuyerCheckoutSession(sessionId: string, buyerId: string
   return getCheckoutSessionView(sessionId, buyerId)
 }
 
-export async function parsePaymentWebhook(headers: Record<string, string | string[] | undefined>, body: unknown) {
-  return createPaymentProvider().parseWebhook({ headers, body })
+export async function parsePaymentWebhook(headers: Record<string, string | string[] | undefined>, body: unknown, rawBody?: string) {
+  return createPaymentProvider().parseWebhook({ headers, body, rawBody })
 }
 
 export async function processPaymentWebhook(input: PaymentWebhookInput) {

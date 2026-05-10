@@ -10,7 +10,22 @@ import { disputeRoutes } from './modules/disputes/disputes.routes.js'
 import { adminOpsRoutes } from './modules/admin/ops.routes.js'
 import { authenticate } from './plugins/authenticate.js'
 
+declare module 'fastify' {
+  interface FastifyRequest {
+    rawBody?: string
+  }
+}
+
 const app = Fastify({ logger: true })
+
+app.addContentTypeParser('application/json', { parseAs: 'string' }, (request, body, done) => {
+  request.rawBody = typeof body === 'string' ? body : body.toString('utf8')
+  try {
+    done(null, request.rawBody ? JSON.parse(request.rawBody) : {})
+  } catch (err) {
+    done(err as Error)
+  }
+})
 
 app.register(cors, {
   origin: ['http://localhost:3000'],

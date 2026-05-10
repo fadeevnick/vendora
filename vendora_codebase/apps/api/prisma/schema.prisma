@@ -298,6 +298,7 @@ model CheckoutSession {
   currency            String
   providerName        String                @default("dev")
   providerSessionId   String                @unique
+  providerSessionSecret String?
   status              CheckoutSessionStatus @default(AWAITING_PAYMENT)
   expiresAt           DateTime
   completedAt         DateTime?

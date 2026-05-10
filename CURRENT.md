@@ -83,7 +83,7 @@ Post-commit audit on `2026-05-10` passed after commits `efbff92`, `643e6b2` and 
 
 Local DB status at checkpoint: `npx prisma migrate status` originally reported 21 migrations and schema
 up to date. After the H3 moderation migration, Compose-network migration status on `2026-05-10` reports
-22 migrations and schema up to date via `npm run db:migrate:status:compose`.
+23 migrations and schema up to date via `npm run db:migrate:status:compose`.
 
 Replay discipline note: host-side Prisma/Node access to `127.0.0.1:55432` can fail in this environment
 even when the Docker Postgres service is healthy. The stable local verification path is the Compose-network
@@ -603,6 +603,8 @@ Current `H1` payment status:
 - provider webhook signature parsing now goes through the payment provider adapter;
 - `npm run runtime:h1-payment-provider --workspace apps/api` passed with `H1-PAYMENT-PROVIDER-01` through `H1-PAYMENT-PROVIDER-04`;
 - post-change `runtime:phase04` and full `runtime:r1` both passed on `2026-05-08 13:26 MSK +0300`;
+- `PAYMENT_PROVIDER=stripe` adapter code now exists for Stripe Checkout Session creation and signed raw-body webhook verification;
+- `npm run runtime:h1-stripe-payment-provider --workspace apps/api` passed with `H1-STRIPE-PAYMENT-PROVIDER-01` through `H1-STRIPE-PAYMENT-PROVIDER-03` on `2026-05-10`;
 - live Stripe/YooKassa/hosted provider charge/session dashboard/API proof is still not done.
 
 Current `H1` refund status:

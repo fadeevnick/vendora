@@ -70,13 +70,12 @@ export const createCheckoutSessionSchema = {
 export const paymentWebhookSchema = {
   body: {
     type: 'object',
-    required: ['providerEventId', 'checkoutSessionId', 'eventType'],
     properties: {
       providerEventId: { type: 'string', minLength: 2 },
       checkoutSessionId: { type: 'string' },
       eventType: { type: 'string', enum: ['PAYMENT_SUCCEEDED', 'PAYMENT_FAILED'] },
     },
-    additionalProperties: false,
+    additionalProperties: true,
   },
 }
 

@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
+    "db:migrate:deploy:compose": "docker compose run --rm -w /workspace/apps/api -e DATABASE_URL=postgresql://vendora:vendora@postgres:5432/vendora notification-worker npx prisma migrate deploy",
     "db:migrate:status:compose": "docker compose run --rm -w /workspace/apps/api -e DATABASE_URL=postgresql://vendora:vendora@postgres:5432/vendora notification-worker npx prisma migrate status",
     "runtime:h1-email-live-provider:compose": "docker compose run --rm -w /workspace/apps/api -e DATABASE_URL=postgresql://vendora:vendora@postgres:5432/vendora -e EMAIL_PROVIDER=resend -e RESEND_API_KEY -e EMAIL_FROM -e EMAIL_LIVE_TEST_RECIPIENT notification-worker npm run runtime:h1-email-live-provider"
   }

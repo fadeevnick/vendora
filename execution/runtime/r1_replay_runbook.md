@@ -128,6 +128,7 @@ If the host-side Prisma check reports `P1001` while the Compose Postgres service
 same migration status check inside the Compose network from `vendora_codebase/`:
 
 ```bash
+npm run db:migrate:deploy:compose
 npm run db:migrate:status:compose
 ```
 
@@ -143,7 +144,7 @@ Current local note:
 - on `2026-05-10`, host-side Node/Prisma access to the published Postgres port `127.0.0.1:55432`
   showed an environment-level connection/handshake failure;
 - the same Prisma migration status command succeeded inside the Compose network against
-  `postgres:5432`, reporting 22 migrations and `Database schema is up to date!`;
+  `postgres:5432`, reporting 23 migrations and `Database schema is up to date!`;
 - the one-off slim Node tooling container may print Prisma OpenSSL detection warnings; treat the
   migration status result and exit code as the replay gate for this command;
 - this keeps replay verification on the Docker-backed runtime path without treating host port
