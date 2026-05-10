@@ -35,6 +35,7 @@
     "runtime:h1-email-worker": "node scripts/runtime/h1_email_worker_check.mjs",
     "runtime:h1-email-worker-daemon": "node scripts/runtime/h1_email_worker_daemon_check.mjs",
     "runtime:h1-email-provider": "node scripts/runtime/h1_email_provider_check.mjs",
+    "runtime:h1-email-live-provider": "node scripts/runtime/h1_email_live_provider_check.mjs",
     "runtime:h1-payment-provider": "node scripts/runtime/h1_payment_provider_check.mjs",
     "runtime:h1-refund-provider": "node scripts/runtime/h1_refund_provider_check.mjs",
     "runtime:h1-payout-provider": "node scripts/runtime/h1_payout_provider_check.mjs",

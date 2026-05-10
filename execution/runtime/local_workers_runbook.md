@@ -38,6 +38,26 @@ Important:
 - local mock Resend proof is not provider dashboard/API evidence;
 - launch-grade email proof still requires real provider credentials and external provider evidence.
 
+Live provider proof command:
+
+```bash
+npm run runtime:h1-email-live-provider:compose
+```
+
+Required environment:
+
+```text
+RESEND_API_KEY
+EMAIL_FROM
+EMAIL_LIVE_TEST_RECIPIENT
+```
+
+Notes:
+
+- the command runs inside the Compose network and connects to Postgres at `postgres:5432`;
+- it uses `EMAIL_PROVIDER=resend` and the real HTTPS Resend API by default;
+- `RESEND_API_BASE_URL` must not point to localhost or another mock endpoint for this proof.
+
 ## Order Maintenance Worker
 
 Entrypoint:

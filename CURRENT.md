@@ -416,6 +416,10 @@ We stopped exactly here:
   - command `npm run runtime:h1-email-provider --workspace apps/api`
   - evidence IDs `H1-EMAIL-PROVIDER-01` through `H1-EMAIL-PROVIDER-03`
   - checked on `2026-05-08 13:03 MSK +0300`
+- live Resend provider proof harness now exists and intentionally requires real provider env:
+  - command `npm run runtime:h1-email-live-provider:compose`
+  - required env `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_LIVE_TEST_RECIPIENT`
+  - evidence IDs `H1-EMAIL-LIVE-PROVIDER-01` through `H1-EMAIL-LIVE-PROVIDER-03` only count after a real provider send succeeds
 - long-running NotificationOutbox worker entrypoint now exists:
   - command `npm run notifications:worker --workspace apps/api`
   - runtime command `npm run runtime:h1-email-worker-daemon --workspace apps/api`

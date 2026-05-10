@@ -291,6 +291,7 @@ H1 local email worker shell now drains NotificationOutbox through dev_log and re
 npm run runtime:h1-email-worker succeeded with H1-EMAIL-WORKER-01 through H1-EMAIL-WORKER-03 on 2026-05-08.
 H1 Resend adapter code now drains NotificationOutbox through an HTTP provider contract with EMAIL_PROVIDER=resend, RESEND_API_KEY, EMAIL_FROM and optional RESEND_API_BASE_URL.
 npm run runtime:h1-email-provider succeeded against a local mock provider API with H1-EMAIL-PROVIDER-01 through H1-EMAIL-PROVIDER-03 on 2026-05-08.
+Live Resend proof harness now exists as npm run runtime:h1-email-live-provider:compose. It requires RESEND_API_KEY, EMAIL_FROM and EMAIL_LIVE_TEST_RECIPIENT, rejects localhost/mock provider URLs, and only counts H1-EMAIL-LIVE-PROVIDER-01 through H1-EMAIL-LIVE-PROVIDER-03 after a real provider send succeeds.
 H1 long-running NotificationOutbox worker entrypoint now exists as npm run notifications:worker, with loop interval, batch size, max-attempts and optional event/reference filters.
 npm run runtime:h1-email-worker-daemon succeeded with H1-EMAIL-WORKER-DAEMON-01 through H1-EMAIL-WORKER-DAEMON-03 on 2026-05-09, followed by successful runtime:h1-email-worker and runtime:h1-email-provider regression checks.
 H1 local payment provider adapter code now creates checkout session refs and parses signed provider webhooks through PAYMENT_PROVIDER=dev_mock.

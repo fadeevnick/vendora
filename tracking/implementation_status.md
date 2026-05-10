@@ -52,6 +52,7 @@ Important:
   - runtime command `npm run runtime:h1-email --workspace apps/api` passed with `H1-EMAIL-01` through `H1-EMAIL-04`;
   - local `dev_log` worker shell command `npm run runtime:h1-email-worker --workspace apps/api` passed with `H1-EMAIL-WORKER-01` through `H1-EMAIL-WORKER-03` on `2026-05-08 12:54 MSK +0300`;
   - Resend adapter command `npm run runtime:h1-email-provider --workspace apps/api` passed against a local mock provider API with `H1-EMAIL-PROVIDER-01` through `H1-EMAIL-PROVIDER-03` on `2026-05-08 13:03 MSK +0300`;
+  - live Resend proof harness now exists as `npm run runtime:h1-email-live-provider:compose`; it requires `RESEND_API_KEY`, `EMAIL_FROM` and `EMAIL_LIVE_TEST_RECIPIENT`, rejects local mock provider URLs, and only closes `H1-EMAIL-LIVE-PROVIDER-*` after a real provider send succeeds;
   - long-running worker command `npm run notifications:worker --workspace apps/api` now exists, and `npm run runtime:h1-email-worker-daemon --workspace apps/api` passed with `H1-EMAIL-WORKER-DAEMON-01` through `H1-EMAIL-WORKER-DAEMON-03` on `2026-05-09`;
   - clean post-H1 reset/reseed applied 8 migrations, then `runtime:h1-email`, `runtime:h1-storage` and `runtime:r1` all passed on `2026-05-08 12:37 MSK +0300`.
 - This closes the local outbox/evidence, worker-shell, long-running worker entrypoint and Resend adapter-code parts of the email gap only; live external provider delivery and provider dashboard/API evidence remain open.
