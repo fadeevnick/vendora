@@ -366,6 +366,7 @@ model PaymentProviderEvent {
   id                String    @id @default(uuid())
   providerName      String
   providerEventId   String    @unique
+  providerPaymentIntentId String?
   checkoutSessionId String?
   eventType         String
   payloadHash       String

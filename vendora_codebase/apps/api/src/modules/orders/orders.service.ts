@@ -29,6 +29,7 @@ interface CreateCheckoutSessionInput {
 interface PaymentWebhookInput {
   providerName: string
   providerEventId: string
+  providerPaymentIntentId?: string
   checkoutSessionId: string
   eventType: 'PAYMENT_SUCCEEDED' | 'PAYMENT_FAILED'
   rawPayload: unknown
@@ -302,6 +303,7 @@ async function createProcessedPaymentEvent(
     data: {
       providerName: input.providerName,
       providerEventId: input.providerEventId,
+      providerPaymentIntentId: input.providerPaymentIntentId,
       checkoutSessionId: input.checkoutSessionId,
       eventType: input.eventType,
       payloadHash,
@@ -746,6 +748,7 @@ export async function processPaymentWebhook(input: PaymentWebhookInput) {
       data: {
         providerName: input.providerName,
         providerEventId: input.providerEventId,
+        providerPaymentIntentId: input.providerPaymentIntentId,
         checkoutSessionId: session.id,
         eventType: input.eventType,
         payloadHash,

@@ -20,6 +20,7 @@ export interface PaymentSessionResult {
 export interface ParsedPaymentWebhook {
   providerName: string
   providerEventId: string
+  providerPaymentIntentId?: string
   checkoutSessionId: string
   eventType: PaymentProviderEventType
   rawPayload: unknown
@@ -126,7 +127,7 @@ function parseStripeSignature(header: string) {
 function assertStripeEventBody(body: unknown): asserts body is {
   id: string
   type: string
-  data: { object?: { client_reference_id?: unknown; metadata?: Record<string, unknown> } }
+  data: { object?: { client_reference_id?: unknown; metadata?: Record<string, unknown>; payment_intent?: unknown } }
 } {
   if (!body || typeof body !== 'object') throw new Error('VALIDATION_ERROR: invalid Stripe event payload')
   const payload = body as Record<string, unknown>
@@ -230,6 +231,7 @@ class StripePaymentProvider implements PaymentProvider {
     return {
       providerName: this.name,
       providerEventId: input.body.id,
+      providerPaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : undefined,
       checkoutSessionId,
       eventType,
       rawPayload: input.body,

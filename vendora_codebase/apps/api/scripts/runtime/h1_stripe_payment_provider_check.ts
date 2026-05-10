@@ -100,6 +100,7 @@ async function main() {
       data: {
         object: {
           id: 'cs_test_runtime_stripe',
+          payment_intent: 'pi_runtime_stripe',
           client_reference_id: 'checkout-runtime-stripe',
           metadata: { checkoutSessionId: 'checkout-runtime-stripe' },
         },
@@ -113,6 +114,7 @@ async function main() {
     })
     assert(event.providerName === 'stripe', `expected stripe webhook provider, got ${event.providerName}`)
     assert(event.providerEventId === 'evt_runtime_stripe_success', 'expected Stripe event id')
+    assert(event.providerPaymentIntentId === 'pi_runtime_stripe', 'expected Stripe payment intent id')
     assert(event.checkoutSessionId === 'checkout-runtime-stripe', 'expected checkout session id from Stripe metadata')
     assert(event.eventType === 'PAYMENT_SUCCEEDED', `expected payment success, got ${event.eventType}`)
     record('H1-STRIPE-PAYMENT-PROVIDER-02', 'stripe adapter verifies signed raw webhook body and maps checkout completion to payment success')

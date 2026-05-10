@@ -337,10 +337,22 @@ async function executeRefundProvider(input: {
   refundAmountMinor: number
 }) {
   const provider = createRefundProvider()
+  const paymentEvent = input.dispute.order.checkoutSessionId
+    ? await prisma.paymentProviderEvent.findFirst({
+      where: {
+        checkoutSessionId: input.dispute.order.checkoutSessionId,
+        eventType: 'PAYMENT_SUCCEEDED',
+        processedAt: { not: null },
+        providerPaymentIntentId: { not: null },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    : null
   try {
     return await provider.createRefund({
       disputeId: input.dispute.id,
       orderId: input.dispute.orderId,
+      providerPaymentIntentId: paymentEvent?.providerPaymentIntentId,
       amountMinor: input.refundAmountMinor,
       currency: input.fund.currency,
       reason: `${input.resolutionType}:${input.dispute.reason}`,

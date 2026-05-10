@@ -64,9 +64,14 @@ Important:
 - H1 Stripe payment provider adapter-code proof now exists:
   - `PAYMENT_PROVIDER=stripe` creates Stripe Checkout Session requests with amount, currency and checkout metadata;
   - the payment webhook path preserves raw JSON request body for provider signature verification;
-  - Stripe webhook parsing verifies `Stripe-Signature` with HMAC over the raw body and maps `checkout.session.completed` to `PAYMENT_SUCCEEDED`;
+  - Stripe webhook parsing verifies `Stripe-Signature` with HMAC over the raw body, maps `checkout.session.completed` to `PAYMENT_SUCCEEDED` and retains provider payment intent evidence;
   - runtime command `npm run runtime:h1-stripe-payment-provider --workspace apps/api` passed with `H1-STRIPE-PAYMENT-PROVIDER-01` through `H1-STRIPE-PAYMENT-PROVIDER-03` on `2026-05-10`.
-- This closes local Stripe adapter-code/signature-contract proof only; live Stripe hosted checkout/session and dashboard/API evidence remains open.
+- H1 Stripe refund provider adapter-code proof now exists:
+  - migration `20260510150000_h1_stripe_payment_intent_ref` added `PaymentProviderEvent.providerPaymentIntentId`;
+  - `REFUND_PROVIDER=stripe` creates Stripe refund requests with retained payment intent, amount and dispute/order metadata;
+  - Stripe refund adapter refuses refunds when provider payment intent evidence is missing;
+  - runtime command `npm run runtime:h1-stripe-refund-provider --workspace apps/api` passed with `H1-STRIPE-REFUND-PROVIDER-01` and `H1-STRIPE-REFUND-PROVIDER-02` on `2026-05-10`.
+- This closes local Stripe adapter-code/signature-contract/refund-contract proof only; live Stripe hosted checkout/session/refund and dashboard/API evidence remains open.
 - H1 refund provider execution-code proof now exists:
   - migration `20260508133000_h1_refund_provider_execution` added `RefundProviderExecution`;
   - buyer-favor dispute resolution creates `REFUND_PROVIDER=dev_mock` execution evidence aligned with `RETURNED_TO_BUYER` fund state and `REFUNDED` ledger state;
